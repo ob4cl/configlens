@@ -1,0 +1,535 @@
+{
+  "registry_version": "1.0",
+  "client": "opencode",
+  "adapter_revision": "0.1.0",
+  "evidence": [
+    {
+      "id": "S4",
+      "kind": "documentation",
+      "url": "https://docs.opencode.ai/docs/config/",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "id": "OC-REPO",
+      "kind": "repository-metadata",
+      "url": "https://api.github.com/repos/sst/opencode/commits?per_page=1",
+      "retrieved": "2026-10-10",
+      "note": "HEAD 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937. Historical loader path packages/opencode/src/config/config.ts removed by 44b6938b2ad2895bdd89d5d5cf753fb01ca8e3dd (2026-07-21); no replacement loader SHA pinned."
+    }
+  ],
+  "tested_client_versions": ["1.18.35"],
+  "documented_client_versions": ["1.18.35"],
+  "pinned_commit": null,
+  "conformance_status": "fixture_verified_max",
+  "layers": [
+    {
+      "id": "oc.remote.wellknown",
+      "rank": 0,
+      "observable": false,
+      "location": "remote .well-known/opencode organizational defaults",
+      "unobservable_reason": "remote_source_not_fetched"
+    },
+    {
+      "id": "oc.global",
+      "rank": 10,
+      "observable": true,
+      "location": "$XDG_CONFIG_HOME/opencode/opencode.json (or opencode.jsonc)"
+    },
+    {
+      "id": "oc.custom_path",
+      "rank": 20,
+      "observable": true,
+      "location": "$OPENCODE_CONFIG"
+    },
+    {
+      "id": "oc.project",
+      "rank": 30,
+      "observable": true,
+      "location": "opencode.json in cwd, traversing up to the nearest git directory"
+    },
+    {
+      "id": "oc.opencode_dirs",
+      "rank": 40,
+      "observable": false,
+      "location": ".opencode directories (agents, commands, plugins)",
+      "unobservable_reason": "not_a_settings_document"
+    },
+    {
+      "id": "oc.custom_dir",
+      "rank": 45,
+      "observable": true,
+      "location": "$OPENCODE_CONFIG_DIR",
+      "placement_verified": false
+    },
+    {
+      "id": "oc.inline",
+      "rank": 50,
+      "observable": true,
+      "location": "$OPENCODE_CONFIG_CONTENT"
+    },
+    {
+      "id": "oc.managed_file",
+      "rank": 60,
+      "observable": true,
+      "location": "/etc/opencode (Linux), /Library/Application Support/opencode (macOS), %ProgramData%\\opencode (Windows)"
+    },
+    {
+      "id": "oc.managed_macos_prefs",
+      "rank": 70,
+      "observable": true,
+      "location": "/Library/Managed Preferences/<user>/ai.opencode.managed.plist",
+      "parse_supported": false
+    }
+  ],
+  "rules": [
+    {
+      "pointer": "/model",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "env+file",
+      "model_name": true,
+      "tests": [
+        "oc_scalar_project_overrides_global",
+        "oc_managed_file_overrides_project",
+        "oc_inline_content_overrides_project",
+        "oc_scalar_boundary_highest_layer_null_is_not_missing",
+        "oc_scalar_negative_unknown_layer_does_not_win"
+      ]
+    },
+    {
+      "pointer": "/small_model",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "env+file",
+      "model_name": true,
+      "tests": ["oc_scalar_project_overrides_global"]
+    },
+    {
+      "pointer": "/default_agent",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_strings": true,
+      "tests": ["oc_scalar_project_overrides_global"]
+    },
+    {
+      "pointer": "/share",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_enums": ["manual", "auto", "disabled"],
+      "tests": ["oc_scalar_project_overrides_global"]
+    },
+    {
+      "pointer": "/autoupdate",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_enums": ["notify"],
+      "tests": ["oc_scalar_project_overrides_global"]
+    },
+    {
+      "pointer": "/snapshot",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_scalar_project_overrides_global"]
+    },
+    {
+      "pointer": "/shell",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_strings": true,
+      "tests": ["oc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/compaction",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_nested_merge_retains_unrelated_keys"]
+    },
+    {
+      "pointer": "/compaction/auto",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_nested_merge_retains_unrelated_keys"]
+    },
+    {
+      "pointer": "/compaction/prune",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_nested_merge_retains_unrelated_keys"]
+    },
+    {
+      "pointer": "/compaction/reserved",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_nested_merge_retains_unrelated_keys"]
+    },
+    {
+      "pointer": "/attachment",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/attachment/image",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/attachment/image/auto_resize",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/attachment/image/max_width",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/attachment/image/max_height",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/attachment/image/max_base64_bytes",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/server",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_nested_merge_retains_unrelated_keys"]
+    },
+    {
+      "pointer": "/server/port",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_nested_merge_retains_unrelated_keys"]
+    },
+    {
+      "pointer": "/server/hostname",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_strings": true,
+      "tests": ["oc_server_scalar_layer_override"]
+    },
+    {
+      "pointer": "/server/mdns",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_server_scalar_layer_override"]
+    },
+    {
+      "pointer": "/server/mdnsDomain",
+      "operator": "replace",
+      "rule_id": "opencode.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_strings": true,
+      "tests": ["oc_server_scalar_layer_override"]
+    },
+    {
+      "pointer": "/server/cors",
+      "operator": "inventory-only",
+      "rule_id": "opencode.list.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_list_inventory_only_no_merge_claim"]
+    },
+    {
+      "pointer": "/tools",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_child_events_retained"]
+    },
+    {
+      "pointer": "/tools/*",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_nested_merge_retains_unrelated_keys", "oc_object_child_events_retained"]
+    },
+    {
+      "pointer": "/permission",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_enums": ["ask", "allow", "deny"],
+      "tests": ["oc_object_child_events_retained"]
+    },
+    {
+      "pointer": "/permission/**",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_enums": ["ask", "allow", "deny"],
+      "tests": ["oc_object_child_events_retained"]
+    },
+    {
+      "pointer": "/mcp",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_child_events_retained"]
+    },
+    {
+      "pointer": "/mcp/*/enabled",
+      "operator": "replace",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_child_events_retained"]
+    },
+    {
+      "pointer": "/mcp/*/type",
+      "operator": "replace",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "public_enums": ["local", "remote"],
+      "tests": ["oc_mcp_type_and_url_rules"]
+    },
+    {
+      "pointer": "/mcp/*/url",
+      "operator": "replace",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "documented",
+      "evidence": ["S4"],
+      "interpolation": "env+file",
+      "public_urls": true,
+      "tests": ["oc_mcp_type_and_url_rules"]
+    },
+    {
+      "pointer": "/mcp/*/environment",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "redact_subtree": "mcp_environment_map",
+      "tests": ["oc_mcp_environment_fully_redacted"]
+    },
+    {
+      "pointer": "/mcp/*",
+      "operator": "object-merge",
+      "rule_id": "opencode.object.recursive-merge",
+      "support": "fixture_verified",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_object_child_events_retained"]
+    },
+    {
+      "pointer": "/provider/**",
+      "operator": "inventory-only",
+      "rule_id": "opencode.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_unknown_key_inventory_only"]
+    },
+    {
+      "pointer": "/instructions",
+      "operator": "inventory-only",
+      "rule_id": "opencode.list.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_list_inventory_only_no_merge_claim"]
+    },
+    {
+      "pointer": "/plugin",
+      "operator": "inventory-only",
+      "rule_id": "opencode.list.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/disabled_providers",
+      "operator": "inventory-only",
+      "rule_id": "opencode.list.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/enabled_providers",
+      "operator": "inventory-only",
+      "rule_id": "opencode.list.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/watcher",
+      "operator": "inventory-only",
+      "rule_id": "opencode.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": ["oc_list_inventory_only_no_merge_claim"]
+    },
+    {
+      "pointer": "/watcher/ignore",
+      "operator": "inventory-only",
+      "rule_id": "opencode.list.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/agent/**",
+      "operator": "inventory-only",
+      "rule_id": "opencode.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/command/**",
+      "operator": "inventory-only",
+      "rule_id": "opencode.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/formatter",
+      "operator": "inventory-only",
+      "rule_id": "opencode.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/lsp",
+      "operator": "inventory-only",
+      "rule_id": "opencode.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/experimental/**",
+      "operator": "inventory-only",
+      "rule_id": "opencode.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S4"],
+      "interpolation": "none",
+      "tests": []
+    }
+  ],
+  "sensitive_field_patterns": [
+    "password",
+    "passwd",
+    "passphrase",
+    "secret",
+    "token",
+    "credential",
+    "credentials",
+    "authorization",
+    "auth",
+    "apikey",
+    "api_key",
+    "api-key",
+    "access_key",
+    "accesskey",
+    "private_key",
+    "privatekey",
+    "client_secret",
+    "cookie",
+    "bearer",
+    "jwt",
+    "session",
+    "key"
+  ],
+  "covered:unobservable_layers": ["oc.remote.wellknown", "oc.opencode_dirs", "oc.managed_macos_prefs"]
+}

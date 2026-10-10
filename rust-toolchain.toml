@@ -1,0 +1,8 @@
+# ConfigLens pins the Rust toolchain used for verification.
+# Verified locally with: cargo 1.99.0 / rustc 1.99.0 (2026-09-28).
+# `channel = "stable"` is intentional: the crate declares `rust-version` (MSRV) in
+# Cargo.toml, and CI additionally installs that MSRV toolchain to prove the floor.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "default"

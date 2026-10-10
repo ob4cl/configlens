@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://configlens.dev/schema/report-1.0.json",
+  "title": "ConfigLens report",
+  "description": "Machine-readable ConfigLens report. Bundled with the binary; requires no network access. Redacted by construction: secret values appear only as {\"redacted\": true, \"reason\": \"...\"}.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "client",
+    "adapter_revision",
+    "compatibility",
+    "context",
+    "sources",
+    "resolutions",
+    "diagnostics",
+    "coverage",
+    "redaction",
+    "errors"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "tool_version": { "type": "string" },
+    "command": { "type": "string" },
+    "client": { "type": "string" },
+    "adapter_revision": { "type": "string" },
+    "compatibility": {
+      "type": "object",
+      "required": ["conformance_status", "tested_versions", "documented_versions", "evidence", "provisional"],
+      "properties": {
+        "conformance_status": { "type": "string" },
+        "tested_versions": { "type": "array", "items": { "type": "string" } },
+        "documented_versions": { "type": "array", "items": { "type": "string" } },
+        "pinned_commit": { "type": ["string", "null"] },
+        "provisional": { "type": "boolean" },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "url", "retrieved"],
+            "properties": {
+              "id": { "type": "string" },
+              "kind": { "type": "string" },
+              "url": { "type": "string" },
+              "retrieved": { "type": "string" },
+              "note": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": ["os", "cwd", "client_version", "trust", "paths", "simulated", "strict", "environment_keys"],
+      "properties": {
+        "os": { "enum": ["linux", "macos", "windows", "wsl"] },
+        "cwd": { "type": "string" },
+        "project_root": { "type": ["string", "null"] },
+        "client_version": { "type": "string" },
+        "trust": { "enum": ["unknown", "trusted", "untrusted"] },
+        "paths": { "enum": ["local", "share"] },
+        "simulated": { "type": "boolean" },
+        "strict": { "type": "boolean" },
+        "environment_keys": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "layer", "rank", "class", "location", "status", "applicability", "bytes"],
+        "properties": {
+          "id": { "type": "integer" },
+          "layer": { "type": "string" },
+          "rank": { "type": "integer" },
+          "class": { "type": "string" },
+          "location": { "type": "string" },
+          "status": {
+            "enum": [
+              "observed",
+              "missing",
+              "unreadable",
+              "blocked",
+              "resource_limit_exceeded",
+              "malformed",
+              "supplied",
+              "unobservable"
+            ]
+          },
+          "status_detail": { "type": ["string", "null"] },
+          "applicability": { "enum": ["applicable", "skipped", "conditional"] },
+          "applicability_note": { "type": ["string", "null"] },
+          "bytes": { "type": "integer" },
+          "note": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "resolutions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "pointer",
+          "status",
+          "support",
+          "confidence",
+          "observed_value",
+          "events",
+          "coverage_gaps",
+          "notes"
+        ],
+        "properties": {
+          "pointer": { "type": "string" },
+          "status": { "enum": ["resolved", "partial", "unsupported", "invalid", "absent"] },
+          "support": {
+            "enum": [
+              "inventory_only",
+              "documented",
+              "fixture_verified",
+              "upstream_conformance_verified",
+              "unsupported"
+            ]
+          },
+          "confidence": {
+            "enum": ["fixture_verified", "documented", "inventory_only", "unverified"]
+          },
+          "observed_value": { "$ref": "#/$defs/publicValue" },
+          "effective_value": { "$ref": "#/$defs/publicValue" },
+          "rule_id": { "type": ["string", "null"] },
+          "evidence": { "type": "array", "items": { "type": "string" } },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind"],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "selected",
+                    "replaced",
+                    "contributed",
+                    "ignored",
+                    "constrained",
+                    "transformed",
+                    "unresolved"
+                  ]
+                },
+                "definition_id": { "type": ["integer", "null"] },
+                "source_id": { "type": ["integer", "null"] },
+                "location": { "type": ["string", "null"] },
+                "value": { "$ref": "#/$defs/publicValue" },
+                "rule_id": { "type": ["string", "null"] },
+                "reason_code": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "coverage_gaps": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "code", "message"],
+        "properties": {
+          "severity": { "enum": ["info", "warning", "error"] },
+          "code": { "type": "string" },
+          "location": { "type": ["string", "null"] },
+          "line": { "type": ["integer", "null"] },
+          "column": { "type": ["integer", "null"] },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "subject", "reason"],
+        "properties": {
+          "kind": {
+            "enum": [
+              "expected_unobservable",
+              "managed_state_unknown",
+              "trust_unknown",
+              "session_state_simulated",
+              "rule_placement_unverified",
+              "version_untested",
+              "project_boundary_uncertain"
+            ]
+          },
+          "subject": { "type": "string" },
+          "reason": { "type": "string" },
+          "rank": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "required": ["mode", "rules_applied", "snapshot_acl", "values_redacted"],
+      "properties": {
+        "mode": { "enum": ["local", "share"] },
+        "rules_applied": { "type": "array", "items": { "type": "string" } },
+        "snapshot_acl": { "type": "string" },
+        "values_redacted": { "type": "integer" }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "location": { "type": ["string", "null"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "publicValue": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "value": {},
+        "redacted": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "kind": { "enum": ["null", "bool", "integer", "number", "string", "array", "object"] }
+      }
+    }
+  }
+}

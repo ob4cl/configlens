@@ -1,0 +1,43 @@
+[package]
+name = "configlens"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Explain which AI coding-tool configuration value wins, and why — offline, read-only, redacted."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/example/configlens"
+readme = "README.md"
+keywords = ["configuration", "provenance", "cli", "opencode", "claude-code"]
+categories = ["command-line-utilities", "development-tools"]
+
+[lib]
+name = "configlens"
+path = "src/lib.rs"
+
+[[bin]]
+name = "configlens"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.152"
+thiserror = "2.0.21"
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+predicates = "3.1.4"
+tempfile = "3.27.0"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
