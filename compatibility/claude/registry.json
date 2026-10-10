@@ -1,0 +1,338 @@
+{
+  "registry_version": "1.0",
+  "client": "claude",
+  "adapter_revision": "0.1.0",
+  "evidence": [
+    {
+      "id": "S3",
+      "kind": "documentation",
+      "url": "https://code.claude.com/docs/en/settings",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "id": "S3-MANAGED",
+      "kind": "documentation",
+      "url": "https://code.claude.com/docs/en/managed-settings",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "id": "CC-NPM",
+      "kind": "package-registry",
+      "url": "https://registry.npmjs.org/@anthropic-ai%2fclaude-code",
+      "retrieved": "2026-10-10",
+      "note": "latest 2.1.296; GitHub release v2.1.296 published 2026-10-09T19:28:59Z"
+    }
+  ],
+  "tested_client_versions": ["2.1.296"],
+  "documented_client_versions": ["2.1.296"],
+  "pinned_commit": null,
+  "conformance_status": "fixture_verified_max",
+  "layers": [
+    {
+      "id": "cc.user",
+      "rank": 10,
+      "observable": true,
+      "location": "$CLAUDE_CONFIG_DIR/settings.json or $HOME/.claude/settings.json"
+    },
+    {
+      "id": "cc.project_shared",
+      "rank": 20,
+      "observable": true,
+      "location": "<project root>/.claude/settings.json"
+    },
+    {
+      "id": "cc.project_local",
+      "rank": 30,
+      "observable": true,
+      "location": "<project root>/.claude/settings.local.json"
+    },
+    {
+      "id": "cc.session_args",
+      "rank": 40,
+      "observable": true,
+      "location": "supplied client_arguments (--settings / --model / --effort)",
+      "supplied_only": true
+    },
+    {
+      "id": "cc.managed.file",
+      "rank": 60,
+      "observable": true,
+      "location": "/etc/claude-code/managed-settings.json + managed-settings.d/*.json (Linux and WSL)"
+    },
+    {
+      "id": "cc.managed.mdm",
+      "rank": 70,
+      "observable": false,
+      "location": "macOS com.anthropic.claudecode profile / Windows HKLM\\SOFTWARE\\Policies\\ClaudeCode",
+      "unobservable_reason": "platform_policy_store_not_read"
+    },
+    {
+      "id": "cc.managed.server",
+      "rank": 80,
+      "observable": false,
+      "location": "claude.ai server-managed settings / Claude apps gateway",
+      "unobservable_reason": "remote_source_not_fetched"
+    },
+    {
+      "id": "cc.managed.hkcu",
+      "rank": 90,
+      "observable": false,
+      "location": "HKCU\\SOFTWARE\\Policies\\ClaudeCode (Windows and WSL)",
+      "unobservable_reason": "registry_not_read"
+    }
+  ],
+  "rules": [
+    {
+      "pointer": "/model",
+      "operator": "replace",
+      "rule_id": "claude.scalar.layer-override",
+      "support": "fixture_verified",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "model_name": true,
+      "tests": [
+        "cc_local_overrides_project_overrides_user",
+        "cc_managed_overrides_user_files",
+        "cc_session_settings_flag_overrides_files"
+      ]
+    },
+    {
+      "pointer": "/effortLevel",
+      "operator": "replace",
+      "rule_id": "claude.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "public_enums": ["low", "medium", "high"],
+      "tests": ["cc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/theme",
+      "operator": "replace",
+      "rule_id": "claude.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "public_strings": true,
+      "tests": ["cc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/verbose",
+      "operator": "replace",
+      "rule_id": "claude.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "tests": ["cc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/spinnerTipsEnabled",
+      "operator": "replace",
+      "rule_id": "claude.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "tests": ["cc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/cleanupPeriodDays",
+      "operator": "replace",
+      "rule_id": "claude.scalar.layer-override",
+      "support": "documented",
+      "evidence": ["S3-MANAGED"],
+      "interpolation": "none",
+      "tests": ["cc_documented_scalars_use_layer_override"]
+    },
+    {
+      "pointer": "/fallbackModel",
+      "operator": "ordered-replace",
+      "rule_id": "claude.list.ordered-whole-replace",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "model_name": true,
+      "tests": ["cc_fallback_model_ordered_whole_replace"]
+    },
+    {
+      "pointer": "/permissions",
+      "operator": "object-merge",
+      "rule_id": "claude.object.recursive-merge",
+      "support": "documented",
+      "evidence": ["S3-MANAGED"],
+      "interpolation": "none",
+      "tests": ["cc_object_nested_merge_key_by_key"]
+    },
+    {
+      "pointer": "/permissions/allow",
+      "operator": "concat-dedupe",
+      "rule_id": "claude.permissions.list-concat",
+      "support": "fixture_verified",
+      "evidence": ["S3", "S3-MANAGED"],
+      "interpolation": "none",
+      "trust_gated": true,
+      "authorization": "none",
+      "tests": [
+        "cc_permissions_allow_lists_concat_and_dedupe",
+        "cc_permissions_list_concat_negative_no_authorization_claim"
+      ]
+    },
+    {
+      "pointer": "/permissions/ask",
+      "operator": "concat-dedupe",
+      "rule_id": "claude.permissions.list-concat",
+      "support": "fixture_verified",
+      "evidence": ["S3", "S3-MANAGED"],
+      "interpolation": "none",
+      "authorization": "none",
+      "tests": ["cc_permissions_allow_lists_concat_and_dedupe"]
+    },
+    {
+      "pointer": "/permissions/deny",
+      "operator": "concat-dedupe",
+      "rule_id": "claude.permissions.list-concat",
+      "support": "fixture_verified",
+      "evidence": ["S3", "S3-MANAGED"],
+      "interpolation": "none",
+      "authorization": "none",
+      "tests": ["cc_permissions_allow_lists_concat_and_dedupe"]
+    },
+    {
+      "pointer": "/permissions/defaultMode",
+      "operator": "replace",
+      "rule_id": "claude.permissions.default-mode-scope-exclusion",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "public_enums": ["default", "acceptEdits", "plan", "auto", "bypassPermissions"],
+      "scope_excluded_values": ["auto", "bypassPermissions"],
+      "scope_excluded_from": ["cc.project_shared", "cc.project_local"],
+      "tests": ["cc_default_mode_scope_exclusion_ignores_project_value"]
+    },
+    {
+      "pointer": "/availableModels",
+      "operator": "constraint",
+      "rule_id": "claude.availableModels.managed-lock",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "model_name": true,
+      "tests": ["cc_available_models_locks_model_choice"]
+    },
+    {
+      "pointer": "/modelPicker",
+      "operator": "ordered-replace",
+      "rule_id": "claude.list.ordered-whole-replace",
+      "support": "documented",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "model_name": true,
+      "tests": ["cc_fallback_model_ordered_whole_replace"]
+    },
+    {
+      "pointer": "/env/*",
+      "operator": "inventory-only",
+      "rule_id": "claude.env.inventory-only-trust-gated",
+      "support": "inventory_only",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "trust_gated": true,
+      "redact_subtree": "environment_value",
+      "tests": ["cc_allow_from_project_conditional_when_trust_unknown"]
+    },
+    {
+      "pointer": "/permissions/additionalDirectories",
+      "operator": "inventory-only",
+      "rule_id": "claude.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/sandbox/**",
+      "operator": "object-merge",
+      "rule_id": "claude.object.recursive-merge",
+      "support": "documented",
+      "evidence": ["S3-MANAGED"],
+      "interpolation": "none",
+      "public_host_list": true,
+      "tests": ["cc_object_nested_merge_key_by_key"]
+    },
+    {
+      "pointer": "/hooks/**",
+      "operator": "inventory-only",
+      "rule_id": "claude.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "tests": ["cc_unknown_key_inventory_only"]
+    },
+    {
+      "pointer": "/mcpServers/**",
+      "operator": "inventory-only",
+      "rule_id": "claude.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "redact_subtree": "mcp_environment_map",
+      "tests": ["cc_unknown_key_inventory_only"]
+    },
+    {
+      "pointer": "/enabledPlugins/**",
+      "operator": "inventory-only",
+      "rule_id": "claude.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "tests": []
+    },
+    {
+      "pointer": "/extraKnownMarketplaces/**",
+      "operator": "inventory-only",
+      "rule_id": "claude.unknown.inventory-only",
+      "support": "inventory_only",
+      "evidence": ["S3"],
+      "interpolation": "none",
+      "tests": []
+    }
+  ],
+  "env_pairs": [
+    {
+      "env": "ANTHROPIC_MODEL",
+      "pointer": "/model",
+      "mode": "overrides_files",
+      "evidence": "S3"
+    },
+    {
+      "env": "ANTHROPIC_DEFAULT_MODEL",
+      "pointer": "/model",
+      "mode": "only_when_no_file_sets_key",
+      "evidence": "S3"
+    }
+  ],
+  "sensitive_field_patterns": [
+    "password",
+    "passwd",
+    "passphrase",
+    "secret",
+    "token",
+    "credential",
+    "credentials",
+    "authorization",
+    "auth",
+    "apikey",
+    "api_key",
+    "api-key",
+    "access_key",
+    "accesskey",
+    "private_key",
+    "privatekey",
+    "client_secret",
+    "cookie",
+    "bearer",
+    "jwt",
+    "session",
+    "key"
+  ],
+  "covered:unobservable_layers": ["cc.managed.mdm", "cc.managed.server", "cc.managed.hkcu"]
+}
