@@ -38,7 +38,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 
 | ID | Item | Truth now | Acceptance criteria | Status |
 |---|---|---|---|---|
-| C1 | Every advertised rule has positive, negative and boundary tests | Rule→test maps exist in both registries; **315** tests pass locally (see `docs/verification-log.md` §3; earlier snapshots said 296) and the three-OS CI matrix is green (run 38099457727) | For each rule ID in `compatibility/*/registry.md`: ≥1 positive, ≥1 negative, ≥1 boundary test; mapped by test ID | PARTIAL |
+| C1 | Every advertised rule has positive, negative and boundary tests | Rule→test maps exist in both registries; **324** tests pass locally (see `docs/verification-log.md` §3; earlier snapshots said 296) and the three-OS CI matrix is green (most recently run 38157888805) | For each rule ID in `compatibility/*/registry.md`: ≥1 positive, ≥1 negative, ≥1 boundary test; mapped by test ID | PARTIAL |
 | C2 | Deterministic output | Passing (`conformance` property test) | Identical context ⇒ byte-identical report; seed recorded on failure | DONE |
 | C3 | Exit-code contract | Passing (`cli::exit_*`, `error::tests`) | 0/1/2/3/4 with priority 2→4→3→1→0 asserted by a matrix test | DONE |
 | C4 | Ten acceptance examples end-to-end | Passing (`tests/acceptance.rs` + others) | All §9 examples exercised through the CLI | DONE |
@@ -197,11 +197,11 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 
 Minimum bar for a first release a respected CLI would stand behind:
 
-1. C1 rule tests complete; C2/C3/C4/C5 green in CI. (C7 fuzz smoke at least present.) — **DONE**: 315 tests green locally; the three-OS matrix is green. C7 now ships three `cargo-fuzz` targets with a bounded CI job that has not yet run in CI, which the release notes must say.
+1. C1 rule tests complete; C2/C3/C4/C5 green in CI. (C7 fuzz smoke at least present.) — **DONE**: 324 tests green locally; the three-OS matrix is green. C7 ships three `cargo-fuzz` targets with a bounded CI job that now runs green in CI.
 2. **P3 share-mode URL-host gap fixed** — DONE (`1fae794`); shown by the
    `share_mode_path_and_host_pseudonymization` block in `demo/demo.sh` and §6.3 of
    `docs/engineering-verification.md`.
-3. X1–X6 CI green on three OSes; X6 secret-leak job blocking. — **DONE as amended**: X1/X5/X6 done; X3 green but CI-level only (no real-client run on macOS/Windows); X2 is the manual prerelease workflow, not tag-triggered and never run; **X4 (`cargo-deny`) is now present** (`deny.toml` + a `dependencies` job) but has not yet run in CI — say so in the release notes.
+3. X1–X6 CI green on three OSes; X6 secret-leak job blocking. — **DONE as amended**: X1/X5/X6 done; X3 green but CI-level only (no real-client run on macOS/Windows); X2 is the manual prerelease workflow, not tag-triggered, and has since completed for `v0.1.0-beta.2` and `v0.1.0-beta.3`; **X4 (`cargo-deny`)** is present (`deny.toml` + a `dependencies` job) and runs green in CI.
 4. M1 MSRV build green (or declaration corrected). — **DONE**: the 1.85.0 job is green in CI.
 5. N1, N2, N3, N5, N6 present; R4 release notes; S1 checksums + S3 verify instructions. — **DONE except S1**: everything is present; S1 completes when the first prerelease actually publishes assets.
 6. D2 real repo URL; D4 real demo; D6 README examples actually run. — **DONE except D4**: a real recording exists in the working tree (`docs/demo/configlens-demo.cast`) but is not committed; the tracked demo script is real and runs.
@@ -216,7 +216,7 @@ Minimum bar for a first release a respected CLI would stand behind:
 Still open, and to be labelled honestly in the release notes: **D4** (a terminal recording exists in
 the working tree but is not committed), **R5** (SBOM present; provenance attestation not done),
 **S1/S2/S3** (no release has been published, so checksums, signatures and verify instructions are
-unexercised), **X4 / the `fuzz` and `sbom` jobs** (defined in CI but never run; `prerelease.yml` has
-never run at all), **F1** (no pinned loader harness), and **Codex** (no verified upstream evidence,
+unexercised), **X4 / the `fuzz` and `sbom` jobs** (now all green in CI; `prerelease.yml` has completed
+twice), **F1** (no pinned loader harness), and **Codex** (no verified upstream evidence,
 so no adapter). Benchmarks (C8) are no longer open: `benches/resolution.rs` runs and its numbers — and
 its quadratic scaling — are recorded in `docs/implementation-status.md`.

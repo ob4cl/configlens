@@ -20,8 +20,9 @@ no boundary justifies a workspace yet.
 **Why:**
 - The spec requires *no silent duplicate-key loss*, byte spans for every definition, and *no regex
   comment stripping* for JSONC. A hand-written scanner gives all three by construction: comment and
-  string handling happen in one pass over bytes (`jsonc::strip_to_json_with_map` produces both the
-  comment-free text and a byte-offset map back to the original source, so spans stay truthful).
+  string handling happen in one pass over bytes (`jsonc::strip_jsonc` rewrites the document in place,
+  preserving length by replacing comments with spaces, so every byte offset and therefore every span
+  stays truthful without a separate offset map).
 - `serde_json` (already a dependency) has no span or duplicate-key evidence, so we would still need
   a second pass — the "write a detection pass if necessary" escape hatch in §6.
 - Avoids pinning an extra parser whose maintenance/licence had to be re-verified.
@@ -87,14 +88,15 @@ withheld and status is `partial` unless a rule proves the missing layer cannot a
 
 ## D9 — Exit-code arbitration is centralised and total
 
-**Decision:** every command returns `Result<Report, CliError>`; `cli::exit::resolve` maps the
-collected findings to the code with the documented priority `2 → 4 → 3 → 1 → 0`.
+**Decision:** every command returns `Result<Report, CliError>`; `cli::exit_code_for_known` (with
+`error::arbitrate`) maps the collected findings to the code with the documented priority
+`2 → 4 → 3 → 1 → 0`.
 **Why:** per-command `exit(1)` calls are how exit-code contracts rot. One function, one test matrix.
 
 ## D10 — No `proptest` / no `insta` / no `criterion` dependency
 
 **Decision:** property tests use a small deterministic LCG-based generator
-(`tests/conformance/properties.rs`), snapshots use literal `assert_eq!` on stable strings, and the
+(`tests/conformance.rs`), snapshots use literal `assert_eq!` on stable strings, and the
 benchmark is a plain `std::time::Instant` harness behind `#[bench]`-free `cargo bench`-shaped `main`.
 **Why:** §6 says to justify every dependency; none of the three earns its weight here, and the
 deterministic generator is *stronger* for our main property (identical context ⇒ byte-identical
@@ -111,11 +113,12 @@ complete TOCTOU immunity across all OSes").
 **Why:** `unsafe` is forbidden crate-wide; the mitigation we do implement is metadata validation
 (`is_file`, not symlink-to-outside-root, size limit *before* a bounded read).
 
-## D12 — JSONC is handled by pre-pass + offset map, not by a second parser
+## D12 — JSONC is handled by a length-preserving pre-pass, not by a second parser
 
-**Decision:** `parse::jsonc::prepare(source)` walks the bytes tracking string state and returns the
-comment-free JSON text plus a monotonic `Vec<usize>` mapping comment-free byte offsets to original
-offsets (comments are replaced by spaces so line/column arithmetic still works).
+**Decision:** `parse::jsonc::strip_jsonc(source)` walks the bytes tracking string state and returns
+the comment-free JSON text *at the same length*: every character of a `//` or `/* */` comment is
+replaced by a space, so line/column arithmetic and byte spans keep pointing at the original source
+without a separate offset map.
 **Why:** one parser, one set of span semantics, and JSONC-specific tests can assert that a `//`
 inside a string is *not* a comment (the classic regex-stripping bug).
 **Cost:** span offsets need mapping; a bug here would misreport columns, so the mapping is tested
@@ -133,9 +136,9 @@ it does not *set* `/model`, it *locks* it, so it must appear as a constraint on 
 
 ## D14 — `--paths share` pseudonymizes deterministically from sorted order
 
-**Decision:** share mode emits `$PROJECT`, `$HOME`, `$XDG_CONFIG`, `$MANAGED`, `$SESSION` aliases,
-host hashed to `host_<n>` … plus `mcp_1`, `field_1` opaque IDs assigned by sorted order of the
-*definition*, never by content.
+**Decision:** share mode emits `$HOME`, `$XDG_CONFIG`, `$PROJECT`, `$MANAGED`, `$EXTERNAL` path
+aliases and `host_<n>` host aliases … plus `field_<n>` and `rule_<n>` opaque IDs assigned in sorted
+order of the *definition*, never by content.
 **Why:** §5 "machine-specific path bytes never become stable IDs", §7 "Source-level public IDs
 identify location roles, not content fingerprints". Sorting first keeps output deterministic, which
 the determinism property test asserts.

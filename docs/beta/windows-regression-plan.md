@@ -80,8 +80,9 @@ Two safe patterns — use either:
   `--quiet` does not hide failures.
 
 Branch on `$LASTEXITCODE`, never on the mere presence of stderr text: `2>$null` hides only the
-informational note, a genuine failure still writes to stderr *and* still sets `$LASTEXITCODE` (and,
-for `--format json`, prints the JSON error envelope on stdout).
+informational note, a genuine failure still writes to stderr *and* still sets `$LASTEXITCODE` (and prints a
+human-readable `configlens: <code>: <message>` line on stderr). Note: a fatal error does **not** emit a
+JSON envelope on stdout — even with `--format json`, stdout stays empty and the reason is on stderr.
 
 ## 2. Supported-client metadata
 
