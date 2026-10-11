@@ -299,13 +299,23 @@ mod tests {
             .collect()
     }
 
+    /// A host-native path built from `parts`, mirroring how the adapters push components.
+    /// Windows joins with `\`, so a `/`-separated literal would never compare equal there.
+    fn host_path(parts: &[&str]) -> String {
+        let mut path = PathBuf::new();
+        for part in parts {
+            path.push(part);
+        }
+        path.display().to_string()
+    }
+
     #[test]
     fn finds_the_global_config_in_the_xdg_config_home() {
         let ctx = ctx("/home/dev/work/p", "/home/dev/.config", "/home/dev");
-        let access =
-            MemoryFileAccess::new().with_file("/home/dev/.config/opencode/opencode.json", "{}");
+        let global = host_path(&["/home/dev/.config", "opencode", "opencode.json"]);
+        let access = MemoryFileAccess::new().with_file(global.clone(), "{}");
         let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
-        assert!(paths(&plan).contains(&"/home/dev/.config/opencode/opencode.json".to_string()));
+        assert!(paths(&plan).contains(&global));
         let candidate = plan
             .candidates
             .iter()
@@ -317,9 +327,10 @@ mod tests {
     #[test]
     fn finds_a_project_config_in_the_cwd() {
         let ctx = ctx("/home/dev/work/p", "/home/dev/.config", "/home/dev");
-        let access = MemoryFileAccess::new().with_file("/home/dev/work/p/opencode.json", "{}");
+        let project = host_path(&["/home/dev/work/p", "opencode.json"]);
+        let access = MemoryFileAccess::new().with_file(project.clone(), "{}");
         let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
-        assert!(paths(&plan).contains(&"/home/dev/work/p/opencode.json".to_string()));
+        assert!(paths(&plan).contains(&project));
     }
 
     #[test]
@@ -367,8 +378,8 @@ mod tests {
     fn both_json_and_jsonc_in_one_directory_are_discovered() {
         let ctx = ctx("/home/dev/work/p", "/home/dev/.config", "/home/dev");
         let access = MemoryFileAccess::new()
-            .with_file("/home/dev/work/p/opencode.json", "{}")
-            .with_file("/home/dev/work/p/opencode.jsonc", "{}");
+            .with_file(host_path(&["/home/dev/work/p", "opencode.json"]), "{}")
+            .with_file(host_path(&["/home/dev/work/p", "opencode.jsonc"]), "{}");
         let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
         let project: Vec<&Candidate> = plan
             .candidates
@@ -439,18 +450,19 @@ mod tests {
     #[test]
     fn managed_files_use_the_platform_directory() {
         let mut ctx = ctx("/home/dev/work/p", "/home/dev/.config", "/home/dev");
-        let access = MemoryFileAccess::new().with_file("/etc/opencode/opencode.json", "{}");
+        let linux_managed = host_path(&["/etc/opencode", "opencode.json"]);
+        let access = MemoryFileAccess::new().with_file(linux_managed.clone(), "{}");
         let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
-        assert!(paths(&plan).contains(&"/etc/opencode/opencode.json".to_string()));
+        assert!(paths(&plan).contains(&linux_managed));
 
         ctx.os = Os::MacOs;
         let mac_dir = PathBuf::from("/Library/Application Support/opencode");
+        let mac_managed = mac_dir.join("opencode.json").display().to_string();
         let access = MemoryFileAccess::new().with_file(mac_dir.join("opencode.json"), "{}");
         let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
-        assert!(paths(&plan)
-            .contains(&"/Library/Application Support/opencode/opencode.json".to_string()));
+        assert!(paths(&plan).contains(&mac_managed));
         assert!(
-            !paths(&plan).contains(&"/etc/opencode/opencode.json".to_string()),
+            !paths(&plan).contains(&linux_managed),
             "the Linux managed directory must not be used on macOS"
         );
     }
