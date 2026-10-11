@@ -2,7 +2,14 @@
 
 The repository stays private. Engineering work is already authorised; this is not a request to approve it again.
 
-## Needed for the real-user pilot
+## Optional: the real-user pilot
+
+**Nothing in the project is blocked on this, and the repository stores no personal data from it.** The
+pilot is a pre-publication validation step, not a prerequisite for development: it answers one
+question — "does a developer who did not write this understand the output?" — which no amount of
+internal testing can answer. You can also skip it and take feedback as public issues after
+publishing; the cost is that your first impression doubles as your bug report. No tester handle,
+consent record or identifiable feedback is ever committed to this repository.
 
 1. Identify 5–10 willing developers using Claude Code or OpenCode. Send their GitHub usernames, not their settings or credentials.
 2. Approve the specific invitations and access method before anyone is contacted or granted repository access. Private repository access exposes its source and history.
