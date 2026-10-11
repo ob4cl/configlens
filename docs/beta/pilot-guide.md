@@ -7,6 +7,9 @@ the point. A trace that solves a real incident is.
 You (the maintainer) run this. This guide does not contact anyone; it prepares the material so
 the only real-world step is your own invitation, after you approve it (`user-actions.md` B.5/B.6).
 
+**Forward `tester-instructions.md` to testers — not this file.** It is the tester-facing copy of the
+task below plus the consent text and the feedback template, and it can be pasted into a message as-is.
+
 ## Scope and rules
 
 - **5–10 testers**, each a real developer who uses **Claude Code or OpenCode** and has hit a
