@@ -5,7 +5,9 @@ issues. Its safety properties are the product, so security reports are taken ser
 
 > **This repository is private (private beta).** That changes how you report, not whether you should:
 > everything below assumes the report stays inside this repository until it is fixed. There is **no
-> public vulnerability intake channel yet**, and there is no bug bounty.
+> public vulnerability intake channel yet**, and there is no bug bounty. GitHub private
+> vulnerability reporting can only be enabled on public repositories, so it will be switched on when
+> the beta is published; until then, reporting means a private issue in this repository.
 
 ## How to report
 
@@ -54,9 +56,10 @@ Out of scope (by design, not a vulnerability):
 - Permission lists being reported as a provenance merge rather than an authorization decision —
   ConfigLens explicitly does not evaluate authorization.
 - Clients or keys that are unsupported; those are labelled, not claimed.
-- The known, documented 0.1 limitation that `--paths share` does not pseudonymize URL **hosts**
-  (`userinfo`, query and fragment are stripped). It is a known gap, not a new finding — but a
-  *different* leak in share mode is in scope.
+- The documented pseudonymization itself: in `--paths share`, URL **hosts** are replaced with opaque
+  ids (`https://host_1/mcp?[redacted]`), user info, query and fragment are stripped, and paths become
+  `$HOME`/`$PROJECT` aliases. That is intended output, not a leak. Any *other* identifying value
+  reaching any channel is in scope.
 
 ## Threat model, briefly
 

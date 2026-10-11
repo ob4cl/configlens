@@ -198,7 +198,9 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 Minimum bar for a first release a respected CLI would stand behind:
 
 1. C1 rule tests complete; C2/C3/C4/C5 green in CI. (C7 fuzz smoke at least present.)
-2. **P3 share-mode URL-host gap fixed** (or the limitation stated in the README in bold).
+2. **P3 share-mode URL-host gap fixed** — DONE (`1fae794`); shown by the
+   `share_mode_path_and_host_pseudonymization` block in `demo/demo.sh` and §6.3 of
+   `docs/engineering-verification.md`.
 3. X1–X6 CI green on three OSes; X6 secret-leak job blocking.
 4. M1 MSRV build green (or declaration corrected).
 5. N1, N2, N3, N5, N6 present; R4 release notes; S1 checksums + S3 verify instructions.
