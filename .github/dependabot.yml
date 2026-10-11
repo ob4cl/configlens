@@ -1,4 +1,4 @@
-# Dependabot configuration (prepared for publication; see docs/launch/publication-checklist.md).
+# Dependabot configuration (prepared for publication).
 #
 # This file defines *version* update pull requests. GitHub *security* updates and Dependabot alerts
 # are separate repository settings and must be enabled in Settings -> Code security; the build-time

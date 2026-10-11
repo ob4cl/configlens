@@ -20,12 +20,11 @@ Two audiences live in this directory. Start with the first list.
 ## Evidence
 
 - [`research/`](research/) — compatibility audits, the fuzz-recovery record, the project-discovery
-  finding, and independent launch audits. These are working documents, not marketing.
+  finding and the Codex adapter contract. These are working documents, not marketing.
 - [`../compatibility/`](../compatibility/) — per-client compatibility registries with source URLs,
   retrieval dates, pinned-commit status and rule→test IDs.
 
-## Launch preparation
+## Release
 
-- [`launch/`](launch/) — the public-launch audit and the publication checklist.
-- [`../.github/workflows/`](../.github/workflows/) — CI and release workflows; `.github/AUTOMATION.md`,
-  which documented them, is now maintained in the private archive.
+- [`../.github/workflows/`](../.github/workflows/) — continuous integration and the beta release
+  workflow.

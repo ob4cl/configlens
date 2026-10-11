@@ -40,8 +40,20 @@ private and no release has been cut from this state.
 
 ### Added
 
-- `docs/README.md` documentation index, `docs/launch/publication-checklist.md` and
-  `.github/dependabot.yml`.
+- `docs/README.md` documentation index and `.github/dependabot.yml`.
+
+### Removed from the public tree (privacy cleanup)
+
+- Internal launch-planning and launch-audit documents were moved out of the public tree. They are
+  planning and review records, not documentation for users of the tool, so they are preserved
+  privately outside the repository rather than deleted. Technical research, compatibility evidence,
+  the fuzz-recovery record and the architecture/specification documents are untouched.
+- Personal and environmental detail was generalised or removed from the documents that remain: a
+  personal name, the exact development-machine model and specification, and references to local
+  tooling locations. Benchmark figures are kept, described by hardware class rather than by device.
+- **This changes the working tree only.** The relocated material and the removed detail remain in this
+  repository's Git history and are not erased by this change. No commit was rewritten, no tag was
+  moved and no release asset was altered.
 
 ## 0.1.0-beta.3 — pre-release, published 2026-10-11
 
