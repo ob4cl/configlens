@@ -87,10 +87,9 @@ satisfied ones `[x]`:
       availability, and that the metadata is exactly what you want shipped.
 - [x] **CI.** Every `ci.yml` job is green — the Linux/macOS/Windows test matrix, `quality`,
       `msrv`, `dependencies` (cargo-deny) and the bounded `fuzz` smoke — most recently on `main` at
-      `51a2ca7`. `prerelease.yml` has now run end to end successfully for `v0.1.0-beta.1` and
-      `v0.1.0-beta.2`. The weekly `fuzz-scheduled.yml` has **not** fired yet (its first run lands on
-      its schedule). Continue to confirm every job is green on each release commit, and keep Actions
-      pinned to verified commits.
+      `5f769fb`. The `Beta prerelease` workflow has completed end to end for `v0.1.0-beta.1`,
+      `v0.1.0-beta.2` and `v0.1.0-beta.3`. The weekly `fuzz-scheduled.yml` has **not** fired yet (its
+      first run lands on its schedule). Continue to confirm every job is green on each release commit.
 - [x] **MSRV actually built.** `cargo +1.85.0 check --locked --all-targets --all-features` exits `0`
       (§8.1 of `verification-log.md`) and the CI `msrv` job runs the same check; local development used
       1.99.0.
@@ -102,6 +101,26 @@ satisfied ones `[x]`:
 - [ ] **Known gaps closed or accepted.** Windows snapshot ACLs. (Share-mode URL-host pseudonymization
       is now implemented and tested.)
 - [ ] **Artifacts.** Tagged source, binaries and checksums; no mandatory curl-to-shell installer.
+
+## GitHub Actions pinning
+
+Every `uses:` in `.github/workflows/` pins a **full 40-hex commit SHA**, with the human-readable
+release in a trailing comment. Floating major tags (`@v4`) are never used, because a tag can be moved
+under you.
+
+When a pin changes — including a Dependabot pull request:
+
+1. Re-resolve the tag to a commit against the upstream repository rather than trusting the proposed
+   value: `git ls-remote https://github.com/<owner>/<repo> refs/tags/<tag>` (annotated tags need
+   `refs/tags/<tag>^{}`).
+2. Confirm the SHA matches the pin you are about to write, and update the trailing version comment.
+3. Treat a **major** version bump as a code change, not a routine dependency update: read the
+   changelog, check the action's `action.yml` inputs the workflow relies on, and let CI run.
+4. Only official, widely used actions are used. Third-party tools are installed by the workflow
+   (for example `cargo install cargo-fuzz --locked --version <v>`) rather than pulled as an action.
+
+The pin inventory and the verification dates live in the private maintainer archive alongside this
+project's release mechanics.
 
 Until all of that is true, keep the honest status wording in the README and changelog.
 
