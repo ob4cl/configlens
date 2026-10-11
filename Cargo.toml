@@ -1,6 +1,6 @@
 [package]
 name = "configlens"
-version = "0.1.0"
+version = "0.1.0-beta.3"
 edition = "2021"
 rust-version = "1.85"
 description = "Explain which AI coding-tool configuration value wins, and why — offline, read-only, redacted."

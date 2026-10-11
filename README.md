@@ -11,8 +11,11 @@ winner — with the file, line and reason for each contribution, including the o
 It never executes your configuration, never runs a client binary, opens no socket and reads no
 credential. Values are redacted unless an adapter explicitly allowlists them.
 
-> **Private beta — version 0.1.0.** This checkout is a working prototype, not a finished product.
-> There is **no published crate or binary**, and nothing here claims upstream conformance.
+> **Private beta — version 0.1.0-beta.3.** This checkout is a working prototype, not a finished
+> product. There is **no published crate or binary**, and nothing here claims upstream conformance.
+> The tool version is unified: `configlens --version`, the report's `tool_version` field, the SBOM
+> root component and the `v0.1.0-beta.3` tag all read `0.1.0-beta.3` (`schema_version` stays the
+> report-schema `1.0` and the adapter `adapter_revision` stays `0.1.0` — they are independent).
 > Benchmarks exist and are documented, with the measured scaling, in
 > [`docs/implementation-status.md`](docs/implementation-status.md). Exactly what is implemented and
 > verified is tracked item by item there.
@@ -112,7 +115,11 @@ table above covers the core commands.
 `--cwd <PATH>` (default `.`), `--client-version <VERSION>` (a *claimed* version — ConfigLens never
 reads a client binary), `--format text|json`, `--strict`, `--no-env`, `--input-context <PATH>`,
 `--color auto|always|never`, `--paths local|share`, `--allow-read-root <PATH>` (repeatable),
-`--project-root <PATH>`. `snapshot` adds `--output`/`--overwrite`; `doctor` adds
+`--project-root <PATH>`. In addition, a global `--quiet` (accepted on every subcommand, as
+`configlens <cmd> --quiet`) suppresses **informational** stderr notes only — the snapshot
+`wrote N bytes` line and the support-report write/`--preview` notes. Errors are always printed to
+stderr, stdout stays machine-readable (JSON), and exit codes are unchanged. `snapshot` adds
+`--output`/`--overwrite`; `doctor` adds
 `--fail-on warning|error`; `support-report` takes `--preview` **or** `--output <PATH>` (neither is a
 usage error); `completions` takes `--shell bash|zsh|fish`.
 
@@ -180,8 +187,15 @@ CLI, Cline, Roo and Hermes (not investigated). Run `configlens clients` for the 
   diagnose; `--paths share` pseudonymizes paths, replaces unknown key names with opaque IDs, and
   strips URL userinfo, query and fragment.
 - **Snapshots.** Written create-new, atomically, with `0600` owner-only permissions on Unix.
-  Windows ACLs are **not** implemented and the report says so.
-- **Known 0.1 gap.** Windows snapshot ACLs are not implemented.
+  On Windows there is no `0600` equivalent: the snapshot is written as a same-directory temporary
+  file and then renamed, so it **inherits the ACL of the destination folder** — ConfigLens cannot
+  tighten it. The report states this (`redaction.snapshot_acl = "not_implemented"`) rather than
+  claiming a protection that does not exist.
+- **Known 0.1 gap / Windows guidance.** Windows snapshot ACL restriction is **not** implemented.
+  A restrictive DACL would need Win32 security APIs through `unsafe` FFI or a new dependency, both
+  ruled out by this crate's `unsafe_code = "forbid"` and its minimal-dependency policy, so it is out
+  of scope for 0.1. Save snapshots in a **private, user-controlled directory** (for example
+  `%USERPROFILE%`, not a shared or world-readable folder) so the inherited ACL is the one you mean.
 - Reports still describe your project structure. Never paste raw credential files into an issue.
 
 ## Requirements

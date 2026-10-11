@@ -35,6 +35,21 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]] || { printf 'Invalid beta tag\n' >&2; exit 1; }
+          # The tag and the package version must agree: the archive names, the git tag,
+          # `configlens --version`, the report `tool_version` and the SBOM root component all
+          # identify the release. The manifest is read straight out of the tag, so nothing is
+          # checked out or executed here, and a mismatch fails before any build starts.
+          tag_version="${TAG#v}"
+          crate_version=$(git show "$TAG:Cargo.toml" | awk '
+            /^\[/ { in_package = ($0 == "[package]") }
+            in_package && /^version[[:space:]]*=/ { gsub(/^[^"]*"/, ""); gsub(/".*$/, ""); print; exit }
+          ')
+          [[ -n "$crate_version" ]] || { printf 'Cannot read the [package] version from %s\n' "$TAG" >&2; exit 1; }
+          if [[ "$crate_version" != "$tag_version" ]]; then
+            printf 'Tag/package version mismatch: %s requires package version %s, found %s\n' \
+              "$TAG" "$tag_version" "$crate_version" >&2
+            exit 1
+          fi
           sha=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
           git merge-base --is-ancestor "$sha" "$GITHUB_SHA"
           printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"

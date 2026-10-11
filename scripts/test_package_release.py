@@ -6,7 +6,10 @@ import tempfile
 import unittest
 import zipfile
 
-from package_release import NOTICES, TARGETS, package
+from package_release import NOTICES, TARGETS, expected_version, package, package_version
+
+# The fixture manifest version; every tag used below must match it (see the mismatch test).
+FIXTURE_VERSION = "0.1.0-beta.1"
 
 
 class PackageTests(unittest.TestCase):
@@ -14,6 +17,12 @@ class PackageTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        (self.root / "Cargo.toml").write_text(
+            '[package]\nname = "configlens"\nversion = "'
+            + FIXTURE_VERSION
+            + '"\nedition = "2021"\n\n[profile.release]\nversion = "not-the-package-version"\n',
+            encoding="utf-8",
+        )
         for name in NOTICES:
             (self.root / name).write_text("Synthetic notice\n", encoding="utf-8")
         for target in TARGETS:
@@ -62,6 +71,32 @@ class PackageTests(unittest.TestCase):
         package(*args)
         with self.assertRaises(FileExistsError):
             package(*args)
+
+    def test_expected_version_strips_the_tag_prefix(self):
+        self.assertEqual(expected_version("v0.1.0-beta.3"), "0.1.0-beta.3")
+        self.assertEqual(expected_version("0.1.0-beta.3"), "0.1.0-beta.3")
+
+    def test_package_version_reads_only_the_package_block(self):
+        # A later section also carries a `version` key; it must not be picked up.
+        self.assertEqual(package_version(self.root), FIXTURE_VERSION)
+
+    def test_rejects_a_tag_that_does_not_match_the_package_version(self):
+        for tag in ("v0.1.0-beta.9", "v0.1.0", "v0.1.0-beta.2"):
+            with self.subTest(tag=tag):
+                with self.assertRaises(ValueError):
+                    package(self.root, self.root / "mismatch", tag, next(iter(TARGETS)))
+        # Nothing may be written when the identity does not add up.
+        self.assertFalse((self.root / "mismatch").exists())
+
+    def test_rejects_a_manifest_without_a_package_version(self):
+        (self.root / "Cargo.toml").write_text('[package]\nname = "configlens"\n', encoding="utf-8")
+        with self.assertRaises(ValueError):
+            package(self.root, self.root / "noversion", "v0.1.0-beta.1", next(iter(TARGETS)))
+        (self.root / "Cargo.toml").unlink()
+        with self.assertRaises((ValueError, OSError)):
+            package(self.root, self.root / "nomanifest", "v0.1.0-beta.1", next(iter(TARGETS)))
+        self.assertFalse((self.root / "noversion").exists())
+        self.assertFalse((self.root / "nomanifest").exists())
 
 
 if __name__ == "__main__":

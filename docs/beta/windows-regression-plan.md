@@ -1,8 +1,9 @@
-# ConfigLens v0.1.0-beta.2 — Windows regression plan (PowerShell)
+# ConfigLens v0.1.0-beta.3 — Windows regression plan (PowerShell)
 
-Copy-paste plan for a Windows machine. Reproduces the beta.1 findings and confirms the
-`OPENCODE_CONFIG_DIR` correction. Written before the beta.2 candidate exists; run it once the
-candidate binary is approved and built.
+Copy-paste plan for a Windows machine. Reproduces the beta.1/beta.2 findings, confirms the
+`OPENCODE_CONFIG_DIR` correction and the ancestor-merge fix, and exercises the beta.3 `--quiet` flag
+and exit-code handling. Written before the beta.3 candidate exists; run it once the candidate binary
+is approved and built.
 
 Paths are expressed with `$env:USERPROFILE` so nothing here is tied to one machine — substitute your
 own folder names if you like, but the two test folders should keep the names used below.
@@ -33,8 +34,8 @@ Custom-directory file `$cfgd\opencode.json`:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-$zip = "$env:USERPROFILE\Downloads\configlens-v0.1.0-beta.2-x86_64-pc-windows-msvc.zip"
-$dst = "$env:USERPROFILE\Desktop\configlens-beta2"
+$zip = "$env:USERPROFILE\Downloads\configlens-v0.1.0-beta.3-x86_64-pc-windows-msvc.zip"
+$dst = "$env:USERPROFILE\Desktop\configlens-beta3"
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
 Expand-Archive -Path $zip -DestinationPath $dst -Force
 $exe = (Get-ChildItem -Path $dst -Recurse -Filter configlens.exe | Select-Object -First 1).FullName
@@ -47,7 +48,40 @@ Get-FileHash -Algorithm SHA256 $zip | Format-List
 & $exe --version
 ```
 
-Expect: `configlens 0.1.0`.
+Expect: `configlens 0.1.0-beta.3`.
+
+## 1b. Exit codes, output capture and `--quiet` (new in beta.3)
+
+PowerShell treats a native command's **stderr** output as error-stream content. With
+`$ErrorActionPreference = 'Stop'` (set in §1), the *informational* note ConfigLens writes on
+stderr — for example `configlens: wrote 1234 bytes ...` — can surface as a `NativeCommandError` and
+abort a script even though ConfigLens succeeded. That note is **informational only**; the process
+**exit code** is the contract (`0`/`1`/`2`/`3`/`4`, see the README's exit-code table). Capture stdout
+and branch on `$LASTEXITCODE`:
+
+```powershell
+# Capture stdout; discard the informational stderr note; fail on a non-zero exit code.
+$out = & $exe scan --client opencode --client-version 1.18.35 2>$null
+if ($LASTEXITCODE -ne 0) { Write-Error "configlens scan failed: exit $LASTEXITCODE" }
+$out
+
+# Machine-readable output: JSON on stdout, and --quiet so no informational note is written at all.
+$json = & $exe doctor --client opencode --client-version 1.18.35 --format json --quiet
+if ($LASTEXITCODE -ne 0) { Write-Error "configlens doctor failed: exit $LASTEXITCODE" }
+$json
+```
+
+Two safe patterns — use either:
+
+- `2>$null` (or `2>&1` to keep the note) **plus** a `$LASTEXITCODE` check: the note is
+  discarded/kept and the exit code is what you branch on.
+- `--quiet`: the informational note is never written, so there is nothing for PowerShell to render as
+  an error. Errors are **always** printed to stderr regardless, and the exit code still changes, so
+  `--quiet` does not hide failures.
+
+Branch on `$LASTEXITCODE`, never on the mere presence of stderr text: `2>$null` hides only the
+informational note, a genuine failure still writes to stderr *and* still sets `$LASTEXITCODE` (and,
+for `--format json`, prints the JSON error envelope on stdout).
 
 ## 2. Supported-client metadata
 

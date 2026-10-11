@@ -11,10 +11,38 @@ account of what is implemented and verified, see
 [`docs/implementation-status.md`](docs/implementation-status.md) and
 [`docs/verification-log.md`](docs/verification-log.md).
 
-## Unreleased
+## 0.1.0-beta.3 — unreleased (requires a new beta build)
 
-Not yet published; these changes are unreleased and require a **new beta build** (behaviour changed
-for one input class, and new checks were added):
+Not yet published. These changes are on the `release/0.1.0-beta.3` branch and require a **new beta
+build**: version identification changed (so the earlier beta artefacts no longer describe this tree)
+and one CLI flag was added.
+
+### Added
+
+- **`--quiet` global flag.** Suppresses **informational** stderr messages only — the snapshot
+  `wrote N bytes` line, and the support-report write and `--preview` notes. Errors are always printed
+  to stderr, stdout stays machine-readable (JSON), and exit codes are unchanged. It is accepted on
+  every subcommand (`configlens <cmd> --quiet`).
+
+### Changed
+
+- **Unified prerelease version identification.** The crate version is now `0.1.0-beta.3`
+  (`Cargo.toml`), and `configlens --version`, the report `tool_version` field, the SBOM root
+  component and the `v0.1.0-beta.3` git tag all agree on it. The prerelease workflow now **rejects a
+  tag whose version does not match the package version**, so a mis-tagged release fails instead of
+  publishing inconsistent metadata. `schema_version` (the report schema) stays `1.0` and the adapter
+  `adapter_revision` stays `0.1.0` — both independent of the crate version.
+- **Windows snapshot-ACL disclosure clarified (documentation only; runtime behaviour unchanged).**
+  Windows has no `0600` equivalent, and the snapshot is written as a same-directory temporary file
+  and then renamed, so it **inherits the ACL of the destination folder**; `redaction.snapshot_acl`
+  remains `not_implemented`. The documents now state the inheritance consequence and recommend saving
+  snapshots in a private, user-controlled directory. A restrictive DACL remains out of scope for 0.1
+  (no `unsafe`, no new dependency).
+
+## 0.1.0-beta.2 — private beta, released 2026-10-11
+
+Published as the private `v0.1.0-beta.2` prerelease (commit `51a2ca7`). Behaviour changed for one
+input class and new checks were added:
 
 ### Added
 

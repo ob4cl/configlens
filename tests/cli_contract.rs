@@ -556,3 +556,193 @@ fn help_lists_every_documented_command() {
         .stdout(predicate::str::contains("diff"))
         .stdout(predicate::str::contains("schema"));
 }
+
+// --- prerelease version identification -------------------------------------------------------
+//
+// The tag, the archive names, `--version`, the report `tool_version` and the SBOM root component
+// must all identify the same release, so a binary of `0.1.0-beta.3` must never introduce itself as
+// `0.1.0`.
+
+#[test]
+fn version_output_is_exactly_the_package_version() {
+    let sandbox = opencode_project();
+    let output = sandbox.command().arg("--version").output().expect("run");
+    assert!(output.status.success(), "--version must exit 0");
+    assert_eq!(
+        String::from_utf8(output.stdout).expect("utf8").trim(),
+        format!("configlens {}", env!("CARGO_PKG_VERSION"))
+    );
+}
+
+#[test]
+fn a_prerelease_suffix_is_reported_and_never_truncated() {
+    let version = env!("CARGO_PKG_VERSION");
+    let Some((base, suffix)) = version.split_once('-') else {
+        // A final release has no suffix to check; nothing to guard here.
+        return;
+    };
+    assert!(!suffix.is_empty(), "unexpected package version {version}");
+    let sandbox = opencode_project();
+    let stdout = String::from_utf8(
+        sandbox
+            .command()
+            .arg("--version")
+            .output()
+            .expect("run")
+            .stdout,
+    )
+    .expect("utf8");
+    assert_eq!(
+        stdout.trim(),
+        format!("configlens {version}"),
+        "the prerelease suffix must be reported verbatim"
+    );
+    assert_ne!(
+        stdout.trim(),
+        format!("configlens {base}"),
+        "a prerelease build must not present itself as the bare base version"
+    );
+}
+
+#[test]
+fn reported_versions_agree_and_schema_and_adapter_revisions_stay_independent() {
+    let sandbox = opencode_project();
+    let output = sandbox
+        .command()
+        .args([
+            "scan",
+            "--client",
+            "opencode",
+            "--client-version",
+            "1.18.35",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run");
+    assert!(output.status.success());
+    let parsed: serde_json::Value =
+        serde_json::from_str(&String::from_utf8(output.stdout).expect("utf8")).expect("json");
+    // Same value as `--version` and the release tag: never a second, drifting copy.
+    assert_eq!(parsed["tool_version"], env!("CARGO_PKG_VERSION"));
+    // Deliberately independent of the package version.
+    assert_eq!(parsed["schema_version"], "1.0");
+    assert_eq!(parsed["adapter_revision"], "0.1.0");
+}
+
+// --- --quiet -----------------------------------------------------------------------------------
+
+#[test]
+fn without_quiet_the_snapshot_note_goes_to_stderr() {
+    let sandbox = opencode_project();
+    let target = sandbox.path("noted.json");
+    let output = sandbox
+        .command()
+        .args([
+            "snapshot",
+            "--client",
+            "opencode",
+            "--client-version",
+            "1.18.35",
+            "--output",
+            target.to_str().expect("path"),
+        ])
+        .output()
+        .expect("run");
+    assert!(output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("wrote"),
+        "the informational note belongs on stderr"
+    );
+    assert!(
+        output.stdout.is_empty(),
+        "snapshot writes nothing to stdout"
+    );
+}
+
+#[test]
+fn quiet_suppresses_only_the_informational_note_and_still_writes_the_snapshot() {
+    let sandbox = opencode_project();
+    let target = sandbox.path("quiet.json");
+    let output = sandbox
+        .command()
+        .args([
+            "snapshot",
+            "--client",
+            "opencode",
+            "--client-version",
+            "1.18.35",
+            "--output",
+            target.to_str().expect("path"),
+            "--quiet",
+        ])
+        .output()
+        .expect("run");
+    assert!(output.status.success(), "the exit code must not change");
+    assert!(
+        output.stderr.is_empty(),
+        "--quiet must silence the note, got: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(output.stdout.is_empty());
+    assert!(target.exists(), "the snapshot is still written");
+}
+
+#[test]
+fn quiet_keeps_the_preview_stdout_machine_readable() {
+    let sandbox = opencode_project();
+    let output = sandbox
+        .command()
+        .args([
+            "support-report",
+            "--client",
+            "opencode",
+            "--client-version",
+            "1.18.35",
+            "--preview",
+            "--quiet",
+        ])
+        .output()
+        .expect("run");
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty(), "no note with --quiet");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&String::from_utf8(output.stdout).expect("utf8"))
+            .expect("--quiet must leave stdout as pure JSON");
+    assert_eq!(parsed["command"], "support-report");
+}
+
+#[test]
+fn quiet_is_a_global_flag_that_never_silences_stdout() {
+    let sandbox = opencode_project();
+    // Accepted on every subcommand, and the product output still goes to stdout.
+    sandbox
+        .command()
+        .args(["clients", "--quiet"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("opencode"));
+}
+
+#[test]
+fn quiet_never_silences_a_usage_error() {
+    let sandbox = opencode_project();
+    // Missing --client is a usage error: still exit 2, still explained on stderr.
+    sandbox
+        .command()
+        .args(["explain", "/model", "--quiet"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("--client"));
+}
+
+#[test]
+fn quiet_never_silences_the_support_report_usage_error() {
+    let sandbox = opencode_project();
+    sandbox
+        .command()
+        .args(["support-report", "--client", "opencode", "--quiet"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("--output"));
+}
