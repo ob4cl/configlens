@@ -60,19 +60,22 @@ cargo build --locked --release
 
 ## A real terminal example
 
-Captured from the isolated demo above (synthetic values only). The long coverage line is elided —
-the tool prints every gap.
+Captured from the isolated demo above (synthetic values only). The long coverage line and the two
+trailing `trust_unknown` diagnostics are elided — the tool prints every gap and every diagnostic.
 
 ```console
 $ configlens explain /model --client claude --client-version 2.1.296
 /model = "local-model" (observed)
-Observed winner: $PROJECT/.claude/settings.local.json:1:12
+Observed winner: $PROJECT/.claude/settings.local.json:1:12  "local-model"  observed_winner
+Losers:
   "project-model"  $PROJECT/.claude/settings.json:2:12  replaced_by_later_layer
-  "local-model"  $PROJECT/.claude/settings.local.json:1:12  observed_winner
 Rule: claude.scalar.layer-override
-Coverage: partial — cc.managed.mdm — platform_policy_store_not_read (expected_unobservable); … (3 more gaps)
+Coverage: partial — cc.managed.hkcu — registry_not_read (expected_unobservable); … (3 more gaps)
 Support: fixture_verified; confidence: evidence_class:fixture_verified
 Conclusion: "local-model" wins among the observed applicable sources; effective value withheld.
+Next inspection:
+  - supply the managed settings file with --input-context to include it
+  - remote/MDM layers are not observable here; re-run where the managed source is readable
 ```
 
 Read it as: the project file set `model` to `"project-model"`, a later layer replaced it with

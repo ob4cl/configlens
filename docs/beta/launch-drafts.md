@@ -4,6 +4,10 @@ Every item below is a draft for the maintainer to review, edit and — only afte
 (`user-actions.md` E.19/E.20) — post themselves. No posting, tagging, DMing, contacting moderators
 or publishing is done by the tooling that produced this file.
 
+Every command transcript below was re-run against a synthetic home before being written here; the
+earlier drafts contained an invented `Rule:` name and example text, which is exactly what a reviewer
+would catch.
+
 ## Rules for all drafts (from spec §10 "Release and distribution")
 
 - Lead with **one reproducible behaviour**, not AI hype.
@@ -41,13 +45,18 @@ factual, limits up front. This is the canonical text other posts link to.
   > It's deliberately boring on safety: no network, no subprocess, no client execution, redacted by
   > default, and `--paths share` to pseudonymize paths before you attach a report to an issue.
   >
-  > Example (synthetic fixture), `explain /model --client claude`:
+  > Example, real output from a synthetic three-file home (reproduce with `./demo/demo.sh`):
   > ```
-  > /model = model-b
-  > Observed winner: $PROJECT/.claude/settings.local.json:2:12
-  >   model-a  $PROJECT/.claude/settings.json:2:12  replaced by local setting
-  > Rule: claude.model.local-over-project
-  > Coverage: partial — runtime arguments and managed sources not supplied
+  > $ configlens explain /model --client claude --client-version 2.1.296 --paths share
+  > /model = "model-b" (observed)
+  > Observed winner: $PROJECT/.claude/settings.local.json:1:11  "model-b"  observed_winner
+  > Losers:
+  >   "model-user"  $HOME/.claude/settings.json:1:11  replaced_by_later_layer
+  >   "model-a"  $PROJECT/.claude/settings.json:1:11  replaced_by_later_layer
+  > Rule: claude.scalar.layer-override
+  > Coverage: partial — cc.managed.hkcu — registry_not_read (expected_unobservable); cc.managed.mdm — ...
+  > Support: fixture_verified; confidence: evidence_class:fixture_verified
+  > Conclusion: "model-b" wins among the observed applicable sources; effective value withheld.
   > ```
   >
   > Honest limits: only Claude Code and OpenCode adapters exist right now; Codex is on the roadmap
@@ -91,8 +100,9 @@ factual, limits up front. This is the canonical text other posts link to.
   > off-the-shelf parsers silently drop duplicate keys, and duplicate-key evidence matters for
   > precedence. Redaction is enforced by types, not code review.
   >
-  > Limitations are listed in the README — only two adapters exist, no runner has reached
-  > `upstream_conformance_verified`, and there's at least one known redaction gap in share mode.
+  > Limitations are listed in the README: two adapters (Claude Code, OpenCode), every rule at most
+  > fixture-verified because neither client exposes a pinnable loader, managed/remote layers reported
+  > as unobservable rather than guessed, no macOS/Windows runtime comparison yet.
   > [link]
 
 ---
@@ -142,3 +152,66 @@ factual, limits up front. This is the canonical text other posts link to.
 - Never invent stars, downloads, users or testimonials.
 - Never claim Codex/Gemini support, conformance, or cross-platform verification that isn't DONE.
 - Never post without (a) approval and (b) the release gate met.
+
+---
+
+## 8. r/ClaudeCode and r/ClaudeAI (the users themselves)
+
+- **Audience:** exactly the people who hit precedence confusion; tone is plain and practical.
+- **Check first:** the current self-promotion rule and whether a "Tools"/"Project" flair is required.
+  Several of these communities restrict self-promotion to a weekly thread or a flair; ask a mod if
+  unsure rather than guessing.
+- **Draft (r/ClaudeCode version):**
+
+  > **Which of your Claude Code settings files actually won? I built a read-only CLI that tells you — and says what it can't see**
+  >
+  > The thing that kept costing me time: a setting looks like it should apply, and it doesn't. So I
+  > wrote ConfigLens. Point it at a project and it prints the trace for one key: which file supplied
+  > the winning value, what overrode it, and what it could not observe.
+  >
+  > ```
+  > $ configlens explain /model --client claude --client-version 2.1.296 --paths share
+  > /model = "model-b" (observed)
+  > Observed winner: $PROJECT/.claude/settings.local.json:1:11  "model-b"  observed_winner
+  > Losers:
+  >   "model-user"  $HOME/.claude/settings.json:1:11  replaced_by_later_layer
+  >   "model-a"  $PROJECT/.claude/settings.json:1:11  replaced_by_later_layer
+  > Rule: claude.scalar.layer-override
+  > Coverage: partial — cc.managed.hkcu — registry_not_read (expected_unobservable); cc.managed.mdm — ...
+  > Support: fixture_verified; confidence: evidence_class:fixture_verified
+  > Conclusion: "model-b" wins among the observed applicable sources; effective value withheld.
+  > ```
+  >
+  > Safety was the design constraint, not a feature: no network, no subprocess, never runs your
+  > config, redacted by default, and a `--paths share` mode that pseudonymizes paths and URL hosts so
+  > you can attach a report to an issue. Rust, MIT/Apache-2.0, builds with `cargo build --locked
+  > --release`.
+  >
+  > Honest limits, up front: Claude Code and OpenCode only (no Codex or Cursor); managed/enterprise,
+  > remote and MDM state is usually unobservable, so it shows an *observed* winner and withholds an
+  > "effective" value instead of guessing; and nothing has been verified against the real clients at
+  > runtime yet — the rules are fixture-verified. [link]
+  >
+  > If the trace is confusing, that's the feedback I want.
+
+## 9. Private phase: what you can post before the repo is public
+
+Nothing public links anywhere until the repo is public and the release notes exist — a link to a
+private repository 404s for everyone and reads as broken. So while the repo is private, the only
+public activity is **answering**: find a thread where someone is confused about why a setting is
+being ignored, answer it genuinely, and mention the tool as a reply (message E in
+`outreach-messages.md`).
+
+If someone asks for the link while the repo is private, do **not** post the private URL. Reply:
+"It's in a private beta right now — send me your GitHub handle and I'll add you." That is also the
+only way to turn a passing reader into a tester.
+
+## 10. Before posting anywhere (checklist)
+
+1. Repo is public, the release-readiness gate is met, and the release notes are live (so every link
+   lands somewhere real).
+2. You have read that community's self-promotion rules and applied the required flair/thread.
+3. The post states its own limitations — a launch post without them reads as hype.
+4. No request for stars, upvotes, follows or shares, and no invented users or testimonials.
+5. One community at a time; see whether people engage before posting to the next.
+6. No claim of runtime verification against Claude Code or OpenCode on any platform.

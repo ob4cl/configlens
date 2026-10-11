@@ -75,14 +75,18 @@ writing). Run `configlens clients` for the current matrix.
 A real `explain` looks like this (synthetic values, from the demo):
 
 ```console
+$ configlens explain /model --client claude --client-version 2.1.296
 /model = "local-model" (observed)
-Observed winner: $PROJECT/.claude/settings.local.json:1:12
+Observed winner: $PROJECT/.claude/settings.local.json:1:12  "local-model"  observed_winner
+Losers:
   "project-model"  $PROJECT/.claude/settings.json:2:12  replaced_by_later_layer
-  "local-model"  $PROJECT/.claude/settings.local.json:1:12  observed_winner
 Rule: claude.scalar.layer-override
-Coverage: partial — cc.managed.mdm — platform_policy_store_not_read (expected_unobservable); … (3 more gaps)
+Coverage: partial — cc.managed.hkcu — registry_not_read (expected_unobservable); … (3 more gaps)
 Support: fixture_verified; confidence: evidence_class:fixture_verified
 Conclusion: "local-model" wins among the observed applicable sources; effective value withheld.
+Next inspection:
+  - supply the managed settings file with --input-context to include it
+  - remote/MDM layers are not observable here; re-run where the managed source is readable
 ```
 
 Line by line:
@@ -90,8 +94,9 @@ Line by line:
 - **`/model = "local-model" (observed)`** — the observed value for the pointer. `(observed)` means it
   was not proven complete; a runtime value would be labelled differently.
 - **`Observed winner:`** — where the winning definition lives, as `path:line:column`.
-- **The two indented lines** are the contribution trace, in precedence order. `replaced_by_later_layer`
-  and `observed_winner` are reason codes; both the winner *and* the losers are shown.
+- **`Losers:` and the lines under it** are the contribution trace, in precedence order.
+  `replaced_by_later_layer` and `observed_winner` are reason codes; both the winner *and* the losers
+  are shown.
 - **`Rule:`** the rule ID that produced the result, so you can look it up in the adapter's registry.
 - **`Coverage: partial`** — the gaps that stop ConfigLens from calling this the runtime value.
 - **`Support:`** the evidence class: `fixture_verified`, `documented` or `inventory_only`.
