@@ -336,11 +336,10 @@ fn share_mode_aliases_embedded_absolute_paths() {
     let home = sandbox.home.to_str().expect("home").to_string();
     let shell = format!("{home}/.local/bin/zsh");
     std::fs::create_dir_all(sandbox.home.join(".config/opencode")).expect("mkdir");
-    std::fs::write(
-        sandbox.home.join(".config/opencode/opencode.json"),
-        format!("{{\"shell\": \"{shell}\"}}"),
-    )
-    .expect("write");
+    // Built with serde_json: on Windows the home path contains backslashes, which a
+    // hand-written JSON string would turn into invalid escapes and the file would not parse.
+    let body = serde_json::json!({ "shell": shell }).to_string();
+    std::fs::write(sandbox.home.join(".config/opencode/opencode.json"), body).expect("write");
 
     let share = sandbox
         .command()
