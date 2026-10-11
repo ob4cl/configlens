@@ -785,9 +785,16 @@ fn oc_custom_dir_stays_below_inline_content() {
 fn oc_custom_dir_is_read_from_windows_shaped_paths() {
     // The Windows beta used a directory value (not a file value). Path handling must work with a
     // host-absolute path, including a trailing separator, on every platform.
+    //
+    // `host_abs` yields `C:/srv/team/ocdir` on Windows and `/srv/team/ocdir` elsewhere, so the read
+    // approval must name that same host-absolute directory: approving the POSIX literal would leave
+    // the source correctly *refused* on Windows (a path outside the approved roots) rather than
+    // read, which is the behaviour the other test covers, not this one.
     let dir = format!("{}/", host_abs("/srv/team/ocdir"));
-    let c = with_env(custom_dir_ctx(), &[("OPENCODE_CONFIG_DIR", dir.as_str())]);
-    let config = format!("{}/opencode.json", dir.trim_end_matches('/'));
+    let base = dir.trim_end_matches('/');
+    let config = format!("{base}/opencode.json");
+    let mut c = with_env(custom_dir_ctx(), &[("OPENCODE_CONFIG_DIR", dir.as_str())]);
+    c.approved_roots = vec![std::path::PathBuf::from(base)];
     let output = run(
         Client::OpenCode,
         &c,

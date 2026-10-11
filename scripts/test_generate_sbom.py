@@ -128,9 +128,13 @@ class SbomTests(unittest.TestCase):
         )
         self.assertIn("pkg:cargo/serde@1.0.229", written["dependencies"][1]["dependsOn"])
         # The tool was invoked exactly as the release workflow documents, with a pinned epoch.
+        # `generate()` resolves the crate root before building the command line
+        # (`Path(root).resolve()`), which matters where the temporary directory is reached through a
+        # symlink (macOS `/var` -> `/private/var`), so the expectation normalises the same way.
         generate_call = runner.generation_calls()
         self.assertEqual(
-            generate_call[0]["arguments"], tool_arguments(self.root, "x86_64-unknown-linux-gnu")
+            generate_call[0]["arguments"],
+            tool_arguments(self.root.resolve(), "x86_64-unknown-linux-gnu"),
         )
         self.assertEqual(generate_call[0]["environment"]["SOURCE_DATE_EPOCH"], "1")
         # The tool's own output file is not left behind in the crate root.
