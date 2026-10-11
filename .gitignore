@@ -6,3 +6,7 @@
 .vscode/
 __pycache__/
 *.pyc
+
+# Tester records are personal data and must never be committed (see docs/beta/pilot-guide.md)
+pilot-log.md
+**/pilot-log.md

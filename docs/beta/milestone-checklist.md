@@ -174,7 +174,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 | ID | Item | Truth now | Acceptance criteria | Status |
 |---|---|---|---|---|
 | E1 | Pilot guide, task script, consent + feedback templates | In `pilot-guide.md` | Ready to use; approved by maintainer | DONE |
-| E2 | 5–10 real developers run the task script | Not started (maintainer invites) | ≥5 complete the script; ≥3 diagnose a real incident with a trace rather than maintainer help | DECISION |
+| E2 | Real developers run the task script (optional — maintainer's call) | Not started, and **not required** for development | 2–3 complete the script and diagnose a real incident with a trace rather than maintainer help | DECISION |
 | E3 | Consent recorded | Not started | Every tester's consent captured before sharing anything | TODO |
 | E4 | Pilot findings triaged | Not started | Every serious correctness/privacy finding triaged via `issue-triage.md`; serious ones closed before public launch | TODO |
 
@@ -205,7 +205,12 @@ Minimum bar for a first release a respected CLI would stand behind:
 4. M1 MSRV build green (or declaration corrected).
 5. N1, N2, N3, N5, N6 present; R4 release notes; S1 checksums + S3 verify instructions.
 6. D2 real repo URL; D4 real demo; D6 README examples actually run.
-7. E2 ≥5 testers completed; E4 serious findings closed.
+7. E2 (optional) 2–3 testers completed, **or** an explicit decision to publish without a pilot and
+   take feedback as issues; E4 serious findings closed either way.
+
+   The pilot is a **pre-publication** check, not a prerequisite for building. Legal/ethical note: no
+   tester's handle, consent record or identifiable feedback is ever stored in this repository — the
+   log lives outside it (`pilot-guide.md`), and anonymous aggregates only.
 8. No launch material claims a capability that is not DONE above.
 
 Items explicitly allowed to remain TODO at 0.1 if labelled honestly: benchmarks (C8),

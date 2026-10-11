@@ -39,6 +39,12 @@ task below plus the consent text and the feedback template, and it can be pasted
 Record, per tester: handle, date, client+version, consent given (yes/no), and what they agreed
 to share. Do **not** record their raw configuration.
 
+**Keep that log outside this repository** (a private note, or a path listed in `.gitignore`). The
+repository is intended to become public, so anything in it becomes public: a tester's handle plus
+"consented on <date>" is personal data that has no reason to be published. GitHub already maintains
+the access list (who has repository access, and when) — do not duplicate it here. Only anonymised
+aggregates belong in the repository, e.g. "3 testers, 2 real findings".
+
 ## Task script (give verbatim; ~20–30 minutes)
 
 Each step already matches shipped behaviour; nothing here requires a feature that is not

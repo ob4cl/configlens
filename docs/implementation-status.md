@@ -13,6 +13,12 @@ Status vocabulary (spec §3): `inventory_only` < `documented` < `fixture_verifie
 
 Legend: `[x]` done and verified · `[~]` partial or bounded · `[ ]` not present / not implemented.
 
+**Refresh (2026-10-11).** This file was written from a local, uncommitted worktree. The work has since
+been committed and pushed to the private repository, so several rows below were stale in the
+*pessimistic* direction (they said a file was absent when it had been added). Corrected rows carry the
+evidence that changed them — release, licensing and CI in particular. Everything still marked `[~]` or
+`[ ]` is still true: no runtime conformance, no benchmarks, Windows snapshot ACLs unimplemented.
+
 Toolchain used for the verification run: `cargo`/`rustc` 1.99.0 (see `docs/verification-log.md`).
 Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib unit + 93 integration).
 
@@ -31,17 +37,17 @@ Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib u
 | Library + single binary crate | [x] | `src/lib.rs` + `src/main.rs` |
 | Bundled report schema | [x] | `src/schema/report-1.0.json`; `schema --kind report`; validated by `model::report::tests::the_bundled_schema_is_valid_json_and_matches_the_schema_version` |
 | `rust-toolchain.toml` | [x] | `channel = "stable"` + `rustfmt`/`clippy`; MSRV declared in `Cargo.toml` |
-| `Cargo.lock` | [~] | present and used (`--locked`); the worktree has **no commits**, so nothing is "committed" |
+| `Cargo.lock` | [x] | present, used with `--locked` locally and in CI, and committed |
 | Integration tests | [~] | six flat targets (`tests/acceptance.rs`, `cli_contract.rs`, `conformance.rs`, `rules_claude.rs`, `rules_opencode.rs`, `security_leaks.rs`) + `tests/common/mod.rs`; **not** the spec's `tests/{cli,security,discovery,conformance}/` layout |
 | `README.md` | [x] | present (new, minimal) |
 | `demo/demo.sh` (runnable isolated demo) | [x] | present (new); runs in a throwaway sandbox, exits 0 |
 | `fixtures/{claude,opencode}/` | [ ] | directories exist but are **empty**; all fixtures are inline in the test files |
 | `examples/` | [ ] | directory exists but is **empty** (the runnable demo lives in `demo/`) |
 | `benches/resolution.rs` | [ ] | `benches/` exists but is **empty**; no benchmark harness and no numbers |
-| `.github/workflows/{ci,release}.yml` | [ ] | `.github/workflows/` exists but is **empty**; no CI is configured or was ever executed |
+| `.github/workflows/ci.yml`, `prerelease.yml` | [x] | present and executed: `ci.yml` runs a Linux/macOS/Windows test matrix, a format+clippy job and an MSRV 1.85 job; all five jobs green ([run](https://github.com/ob4cl/configlens/actions/runs/38099457727)). `prerelease.yml` is a manual workflow producing per-platform archives with checksums; it has **not** been run |
 | `docs/{semantics,compatibility,report-schema,security}.md` | [ ] | absent |
-| `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md` | [ ] | absent |
-| `LICENSE-MIT`, `LICENSE-APACHE` | [ ] | absent (only the SPDX expression `MIT OR Apache-2.0` in `Cargo.toml`) |
+| `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, issue/PR templates | [x] | present |
+| `LICENSE-MIT`, `LICENSE-APACHE` | [x] | both texts present, matching the `MIT OR Apache-2.0` SPDX expression in `Cargo.toml` |
 
 ## 1. Product decisions (§1)
 
@@ -165,11 +171,11 @@ Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib u
 | Security (seeded secrets in fields, keys, paths, URLs, args, malformed JSON, env, escapes) | [x] | `security_leaks` (6 tests) |
 | CLI (exit codes, strict, JSON, NO_COLOR, non-TTY, unknown pointer, incompatible snapshots) | [x] | `cli_contract` (21 tests) |
 | Conformance (pinned upstream loader) | [~] **not run** | no safe loader harness built; rules stay `documented`/`fixture_verified` |
-| Portability (Linux/macOS/Windows runners) | [~] **Linux only verified** | WSL2 Linux executed; macOS/Windows paths are unit-tested logic, not OS-verified |
+| Portability (Linux/macOS/Windows runners) | [~] **CI-verified, not client-verified** | three-OS CI job green ([run](https://github.com/ob4cl/configlens/actions/runs/38099457727)); this proves the test suite runs on those platforms, **not** that the real Claude Code/OpenCode clients behave as modelled there |
 | Property tests (determinism, idempotent redaction, irrelevant-definition independence, no false complete) | [x] | `tests/conformance.rs` (deterministic LCG, no `proptest`) |
 | Fuzz targets | [~] | bounded deterministic byte-mutation smoke in `tests/conformance.rs`; no long `cargo-fuzz` campaign |
 | Benchmarks | [ ] | **none** — no harness, no numbers |
-| CI | [ ] | **none** — no workflow files exist; every check above was run locally only |
+| CI | [x] | `ci.yml` (matrix + format/clippy + MSRV), run 38099457727 and later runs green; release workflow exists but has never been run |
 
 ## 9. Acceptance examples (§9)
 
