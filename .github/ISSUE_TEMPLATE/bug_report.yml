@@ -3,7 +3,7 @@ description: Report reproducible private-beta behavior with synthetic inputs.
 body:
   - type: markdown
     attributes:
-      value: "Do not attach real configuration, tokens, credentials, private paths, or unreviewed logs. Use a minimal synthetic fixture. Redaction is not a guarantee. For a security concern, follow SECURITY.md instead."
+      value: "Do not attach real configuration, tokens, credentials, private paths, or unreviewed logs. Use a minimal synthetic fixture, and produce any report you attach with `--paths share` so paths, URL hosts and unknown key names are pseudonymized. Redaction is not a guarantee — read the file before you attach it. For a security concern, follow SECURITY.md instead."
   - type: input
     id: version
     attributes:
@@ -35,4 +35,6 @@ body:
       label: Privacy review
       options:
         - label: I reviewed all text and attachments and removed secrets and identifying configuration.
+          required: true
+        - label: Any report I attached was produced with `--paths share`, and I read it before attaching it.
           required: true

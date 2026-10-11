@@ -13,7 +13,11 @@ Status vocabulary (spec §3): `inventory_only` < `documented` < `fixture_verifie
 
 Legend: `[x]` done and verified · `[~]` partial or bounded · `[ ]` not present / not implemented.
 
-**Refresh (2026-10-11).** This file was written from a local, uncommitted worktree. The work has since
+**Refresh (2026-10-11).** The OpenCode adapter's supported versions were also re-checked: the stable
+line is now `opencode-ai` 1.19.0, whose config page still documents the identical v1 order, so 1.19.0
+is listed as *documented* while 1.18.35 remains the *tested* pin. The `@opencode/cli` 2.x beta line
+documents a different merge model and stays out of scope.
+This file was written from a local, uncommitted worktree. The work has since
 been committed and pushed to the private repository, so several rows below were stale in the
 *pessimistic* direction (they said a file was absent when it had been added). Corrected rows carry the
 evidence that changed them — release, licensing and CI in particular. Everything still marked `[~]` or
@@ -41,9 +45,9 @@ Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib u
 | Integration tests | [~] | six flat targets (`tests/acceptance.rs`, `cli_contract.rs`, `conformance.rs`, `rules_claude.rs`, `rules_opencode.rs`, `security_leaks.rs`) + `tests/common/mod.rs`; **not** the spec's `tests/{cli,security,discovery,conformance}/` layout |
 | `README.md` | [x] | present (new, minimal) |
 | `demo/demo.sh` (runnable isolated demo) | [x] | present (new); runs in a throwaway sandbox, exits 0 |
-| `fixtures/{claude,opencode}/` | [ ] | directories exist but are **empty**; all fixtures are inline in the test files |
-| `examples/` | [ ] | directory exists but is **empty** (the runnable demo lives in `demo/`) |
-| `benches/resolution.rs` | [ ] | `benches/` exists but is **empty**; no benchmark harness and no numbers |
+| `fixtures/{claude,opencode}/` | [ ] | **not present in the repository** (git cannot track an empty directory, and there are no fixture files to put there); all fixtures are inline in the test files |
+| `examples/` | [ ] | **not present**; the runnable demo lives in `demo/demo.sh` |
+| `benches/resolution.rs` | [x] | present (`harness = false`, no benchmark dependency); run `cargo bench`, numbers below |
 | `.github/workflows/ci.yml`, `prerelease.yml` | [x] | present and executed: `ci.yml` runs a Linux/macOS/Windows test matrix, a format+clippy job and an MSRV 1.85 job; all five jobs green ([run](https://github.com/ob4cl/configlens/actions/runs/38099457727)). `prerelease.yml` is a manual workflow producing per-platform archives with checksums; it has **not** been run |
 | `docs/{semantics,compatibility,report-schema,security}.md` | [ ] | absent |
 | `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, issue/PR templates | [x] | present |
@@ -174,7 +178,7 @@ Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib u
 | Portability (Linux/macOS/Windows runners) | [~] **CI-verified, not client-verified** | three-OS CI job green ([run](https://github.com/ob4cl/configlens/actions/runs/38099457727)); this proves the test suite runs on those platforms, **not** that the real Claude Code/OpenCode clients behave as modelled there |
 | Property tests (determinism, idempotent redaction, irrelevant-definition independence, no false complete) | [x] | `tests/conformance.rs` (deterministic LCG, no `proptest`) |
 | Fuzz targets | [~] | bounded deterministic byte-mutation smoke in `tests/conformance.rs`; no long `cargo-fuzz` campaign |
-| Benchmarks | [ ] | **none** — no harness, no numbers |
+| Benchmarks | [x] | `benches/resolution.rs` (`cargo bench`). Recorded 2026-10-11 on this WSL2 box, release profile, one full engine pass per iteration (median of 21 runs, 9 above 1 000 keys): 0 keys / 1 005 B → **2.40 ms**; 100 keys / 3 395 B → **5.48 ms**; 1 000 keys / 25 895 B → **68.1 ms**; 5 000 keys / 129 895 B → **1 182 ms**. Indicative, not statistical: a regression is visible, an absolute number is not a promise |
 | CI | [x] | `ci.yml` (matrix + format/clippy + MSRV), run 38099457727 and later runs green; release workflow exists but has never been run |
 
 ## 9. Acceptance examples (§9)

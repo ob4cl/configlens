@@ -302,6 +302,10 @@ pub struct RegistryFile {
     /// How upstream combines multiple managed sources. Upstream default is `first-wins` (take the
     /// highest-ranked source that delivers any policy key and ignore the rest); `merge` is opt-in
     /// from Claude Code v2.1.242. ConfigLens models single-source managed resolution only.
+    ///
+    /// **Documentation only.** Nothing in the resolution path reads this value: at most one managed
+    /// source is observable offline, so no cross-source merge can occur and this declaration cannot
+    /// change a result. A unit test asserts the declaration; do not describe it as enforced.
     #[serde(default)]
     pub managed_sources_behavior: Option<String>,
     pub conformance_status: String,
@@ -708,7 +712,7 @@ mod tests {
         // O1/O2/O3: the tested version and the pinned SHA must belong to the same product line.
         let oc = opencode();
         assert_eq!(oc.tested_client_versions(), ["1.18.35"]);
-        assert_eq!(oc.documented_client_versions(), ["1.18.35"]);
+        assert_eq!(oc.documented_client_versions(), ["1.18.35", "1.19.0"]);
         assert_eq!(
             oc.pinned_commit(),
             Some("53d1eabb61e21162157817bf677da0a4ad3332e3")

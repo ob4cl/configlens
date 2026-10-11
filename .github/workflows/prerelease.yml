@@ -129,9 +129,10 @@ jobs:
           [[ ${#archives[@]} == 3 && ${#sums[@]} == 3 ]]
           for checksum in "${sums[@]}"; do sha256sum --check "$checksum"; done
           cat -- "${sums[@]}" > SHA256SUMS
+          notes=$(printf 'Private beta; not a public launch. Unsigned native binaries. Synthetic tests are not proof of upstream-client conformance.\n\nVerify before use:\n- macOS/Linux: sha256sum -c SHA256SUMS\n- Windows: certutil -hashfile <file> SHA256 (compare with SHA256SUMS)\n\nNo automatic update or installation; nothing here contacts the network.')
           gh release create "$TAG" "${archives[@]}" SHA256SUMS \
             --verify-tag --prerelease --latest=false --title "ConfigLens $TAG (private beta)" \
-            --notes "Private beta; not a public launch. Unsigned native binaries. Synthetic tests are not proof of upstream-client conformance. Verify SHA256SUMS before use. No automatic update or installation."
+            --notes "$notes"
           gh release view "$TAG" --json tagName,isPrerelease,isDraft,assets > release.json
           jq --exit-status --arg tag "$TAG" \
             '.tagName == $tag and .isPrerelease == true and .isDraft == false and (.assets | length) == 4' release.json
