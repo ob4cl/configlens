@@ -7,8 +7,10 @@ command that was not run. This file is owned by the coder agent; design docs
 other agents and were **not** modified.
 
 Base commit for this work: `b2684c7` ("Initial ConfigLens CLI prototype"), previously 270 tests
-green. **No git commit or push was made.** No server, real configuration, credential, profile change
-or delegation was used. The shipped tool still makes no network request and spawns no process (this
+green. At the time of writing no commit or push had been made; the integration agent afterwards
+committed this work as `1fae794` and pushed it to the private repository `ob4cl/configlens`, which
+is what made the GitHub Actions evidence in §8 possible. No server, real configuration, credential,
+profile change or delegation was used. The shipped tool still makes no network request and spawns no process (this
 is enforced by `tests/security_leaks.rs::the_source_tree_never_spawns_processes_or_opens_sockets`).
 
 ## 1. Scope of the change (files owned and touched)
@@ -311,3 +313,47 @@ cd /home/user/configlens
 python3 /home/user/.hermes/cache/scratch/configlens_acceptance.py target/debug/configlens
 bash docs/research/run-fixtures.sh
 ```
+
+## 8. Cross-platform CI (first real GitHub Actions runs, 2026-10-11)
+
+Written by the integration agent: §1–§7 are the coder workstream's local evidence, this section is
+what GitHub itself reported once the branch was pushed privately.
+
+Latest run — **all five jobs green**: https://github.com/ob4cl/configlens/actions/runs/38099457727
+(commit `9315a6b`)
+
+| Job | Result | Time |
+|---|---|---|
+| Test (ubuntu-24.04) | success | 42s |
+| Test (macos-15) | success | 22s |
+| Test (windows-2022) | success | 1m38s |
+| Format and Clippy | success | 41s |
+| MSRV (1.85.0) | success | 26s |
+
+`MSRV (1.85.0)` runs `cargo +1.85.0 check --locked --all-targets --all-features`, so the declared
+MSRV is now **verified**, not merely declared. Every matrix job runs
+`cargo +stable test --locked --all-features --no-fail-fast`.
+
+### 8.1 Windows-only test defects the first runs exposed
+
+Three earlier runs failed (38098843620, 38099026275, 38099235178). Every failure was a **test
+assumption about POSIX paths**, never a production defect: Linux and macOS were green throughout,
+and no assertion about redaction, resolution or trust gating changed.
+
+| Symptom | Cause | Fix (commit) |
+|---|---|---|
+| 6 lib tests: `paths(&plan).contains("/home/dev/.claude/settings.json")` | Adapters join with `std::path`, which separates with `\` on Windows, so `display()` never equals a `/`-separated literal | `host_path()` in each test module mirrors the adapter's push chain (`9e3d5da`) |
+| `oc_file_interpolation_requires_allow_read_root`: got `file_reference_not_absolute`, expected `file_reference_blocked` | `Path::is_absolute()` is platform specific: `/etc/secret-model` is rooted but not absolute on Windows, so the reference was rejected one step earlier — still rejected, different code | `host_abs()` in `tests/common` prefixes a drive letter on Windows only (`38df418`) |
+| `share_mode_aliases_embedded_absolute_paths`: config reported `malformed` at line 1 column 11 | The fixture wrote `{"shell": "{home}/.local/bin/zsh"}` with `format!`; a Windows temp home contains backslashes, which are invalid JSON escapes | Fixture now built with `serde_json` (`9315a6b`) |
+
+### 8.2 What this does and does not prove
+
+Proven: the same test suite passes on Linux, macOS and Windows on Rust stable, the format/clippy
+gate is clean, and the 1.85 MSRV check passes.
+
+Not proven, and not claimed: any **runtime** conformance against real Claude Code or OpenCode
+installations on macOS or Windows — `conformance_status` stays `fixture_verified_max`. CI exercises
+the engine and its own test doubles; it does not observe those platforms' real managed policy stores
+(`cc.managed.mdm`, `cc.managed.hkcu`, `oc.managed_macos_prefs` remain declared-unobservable gaps).
+The deprecation notice on `actions/checkout` (Node.js 20 → 24) is cosmetic; the pinned action still
+runs.
