@@ -1,0 +1,214 @@
+name: Artifact action validation
+
+# Non-publishing round-trip test for the GitHub artifact actions used by the release workflow.
+#
+# Why this exists: `actions/upload-artifact` and `actions/download-artifact` run ONLY inside
+# prerelease.yml, which cannot be exercised without cutting a release. That makes a major-version
+# bump untestable until the next real release - on the one path that must not break unattended.
+# This workflow proves the exact proposed versions work, and mirrors prerelease.yml's usage
+# parameter for parameter, without touching releases, tags or published assets.
+#
+# It uploads a deterministic fixture (never anything real) and downloads it back, then asserts:
+#   * the file set survives the round trip (3 archives + 3 checksum sidecars + 1 SBOM = 7 files)
+#   * every byte survives, by comparing content against the fixture and verifying each sidecar
+#     with `sha256sum --check`
+#   * `pattern: release-*` + `merge-multiple: true` still merges multiple artifacts into one dir
+#     (the call the publish job depends on, and the one v5+ changed behaviour for)
+#   * `name: <artifact>` + `merge-multiple: true` merges a single artifact flat, as publish expects
+#   * an empty glob still fails closed under the `error` policy
+#   * the jobs run with `permissions: contents: read` only - no write scope is required
+#
+# Scope: this validates the artifact mechanics, not the Rust build. It publishes nothing.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/artifact-action-validation.yml'
+      - '.github/workflows/prerelease.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Header line of the deterministic fixture. Identical in every job.
+  FIXTURE_HEADER: 'configlens artifact round-trip fixture'
+
+jobs:
+  upload:
+    name: Upload (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-24.04
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
+          - target: aarch64-apple-darwin
+            os: macos-15
+    steps:
+      - name: Build the deterministic fixture
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          {
+            printf '%s\n' "$FIXTURE_HEADER"
+            printf 'target: %s\n' "$TARGET"
+            printf 'run: %s\n' "$GITHUB_RUN_ID"
+          } > "dist/fixture-$TARGET.tar.gz"
+          for i in $(seq 1 128); do printf '%064d\n' "$i"; done >> "dist/fixture-$TARGET.tar.gz"
+          ( cd dist && sha256sum "fixture-$TARGET.tar.gz" > "fixture-$TARGET.tar.gz.sha256" )
+          echo "produced:"
+          ls -l dist
+          ( cd dist && sha256sum -c --strict "fixture-$TARGET.tar.gz.sha256" )
+
+      # Parameter-for-parameter copy of the release build job's upload.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  sbom:
+    name: Upload SBOM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Build a deterministic SBOM fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          {
+            printf '{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,'
+            printf '"metadata":{"component":{"name":"artifact-action-validation"}},'
+            printf '"components":[{"name":"%s","version":"0.0.0"}]}\n' "$FIXTURE_HEADER"
+          } > dist/fixture.cdx.json
+          python3 -c "import json,pathlib; json.loads(pathlib.Path('dist/fixture.cdx.json').read_text())"
+          echo "valid JSON SBOM fixture produced"
+
+      # Parameter-for-parameter copy of the release sbom job's upload (no compression-level, as upstream).
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: dist/*.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+
+  empty-glob-fails-closed:
+    name: Empty glob fails closed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Upload a glob that matches nothing, expecting the error policy to fire
+        id: empty
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: should-not-exist
+          path: dist/definitely-absent-*
+          if-no-files-found: error
+          retention-days: 1
+      - name: Assert the empty glob failed closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "outcome=${{ steps.empty.outcome }}"
+          if [[ "${{ steps.empty.outcome }}" != "failure" ]]; then
+            echo "::error::upload-artifact with if-no-files-found error did not fail on an empty glob - the release workflow relies on this to fail closed"
+            exit 1
+          fi
+          echo "PASS: empty glob failed closed as required"
+
+  download:
+    name: Download and verify
+    needs: [upload, sbom]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # Parameter-for-parameter copy of both publish-job downloads.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sbom
+          path: dist
+          merge-multiple: true
+
+      - name: Verify the round trip
+        shell: bash
+        env:
+          # Every target the upload matrix produced.
+          TARGETS: 'x86_64-unknown-linux-gnu x86_64-pc-windows-msvc aarch64-apple-darwin'
+        run: |
+          set -euo pipefail
+          echo "=== downloaded tree ==="
+          ls -lR dist
+
+          echo
+          echo "=== file set, the publish job's postcondition shape ==="
+          shopt -s nullglob
+          archives=( dist/*.tar.gz )
+          sums=( dist/*.sha256 )
+          boms=( dist/*.cdx.json )
+          echo "archives=${#archives[@]} sums=${#sums[@]} boms=${#boms[@]}"
+          [[ ${#archives[@]} == 3 && ${#sums[@]} == 3 && ${#boms[@]} == 1 ]] || {
+            echo "::error::unexpected file set after the round trip - merge-multiple or pattern behaviour changed"
+            exit 1
+          }
+          [[ "$(find dist -type f | wc -l)" == 7 ]] || {
+            echo "::error::expected exactly 7 files in dist, found $(find dist -type f | wc -l)"
+            exit 1
+          }
+
+          echo
+          echo "=== SHA-256 integrity, exactly as the publish job does it ==="
+          ( cd dist && sha256sum --check --strict ./*.sha256 )
+
+          echo
+          echo "=== byte-for-byte content check against the fixture ==="
+          for target in $TARGETS; do
+            f="dist/fixture-$target.tar.gz"
+            expected="$(mktemp)"
+            {
+              printf '%s\n' "$FIXTURE_HEADER"
+              printf 'target: %s\n' "$target"
+              printf 'run: %s\n' "$GITHUB_RUN_ID"
+            } > "$expected"
+            for i in $(seq 1 128); do printf '%064d\n' "$i"; done >> "$expected"
+            if cmp -s "$expected" "$f"; then
+              echo "  OK   $f matches the fixture byte for byte ($(wc -c < "$f") bytes)"
+            else
+              echo "::error::$f differs from the fixture it was uploaded as"
+              diff <(head -5 "$expected") <(head -5 "$f") || true
+              exit 1
+            fi
+            rm -f "$expected"
+          done
+
+          echo
+          echo "=== union manifest of the round-tripped set ==="
+          ( cd dist && sha256sum ./* | sort -k2 )
+
+          echo
+          echo "PASS: artifact round trip complete with the proposed pins"
