@@ -39,13 +39,24 @@ existing `vMAJOR.MINOR.PATCH-beta.N` tag. It resolves the tag to a commit, requi
 that commit to be an ancestor of the dispatch commit, then runs the complete CI
 workflow against that exact SHA. All checks must pass before builds start.
 
+The preflight also requires the tag's version to equal the `[package] version` in
+`Cargo.toml` at that tag (read straight out of the tag with `git show`, so nothing
+is checked out or executed and a mismatch fails before any build starts). That is
+what keeps the git tag, the archive names, `configlens --version`, the report
+`tool_version` and the SBOM root component pointing at the same release. The check
+applies from `v0.1.0-beta.3` onward: the earlier `v0.1.0-beta.1`/`v0.1.0-beta.2` tags
+carry package version `0.1.0` and would now be rejected, which is intended — they are
+already published and must not be re-cut.
+
 Maintainer procedure (not performed by this implementation):
 
 1. Integrate and review code, workflows, README, and both license files. Push and
    independently inspect all CI jobs. Protect main and beta tags from unauthorized
    updates; a tag must include these scripts and current license notices.
 2. Create/push a reviewed beta tag using the intended package base version. This
-   workflow does not change Cargo version or enforce tag/package version equality.
+   workflow does not change the Cargo version, but it does reject a tag whose version
+   does not equal the package version at that tag, so bump `Cargo.toml` `version` (and
+   `Cargo.lock`) in the commit that gets tagged.
 3. In Actions, choose **Private beta prerelease**, **Run workflow**, branch `main`,
    and enter the exact existing tag. No token secret configuration is required.
 4. Inspect the private prerelease and independently download/verify its assets.

@@ -15,12 +15,47 @@ TARGETS = {
 NOTICES = ("README.md", "LICENSE-MIT", "LICENSE-APACHE")
 
 
+def expected_version(tag):
+    """The package version a release tag must carry: `v0.1.0-beta.3` -> `0.1.0-beta.3`."""
+    return tag[1:] if tag.startswith("v") else tag
+
+
+def package_version(root):
+    """Read the `[package] version` from the manifest without a TOML dependency.
+
+    Only the `[package]` block is read, so a `version` key in any later section cannot be
+    mistaken for the crate version.
+    """
+    manifest = Path(root) / "Cargo.toml"
+    match = re.search(
+        r'^\[package\]\s*$(?P<body>.*?)(?=^\[|\Z)',
+        manifest.read_text(encoding="utf-8"),
+        re.MULTILINE | re.DOTALL,
+    )
+    version = None
+    if match is not None:
+        found = re.search(r'^version\s*=\s*"([^"]+)"\s*$', match.group("body"), re.MULTILINE)
+        if found is not None:
+            version = found.group(1)
+    if version is None:
+        raise ValueError(f"no [package] version found in {manifest}")
+    return version
+
+
 def package(root, output, tag, target):
     if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+", tag):
         raise ValueError("expected vMAJOR.MINOR.PATCH-beta.N")
     if target not in TARGETS:
         raise ValueError("unsupported release target")
     root, output = Path(root), Path(output)
+    # Fail closed before writing anything: the tag and the package version must agree, so that the
+    # archive name, the git tag, `configlens --version`, the report `tool_version` and the SBOM root
+    # component all identify the same release.
+    version = package_version(root)
+    if version != expected_version(tag):
+        raise ValueError(
+            f"tag {tag} requires package version {expected_version(tag)}, found {version}"
+        )
     binary = "configlens.exe" if target.endswith("windows-msvc") else "configlens"
     members = [(binary, root / "target" / target / "release" / binary)]
     members += [(name, root / name) for name in NOTICES]

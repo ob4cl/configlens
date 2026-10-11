@@ -327,3 +327,58 @@ Resolved since this section was first written: the `hostile_inputs` fuzz target 
 `tests/security_leaks.rs::the_saved_hostile_inputs_crash_artifact_is_neutralised` — see
 `docs/research/fuzz-recovery.md`), and the 5,000-key benchmark profile has been run (medians in
 `docs/implementation-status.md` §8; indicative, not statistical).
+
+## 9. Release-quality pass — 0.1.0-beta.3
+
+This section records the `0.1.0-beta.3` release-quality pass (unified version identification, the new
+`--quiet` flag, and the Windows snapshot-ACL clarification). Everything below was run in this checkout
+on 2026-10-11 (Linux, `rustc 1.99.0`); GitHub Actions for this branch runs on the pull request and is
+recorded there, not here.
+
+```
+$ cargo test --locked --no-fail-fast
+194 (lib) + 0 (main) + 8 (acceptance) + 33 (cli_contract) + 10 (conformance)
++ 25 (rules_claude) + 40 (rules_opencode) + 14 (security_leaks) + 0 (doc) = 324 passed, 0 failed, 9 targets
+$ cargo fmt --all -- --check                     # exit 0
+$ cargo clippy --locked --all-targets --all-features -- -D warnings   # clean
+$ cargo +1.85.0 check --locked --all-targets --all-features           # clean (declared MSRV)
+$ cargo check --locked --all-targets --target {x86_64-pc-windows-msvc, x86_64-pc-windows-gnu, aarch64-apple-darwin}  # clean
+$ cargo build --locked --release && ./target/release/configlens --version   # configlens 0.1.0-beta.3
+$ python3 -m unittest discover -s scripts -p 'test_*.py'                # 17 passed
+$ cargo deny check                                                      # advisories/bans/licenses/sources ok
+$ actionlint .github/workflows/*.yml                                    # clean
+$ cargo +nightly fuzz run {parse_documents,resolve_precedence,hostile_inputs} -- -max_total_time=60 -rss_limit_mb=4096
+  178747 / 1165 / 863 runs, all exit 0
+```
+
+Packaging smoke (Linux target): archive + `.sha256` verify OK, and the CycloneDX SBOM root component
+is `pkg:cargo/configlens@0.1.0-beta.3` — the same version as `--version`, the tag and the archive
+name. The committed fuzz corpus remains the coverage-minimised set (2461 files / 9.8 MB).
+
+Note on ordering: a committed file cannot cite a CI run that happens after the commit, so the
+pull-request run for this branch is recorded on the PR itself.
+
+What is statically verifiable by read-only inspection of this checkout:
+
+- **Version unification.** `Cargo.toml` `version` is `0.1.0-beta.3` and `Cargo.lock` pins
+  `configlens 0.1.0-beta.3`; the runtime tool version is `TOOL_VERSION = env!("CARGO_PKG_VERSION")`
+  (`src/lib.rs`), so `configlens --version`, the report `tool_version` field, the SBOM root component
+  and the `v0.1.0-beta.3` git tag all derive from that one value. `schema_version` stays `1.0` and
+  the adapter `adapter_revision` stays `0.1.0` — both independent of the crate version. The
+  prerelease workflow now **rejects a tag whose version does not match the package version**
+  (`.github/AUTOMATION.md`).
+- **`--quiet`.** A global flag (`src/cli.rs`, `#[arg(long, global = true)]`) that suppresses the
+  three informational stderr notes only: the snapshot `wrote N bytes` line, the support-report
+  `wrote N bytes … review before attaching` line, and the support-report `--preview` `preview only —
+  nothing was written` note. Errors are always printed to stderr, stdout (JSON) is unaffected, and
+  exit codes are unchanged; it is accepted on every subcommand (`configlens <cmd> --quiet`).
+- **Windows snapshot ACL.** Documented in `README.md`, `docs/decisions.md` (D17) and
+  `docs/implementation-status.md`: `redaction.snapshot_acl` remains `not_implemented` on non-Unix;
+  the snapshot is renamed from a same-directory temp file and so **inherits the destination folder's
+  ACL**; the guidance is a private, user-controlled directory; a restrictive DACL is out of scope for
+  0.1 (no `unsafe`, no new dependency). This is a documentation clarification — the runtime behaviour
+  is unchanged.
+
+Tree of record: the `release/0.1.0-beta.3` branch. See `README.md`, `docs/decisions.md` (D17),
+`docs/implementation-status.md`, `docs/beta/windows-regression-plan.md` and `CHANGELOG.md` for the
+user-facing text.

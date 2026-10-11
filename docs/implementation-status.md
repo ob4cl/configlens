@@ -28,6 +28,12 @@ Test totals for the current recorded run: **315 passed, 0 failed, 0 ignored** (1
 integration, 9 targets) — see `docs/verification-log.md` §3, which is authoritative where older
 totals differ.
 
+Tool version for this line: **`0.1.0-beta.3`**, unified across the crate version (`Cargo.toml`),
+`configlens --version`, the report `tool_version` field, the SBOM root component and the
+`v0.1.0-beta.3` tag; the prerelease workflow rejects a tag whose version does not match the package
+version. The report `schema_version` stays `1.0` and the adapter `adapter_revision` stays `0.1.0` —
+both independent of the crate version.
+
 **Refresh (2026-10-11, project discovery).** The OpenCode `oc.project` layer no longer reads a single
 file: it now collects every `opencode.json`/`opencode.jsonc` from the working directory up to the
 project boundary (`--project-root`, else the nearest Git directory) and merges them outermost-first,
@@ -172,7 +178,7 @@ runtime-conformance claim.
 | Limits: 2 MiB/file, 16 MiB total, 128 sources, depth 64, include depth 8, 2000 events/key | [x] | each with its own diagnostic and test |
 | Reject devices/sockets/FIFOs/directories | [x] | `filesystem::tests::{directories_are_refused,sockets_are_refused}` |
 | Symlink loops + escape detected | [x] | `filesystem::tests::symlink_*` |
-| Snapshot: explicit path, create-new, atomic same-dir temp, 0600, reject symlink target, `--overwrite` | [~] | Unix verified; **Windows ACL not implemented** (`redaction.snapshot_acl = "not_implemented"`) |
+| Snapshot: explicit path, create-new, atomic same-dir temp, 0600, reject symlink target, `--overwrite` | [~] | Unix verified (`0600`); **Windows ACL not implemented** (`redaction.snapshot_acl = "not_implemented"`). On Windows there is no `0600` equivalent: the same-directory temp file is renamed into place, so the snapshot **inherits the destination folder's ACL** (neither tightened nor loosened). A restrictive DACL is out of scope for 0.1 — it would need `unsafe` Win32 security APIs or a new dependency (`unsafe_code = "forbid"`, minimal-dependency policy). Guidance: save snapshots in a private, user-controlled directory |
 | No automatic snapshots/caches/log files | [x] | none created |
 
 ## 8. Tests (§8)
@@ -216,7 +222,12 @@ All ten are exercised end to end through the CLI in `tests/acceptance.rs` (8 tes
    `v2.1.257` boundary behaviour is not modelled per version.
 6. **List merge ordering across Claude scopes** carries an explicit coverage note because the
    documentation does not state the cross-scope order.
-7. **Windows ACLs on snapshot output** are not implemented; the report says so rather than pretending.
+7. **Windows ACLs on snapshot output** are not implemented; the report says so rather than pretending
+   (`redaction.snapshot_acl = "not_implemented"`). Because the snapshot is renamed from a
+   same-directory temp file, it **inherits the destination folder's ACL** (no `0600` equivalent
+   exists on Windows); save snapshots in a private, user-controlled directory. A restrictive DACL is
+   out of scope for 0.1 (it would need `unsafe` Win32 APIs or a new dependency; the crate forbids
+   `unsafe` and keeps a minimal-dependency policy).
 8. **`managed-settings.d/`** is merged alphabetically by filename, verified by fixture only.
 9. **Codex, Gemini, Aider, Cursor, Copilot CLI, Cline, Roo, Hermes** adapters do not exist.
 10. **Instructions assembly, permission-policy evaluation, remote/MDM fetching, MCP connections,

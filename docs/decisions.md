@@ -163,6 +163,17 @@ assertions."
 outright. On Windows the ACL is not restricted and the tool says so in the JSON report
 (`redaction.snapshot_acl: "not_implemented"`).
 **Why:** §7 atomic-write + owner-only requirement, and refusing to overclaim on Windows.
+**Windows consequence (documented, behaviour unchanged):** Windows has no `0600` equivalent. The
+snapshot is created as a same-directory temporary file and then renamed into place, so it
+**inherits the ACL of the destination folder** — ConfigLens neither tightens nor loosens it. The
+report states this (`redaction.snapshot_acl = "not_implemented"`) rather than claiming a protection
+that does not exist. Guidance: save snapshots in a **private, user-controlled directory** (for
+example `%USERPROFILE%`) rather than a shared or world-readable folder, so the inherited ACL is the
+one you intend.
+**Rejected for 0.1:** a restrictive DACL. Implementing one would need Win32 security APIs through
+`unsafe` FFI or a new Windows-security dependency; this crate forbids `unsafe` crate-wide
+(`unsafe_code = "forbid"`) and keeps a deliberate minimal-dependency policy. A DACL is therefore out
+of scope for 0.1 — a stated scope boundary, not a silent gap.
 
 ## D18 — Candid downgrades rather than invented parity
 

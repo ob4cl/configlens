@@ -69,6 +69,10 @@ pub enum PathsChoice {
                   configlens completions --shell bash"
 )]
 pub struct Cli {
+    /// Suppress informational messages on stderr. Errors are always printed, and stdout output
+    /// (including JSON) is never affected.
+    #[arg(long, global = true)]
+    pub quiet: bool,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -332,8 +336,11 @@ pub fn prepare(client: Client, common: &CommonArgs) -> Result<Prepared, CliError
 }
 
 /// Execute a parsed command, returning the process exit code.
+///
+/// Errors are always reported on stderr; `--quiet` only silences informational notes.
 pub fn run(cli: Cli) -> i32 {
-    match dispatch(cli) {
+    let quiet = cli.quiet;
+    match dispatch(cli, quiet) {
         Ok(code) => code,
         Err(error) => {
             eprintln!("configlens: {}: {}", error.code(), error.message());
@@ -342,7 +349,7 @@ pub fn run(cli: Cli) -> i32 {
     }
 }
 
-fn dispatch(cli: Cli) -> Result<i32, CliError> {
+fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
     match cli.command {
         Command::Clients(args) => {
             if args.format == Format::Json {
@@ -374,16 +381,20 @@ fn dispatch(cli: Cli) -> Result<i32, CliError> {
             if args.preview {
                 // Explicit preview: the sanitized report goes to stdout, nothing is written.
                 print!("{json}");
-                eprintln!(
-                    "configlens: preview only — nothing was written. Add --output <path> to save the sanitized report."
-                );
+                if !quiet {
+                    eprintln!(
+                        "configlens: preview only — nothing was written. Add --output <path> to save the sanitized report."
+                    );
+                }
             } else if let Some(output) = &args.output {
                 // Explicit output; never an automatic upload, and never a default path.
                 let outcome = crate::commands::write_snapshot(output, &json, args.overwrite)?;
-                eprintln!(
-                    "configlens: wrote {} bytes of share-mode support report to {} (permissions: {}). Review it before attaching it anywhere.",
-                    outcome.bytes, outcome.location, outcome.permissions
-                );
+                if !quiet {
+                    eprintln!(
+                        "configlens: wrote {} bytes of share-mode support report to {} (permissions: {}). Review it before attaching it anywhere.",
+                        outcome.bytes, outcome.location, outcome.permissions
+                    );
+                }
             } else {
                 return Err(CliError::usage(
                     "support-report needs --output <path> to save the sanitized report, or --preview to print it",
@@ -445,10 +456,12 @@ fn dispatch(cli: Cli) -> Result<i32, CliError> {
             let report = compose_report("snapshot", &prepared, Vec::new())?;
             let json = render_json::render(&report);
             let outcome = crate::commands::write_snapshot(&args.output, &json, args.overwrite)?;
-            eprintln!(
-                "configlens: wrote {} bytes to {} (permissions: {})",
-                outcome.bytes, outcome.location, outcome.permissions
-            );
+            if !quiet {
+                eprintln!(
+                    "configlens: wrote {} bytes to {} (permissions: {})",
+                    outcome.bytes, outcome.location, outcome.permissions
+                );
+            }
             Ok(exit_code_for_run(&prepared, &args.common, FailOn::Error, None)?.exit_code())
         }
     }
