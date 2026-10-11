@@ -2,15 +2,15 @@
 
 This document records the **engineering work done in this session** for the private beta, the
 **commands actually executed**, and the **measured results**. Nothing here is a claim about a
-command that was not run. This file is owned by the coder agent; design docs
-(`docs/spec/…`, `docs/decisions.md`, `docs/implementation-status.md`, `docs/research/…`) are owned by
-other agents and were **not** modified.
+command that was not run. This document covers the implementation workstream; the design docs
+(`docs/spec/…`, `docs/decisions.md`, `docs/implementation-status.md`, `docs/research/…`) are
+documented separately from it and were **not** modified here.
 
 Base commit for this work: `b2684c7` ("Initial ConfigLens CLI prototype"), previously 270 tests
-green. At the time of writing no commit or push had been made; the integration agent afterwards
-committed this work as `1fae794` and pushed it to the private repository `ob4cl/configlens`, which
-is what made the GitHub Actions evidence in §8 possible. No server, real configuration, credential,
-profile change or delegation was used. The shipped tool still makes no network request and spawns no process (this
+green. At the time of writing no commit or push had been made; it was afterwards committed as
+`1fae794` and pushed to the private repository `ob4cl/configlens`, which
+is what made the GitHub Actions evidence in §8 possible. No server, real configuration or credential
+was used. The shipped tool still makes no network request and spawns no process (this
 is enforced by `tests/security_leaks.rs::the_source_tree_never_spawns_processes_or_opens_sockets`).
 
 > **Test counts in this file are per-session snapshots.** Sections §3 and §6.2 below quote the
@@ -185,10 +185,11 @@ support-report preview contains neither the host nor the seeded secret.
 ## 4. Limitations and things deliberately **not** done
 
 1. **Codex adapter: explicitly pending research.** The brief requires verified upstream evidence
-   before implementation. No pinned Codex loader/version evidence was available to this agent, so
+   before implementation. No pinned Codex loader/version evidence was available at the time, so
    Codex stays in the `unsupported` list (`configlens clients`) with no compatibility claim. It was
-   **not** implemented, and no rule, default or precedence was invented. The evidence researcher
-   writes `docs/research/` separately; upstream conformance remains unverified and is not claimed.
+   **not** implemented, and no rule, default or precedence was invented. The upstream evidence is
+   documented separately in `docs/research/`; upstream conformance remains unverified and is not
+   claimed.
 2. **No upstream conformance run.** Every advertised rule is at most `fixture_verified`; no pinned
    loader harness was built or run here.
 3. **Windows was not executed.** Portability work is source-level gating of Unix-only test fixtures
@@ -224,7 +225,7 @@ python3 $SCRATCH/configlens_acceptance.py target/debug/configlens
 Base: the same uncommitted working tree as §1, `$REPO`. This pass owns
 `src/adapters/` and `compatibility/{claude,opencode}/` plus their tests, and fixes the nine findings in
 `docs/research/compatibility-audit.md` (audit date 2026-10-10). **No git commit or push**; no server,
-real credential, profile change or delegation; the tool still makes no network request and spawns no
+real credential; the tool still makes no network request and spawns no
 process.
 
 ### 6.1 Findings fixed
@@ -295,8 +296,8 @@ Fresh `run-fixtures.sh` output, compared with the pre-fix `docs/research/evidenc
 * **I** (OpenCode scan) — `oc.project` is now `applicable` (was `not unconditional (trust_unknown)`)
   and the run-level `project_trust_unknown` gap is gone (5 → 4 gaps). **O4**.
 
-The pre-existing `docs/research/evidence/fixture-run.txt` is owned by the research agent and — beyond
-my changes — predates the §2.2 `explain` renderer change (its lines have no `Losers:`/`Next
+The pre-existing `docs/research/evidence/fixture-run.txt` predates the §2.2 `explain` renderer
+change (its lines have no `Losers:`/`Next
 inspection:`), so it was **left untouched**; the run above is the current engine behaviour.
 
 ### 6.4 Limitations / deliberately not done
@@ -327,7 +328,7 @@ bash docs/research/run-fixtures.sh
 
 ## 8. Cross-platform CI (first real GitHub Actions runs, 2026-10-11)
 
-Written by the integration agent: §1–§7 are the coder workstream's local evidence, this section is
+§1–§7 are this project's local evidence; this section is
 what GitHub itself reported once the branch was pushed privately.
 
 Latest run — **all five jobs green**: https://github.com/ob4cl/configlens/actions/runs/38099457727

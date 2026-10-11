@@ -1,14 +1,13 @@
 # Finding — project-config discovery reads one file; upstream merges all ancestors
 
-Recorded 2026-10-11. Status: **confirmed divergence; fixed 2026-10-11** (option 1 below, owner-approved).
+Recorded 2026-10-11. Status: **confirmed divergence; fixed 2026-10-11** (see the "Fix" section below).
 The wrong-winner path is closed in `src/adapters/opencode.rs`, regression-tested in
 `tests/rules_opencode.rs`, and cited in `compatibility/opencode/registry.{json,md}` (evidence
 `OC-PROJECT-SOURCE-20261011`). See ["Fix"](#fix-2026-10-11) at the end for the before/after repro.
 
-Raised as item A3 ("source-inferred, not proven") in
-[`beta2-independent-audit.md`](beta2-independent-audit.md). This file records the confirmation:
-the claim is now **proven** against the pinned upstream source and against this tree's release
-binary.
+Originally raised as item A3 ("source-inferred, not proven") in an earlier independent audit. This
+file records the confirmation: the claim is now **proven** against the pinned upstream source and
+against this tree's release binary.
 
 ## What upstream does
 
