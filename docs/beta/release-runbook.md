@@ -28,7 +28,12 @@ cargo build --locked --release
 ./target/release/configlens --version
 ```
 
-- [ ] Bump `version` in `Cargo.toml` (`0.1.0` → next).
+- [ ] Set `version` in `Cargo.toml` to the **exact prerelease version** you are about to tag (for
+      example `0.1.0-beta.3`). The tag and the package version must match: `prerelease.yml`'s preflight
+      rejects a tag whose version differs, and `scripts/package_release.py` fails closed on the same
+      mismatch before writing anything. That is what keeps `configlens --version`, the report
+      `tool_version`, the SBOM root component, the archive names and the tag pointing at one release.
+      `schema_version` (the report schema) and `adapter_revision` are separate and do not move with it.
 - [ ] Run `cargo build --locked` once so `Cargo.lock` matches; commit the lockfile.
 - [ ] Write the `CHANGELOG.md` entry (Added / Changed / Fixed / Known limitations).
 - [ ] Update `README.md` support matrix and any "not verified" statements to match this release.
