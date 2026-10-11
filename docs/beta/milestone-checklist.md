@@ -104,7 +104,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 
 | ID | Item | Truth now | Acceptance criteria | Status |
 |---|---|---|---|---|
-| S1 | `SHA256SUMS` per asset | Machinery present: the packager writes a per-asset SHA-256, the workflow re-verifies each one and publishes a combined `SHA256SUMS`. Not yet exercised — no release has been published | Every release asset has a published SHA-256 in a single manifest | TODO |
+| S1 | `SHA256SUMS` per asset | Exercised: the packager writes a per-asset SHA-256, the workflow re-verifies each one and publishes a combined `SHA256SUMS`. Verified on the `v0.1.0-beta.1`, `v0.1.0-beta.2` and `v0.1.0-beta.3` prereleases (7 assets each) | Every release asset has a published SHA-256 in a single manifest | DONE |
 | S2 | Signature / attestation | none | Detached GPG signature or sigstore/SLSA attestation for the manifest (or documented as not done) | TODO |
 | S3 | Verification instructions | `sha256sum -c SHA256SUMS` (and the Windows equivalent) documented in `release-runbook.md` and emitted in the release notes by the workflow | README/release notes give a copy-paste command to verify downloads; no mandatory curl-to-shell install | TODO |
 
@@ -213,10 +213,12 @@ Minimum bar for a first release a respected CLI would stand behind:
    log lives outside it (`pilot-guide.md`), and anonymous aggregates only.
 8. No launch material claims a capability that is not DONE above.
 
-Still open, and to be labelled honestly in the release notes: **D4** (a terminal recording exists in
-the working tree but is not committed), **R5** (SBOM present; provenance attestation not done),
-**S1/S2/S3** (no release has been published, so checksums, signatures and verify instructions are
-unexercised), **X4 / the `fuzz` and `sbom` jobs** (now all green in CI; `prerelease.yml` has completed
-twice), **F1** (no pinned loader harness), and **Codex** (no verified upstream evidence,
-so no adapter). Benchmarks (C8) are no longer open: `benches/resolution.rs` runs and its numbers — and
+Still open, and to be labelled honestly in the release notes: **R5** (SBOM present; provenance
+attestation not done), **S2** (no signature or attestation for the manifest), **S3** (verification
+instructions are emitted in the release notes but are not yet in the README), **F1** (no pinned
+loader harness), and **Codex** (no verified upstream evidence, so no adapter). **D4** is no longer
+open: the recording is committed at `docs/demo/configlens-demo.cast`. **S1** is exercised: each of the
+`v0.1.0-beta.1`/`beta.2`/`beta.3` prereleases ships a `SHA256SUMS` covering its seven assets.
+**X4 / the `fuzz` and `sbom` jobs** are all green in CI and `prerelease.yml` has completed twice.
+Benchmarks (C8) are no longer open: `benches/resolution.rs` runs and its numbers — and
 its quadratic scaling — are recorded in `docs/implementation-status.md`.
