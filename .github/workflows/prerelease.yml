@@ -1,4 +1,4 @@
-name: Private beta prerelease
+name: Beta prerelease
 
 on:
   workflow_dispatch:
@@ -12,12 +12,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: private-beta-${{ inputs.tag }}
+  group: beta-${{ inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   preflight:
-    if: github.repository == 'ob4cl/configlens' && github.event.repository.private == true && github.ref == 'refs/heads/main'
+    # Visibility is deliberately NOT gated here. This workflow used to require a private repository,
+    # which meant it silently stopped working the moment the project was published. What actually
+    # makes a release trustworthy is enforced below instead: the tag must match the package version,
+    # it must resolve to a commit that is an ancestor of the dispatch commit, CI re-runs against that
+    # exact commit, and the publish job re-resolves the tag and requires it to equal that same SHA.
+    # Keep the repository and ref checks: they stop a fork or an accidental branch dispatch.
+    if: github.repository == 'ob4cl/configlens' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -156,7 +162,7 @@ jobs:
           name: sbom
           path: dist
           merge-multiple: true
-      - name: Verify archives and create private prerelease
+      - name: Verify archives and create the pre-release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -165,8 +171,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Recheck visibility at publication time; never change it.
-          [[ "$(gh api "repos/$GH_REPO" --jq .private)" == true ]]
+          # Record visibility, but do not depend on it: the release is intended to work the same
+          # whether the repository is private or public. Never change visibility here.
+          printf 'repository visibility: %s\n' "$(gh api "repos/$GH_REPO" --jq 'if .private then "private" else "public" end')"
           # Resolve annotated or lightweight tags without cloning or running project code.
           object=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG")
           kind=$(jq -r .object.type <<< "$object")
@@ -185,9 +192,9 @@ jobs:
           [[ ${#archives[@]} == 3 && ${#sums[@]} == 3 && ${#boms[@]} == 3 ]]
           for checksum in "${sums[@]}"; do sha256sum --check "$checksum"; done
           cat -- "${sums[@]}" > SHA256SUMS
-          notes=$(printf 'Private beta; not a public launch. Unsigned native binaries. Synthetic tests are not proof of upstream-client conformance.\n\nEach archive is accompanied by a CycloneDX 1.5 SBOM (configlens-<tag>-<target>.cdx.json) generated from the pinned dependency graph; the SBOM is a dependency inventory, not a signature.\n\nVerify before use:\n- macOS/Linux: sha256sum -c SHA256SUMS\n- Windows: certutil -hashfile <file> SHA256 (compare with SHA256SUMS)\n- SBOM: any CycloneDX viewer, or read it as JSON\n\nNo automatic update or installation; nothing here contacts the network.')
+          notes=$(printf 'Pre-release beta build; unsigned native binaries, no installer. Synthetic tests are not proof of upstream-client conformance.\n\nEach archive is accompanied by a CycloneDX 1.5 SBOM (configlens-<tag>-<target>.cdx.json) generated from the pinned dependency graph; the SBOM is a dependency inventory, not a signature.\n\nVerify before use:\n- macOS/Linux: sha256sum -c SHA256SUMS (macOS: shasum -a 256 -c)\n- Windows: Get-FileHash -Algorithm SHA256 <file> (compare with SHA256SUMS)\n- SBOM: any CycloneDX viewer, or read it as JSON\n\nNo automatic update or installation; nothing here contacts the network.')
           gh release create "$TAG" "${archives[@]}" "${boms[@]}" SHA256SUMS \
-            --verify-tag --prerelease --latest=false --title "ConfigLens $TAG (private beta)" \
+            --verify-tag --prerelease --latest=false --title "ConfigLens $TAG (pre-release beta)" \
             --notes "$notes"
           gh release view "$TAG" --json tagName,isPrerelease,isDraft,assets > release.json
           jq --exit-status --arg tag "$TAG" \

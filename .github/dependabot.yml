@@ -1,0 +1,29 @@
+# Dependabot configuration (prepared for publication; see docs/launch/publication-checklist.md).
+#
+# This file defines *version* update pull requests. GitHub *security* updates and Dependabot alerts
+# are separate repository settings and must be enabled in Settings -> Code security; the build-time
+# advisory surface is already covered by `deny.toml` and the `dependencies` CI job.
+version: 2
+updates:
+  # Runtime and dev dependencies. Grouped so a solo maintainer gets one PR, not one per crate.
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      cargo:
+        patterns: ["*"]
+    labels: ["dependencies"]
+
+  # Keep the pinned action SHAs current. Each commit is still reviewed and re-pinned by hand, because
+  # the workflows pin to full SHAs rather than tags.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: ["dependencies"]

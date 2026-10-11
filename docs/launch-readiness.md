@@ -10,6 +10,13 @@ plan that sits on top of the three evidence reports in this directory:
 **CONFIRMED** = I re-verified it against the repository during this audit. **RECOMMENDATION** = judgement.
 Nothing here has been applied except where the "Applied in this branch" section says so.
 
+> **Owner decisions recorded:** history is preserved (no rewrite, no force-push, no tag moves, no
+> deleted prereleases); the licence stays **MIT OR Apache-2.0** with the `ob4cl` attribution; the
+> initial public distribution channel is **GitHub Releases** (not crates.io/Homebrew/Scoop/winget);
+> and the audit PR was merged by fast-forward. The actionable follow-through now lives in
+> [`launch/publication-checklist.md`](launch/publication-checklist.md), which holds the exact GitHub
+> settings, the public/internal documentation separation proposal and the publication sequence.
+
 ## 0. Where the project actually stands
 
 CONFIRMED: the engineering is finished and CI-verified far beyond the usual bar for a 0.1 beta.
