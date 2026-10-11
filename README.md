@@ -149,12 +149,17 @@ so no rule claims `upstream_conformance_verified`. Support states run
 
 | Client | Adapter revision | Tested / documented version | Max support | Always-incomplete layers |
 |---|---|---|---|---|
-| OpenCode | 0.1.0 | 1.18.35 | `fixture_verified` | remote defaults, `.opencode` directories, macOS managed preferences |
+| OpenCode | 0.1.0 | 1.18.35 tested / 1.19.0 documented | `fixture_verified` | remote defaults, `.opencode` directories, macOS managed preferences |
 | Claude Code | 0.1.0 | 2.1.296 | `fixture_verified` | MDM policy store, server-managed settings, HKCU registry, managed-file-absent |
 
 Per-key detail, evidence URLs, retrieval dates and rule→test IDs live in the adapters' registries:
 [`compatibility/opencode/registry.md`](compatibility/opencode/registry.md) and
 [`compatibility/claude/registry.md`](compatibility/claude/registry.md).
+
+OpenCode's `@opencode/cli` **2.x** line is a separate beta with a *different* documented merge model
+(directory walk to the filesystem root; every `.opencode` config overriding every direct config). It
+is **not implemented**; a claimed version outside the supported sets is reported `unsupported` rather
+than resolved on a guess. See the adapter registry.
 
 These clients are **not implemented** and are labelled `unsupported` — no compatibility claim is
 made from shared file names: Codex and Gemini (0.2 backlog), Aider (backlog), and Cursor, Copilot

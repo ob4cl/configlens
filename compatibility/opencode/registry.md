@@ -11,9 +11,22 @@ Client under description: OpenCode (`opencode-ai` on npm)
 | Primary source URL | https://docs.opencode.ai/docs/config/ (the **v1** config page) |
 | Retrieved (UTC) | 2026-10-10 |
 | Second source | Repository metadata, `sst/opencode` tag `v1.18.35` → commit `53d1eabb61e21162157817bf677da0a4ad3332e3` (via GitHub REST API) |
-| Newest published client version at retrieval | `opencode-ai` **1.18.35** (npm `modified` 2026-10-09) |
+| Tested client version | `opencode-ai` **1.18.35** (npm `modified` 2026-10-09) — the version the fixtures were reproduced against |
+| Documented client versions | `1.18.35`, **`1.19.0`** (re-checked 2026-10-11: npm dist-tag `latest` is `1.19.0` and the live v1 config page still specifies the identical order, so `1.19.0` is *documented* but not *tested*) |
 | Pinned loader commit | **`53d1eabb61e21162157817bf677da0a4ad3332e3`** — the `v1.18.35` tag, i.e. the loader for the documented v1 line: `packages/opencode/src/config/config.ts`. The v2 dev line (`@opencode/cli` 2.0.26, HEAD `7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937`) is a **different product line** and is **out of scope** for this adapter; do not pair a v1 version with a v2 SHA. |
 | Consequence | No rule below may claim `upstream_conformance_verified`. Maximum support in this release is `fixture_verified` (our fixtures vs. the documented v1 order) or `documented`. |
+
+## Version scope (read before reporting a bug)
+
+ConfigLens models the **documented v1 order** below. A claimed client version outside the sets above
+is reported `unsupported` with a note, rather than resolved on a guess.
+
+The `@opencode/cli` **2.x** line is a *different product line*, still published as a beta whose docs
+warn that data may be wiped. Its config page (`https://v2.opencode.ai/docs/config`) describes a
+**different merge model**: it searches from the current directory to the filesystem root, merges
+direct `opencode.json(c)` files from the farthest directory to the closest, then merges `.opencode`
+directories in the same order, so **every `.opencode` config overrides every direct config**. That
+model is **not implemented** here. Do not pair a v1 version with a v2 behaviour claim.
 
 ## Documented precedence order (lowest → highest)
 

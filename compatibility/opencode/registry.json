@@ -10,6 +10,13 @@
       "retrieved": "2026-10-10"
     },
     {
+      "id": "OC-VERSIONS-20261011",
+      "kind": "package-metadata",
+      "url": "https://registry.npmjs.org/opencode-ai",
+      "retrieved": "2026-10-11",
+      "note": "Stable line re-checked: npm dist-tag latest = 1.19.0 (the adapter's tested pin was 1.18.35). The live v1 config page (https://opencode.ai/docs/config, re-checked the same day) still specifies the identical precedence order, so 1.19.0 is listed as documented. The v2 beta (https://v2.opencode.ai/docs/config, npm @opencode/cli 2.0.26) documents a different merge model and remains out of scope."
+    },
+    {
       "id": "OC-REPO",
       "kind": "repository-metadata",
       "url": "https://api.github.com/repos/sst/opencode/git/refs/tags/v1.18.35",
@@ -18,7 +25,8 @@
     }
   ],
   "tested_client_versions": ["1.18.35"],
-  "documented_client_versions": ["1.18.35"],
+  "documented_client_versions": ["1.18.35", "1.19.0"],
+  "supported_versions_note": "Tested means the fixtures reproducing the documented order were built against that version. Documented means the live v1 config page still specifies the identical order for that version. 1.19.0 is the current stable opencode-ai release (npm dist-tag latest, retrieved 2026-10-11) and its page documents the same 8-step order, so it is documented but not tested. The @opencode/cli 2.0.26 line is a separate beta product line whose docs describe a different merge model (directory walk to the filesystem root; direct opencode.json(c) merged farthest-to-closest; every .opencode config overrides every direct config) and it is out of scope: a claimed version outside these sets is reported unsupported rather than guessed.",
   "pinned_commit": "53d1eabb61e21162157817bf677da0a4ad3332e3",
   "conformance_status": "fixture_verified_max",
   "layers": [

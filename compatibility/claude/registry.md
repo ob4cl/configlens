@@ -38,7 +38,9 @@ Managed tier internals (from the managed-settings page). Claude Code combines ma
 that delivers at least one policy key and *ignores the rest rather than merging them*. `"merge"` is
 opt-in from Claude Code v2.1.242 or later. ConfigLens models **single-source** managed resolution
 only: `registry.json` declares `managed_sources_behavior = "first-wins"` and ranks the layers so the
-highest-ranked source wins. The documented cross-source key set (keys read from *every* admin source
+highest-ranked source wins. That declaration is **documentation only** — no code path consults it,
+so it cannot change a resolution (it is asserted by a test, not enforced by the engine). The
+documented cross-source key set (keys read from *every* admin source
 with their own combination rules — `sandbox.network.allowManagedDomainsOnly`, `allowAllClaudeAiMcps`,
 `deniedMcpServers`, `maxEffortLevel`, per-variable `env`, `forceRemoteSettingsRefresh`, …) and
 `policyHelper` (a helper that emits `managedSettings`, which then becomes the only managed settings

@@ -29,6 +29,10 @@ assert_cmd = "2.2.2"
 predicates = "3.1.4"
 tempfile = "3.27.0"
 
+[[bench]]
+name = "resolution"
+harness = false
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
