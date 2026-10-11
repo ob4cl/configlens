@@ -1,0 +1,138 @@
+name: Private beta prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing reviewed tag (vMAJOR.MINOR.PATCH-beta.N)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-beta-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.repository == 'ob4cl/configlens' && github.event.repository.private == true && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve existing reviewed beta tag
+        id: resolve
+        env:
+          TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]] || { printf 'Invalid beta tag\n' >&2; exit 1; }
+          sha=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
+          git merge-base --is-ancestor "$sha" "$GITHUB_SHA"
+          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
+
+  checks:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.preflight.outputs.sha }}
+    permissions:
+      contents: read
+
+  build:
+    needs: [preflight, checks]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal
+      - name: Build native release binary
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          rustup target add --toolchain stable "$TARGET"
+          cargo +stable build --locked --release --target "$TARGET" --bin configlens
+      - name: Package binary and public project notices only
+        env:
+          TAG: ${{ inputs.tag }}
+          TARGET: ${{ matrix.target }}
+        run: python scripts/package_release.py --tag "$TAG" --target "$TARGET" --output dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    needs: [preflight, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Verify archives and create private prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          EXPECTED_SHA: ${{ needs.preflight.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Recheck visibility at publication time; never change it.
+          [[ "$(gh api "repos/$GH_REPO" --jq .private)" == true ]]
+          # Resolve annotated or lightweight tags without cloning or running project code.
+          object=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG")
+          kind=$(jq -r .object.type <<< "$object")
+          sha=$(jq -r .object.sha <<< "$object")
+          while [[ "$kind" == tag ]]; do
+            object=$(gh api "repos/$GH_REPO/git/tags/$sha")
+            kind=$(jq -r .object.type <<< "$object")
+            sha=$(jq -r .object.sha <<< "$object")
+          done
+          [[ "$kind" == commit && "$sha" == "$EXPECTED_SHA" ]]
+          cd dist
+          shopt -s nullglob
+          archives=( *.tar.gz *.zip )
+          sums=( *.sha256 )
+          [[ ${#archives[@]} == 3 && ${#sums[@]} == 3 ]]
+          for checksum in "${sums[@]}"; do sha256sum --check "$checksum"; done
+          cat -- "${sums[@]}" > SHA256SUMS
+          gh release create "$TAG" "${archives[@]}" SHA256SUMS \
+            --verify-tag --prerelease --latest=false --title "ConfigLens $TAG (private beta)" \
+            --notes "Private beta; not a public launch. Unsigned native binaries. Synthetic tests are not proof of upstream-client conformance. Verify SHA256SUMS before use. No automatic update or installation."
+          gh release view "$TAG" --json tagName,isPrerelease,isDraft,assets > release.json
+          jq --exit-status --arg tag "$TAG" \
+            '.tagName == $tag and .isPrerelease == true and .isDraft == false and (.assets | length) == 4' release.json
+          jq '{tag: .tagName, prerelease: .isPrerelease, assets: [.assets[].name]}' release.json

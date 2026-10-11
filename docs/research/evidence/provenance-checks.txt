@@ -1,0 +1,91 @@
+# ConfigLens compatibility audit — provenance verification transcript
+# Audit date (UTC): 2026-10-10
+# All commands are read-only network reads (npm registry / GitHub REST API).
+# Reproduce with the same commands; values are what this audit actually observed.
+
+## npm dist-tags and publish times
+
+$ curl -sS https://registry.npmjs.org/@anthropic-ai/claude-code | jq ...
+  latest = 2.1.296
+  time[2.1.296]   = 2026-10-09T16:58:10.924Z
+  time.modified   = 2026-10-09T19:31:26.129Z
+  recent: 2.1.291(10-06) 2.1.292(10-06) 2.1.293(10-07) 2.1.294(10-08) 2.1.295(10-08) 2.1.296(10-09)
+
+$ curl -sS https://registry.npmjs.org/opencode-ai | jq ...
+  dist-tags.latest = 1.18.35        (published 2026-10-06T20:21:30.784Z)
+  dist-tags.dev    = 0.0.0-dev-202610092229   (2026-10-09T22:55:42.537Z)
+  time.modified    = 2026-10-09T22:55:42.817Z
+
+$ curl -sS https://registry.npmjs.org/@opencode/cli | jq ...
+  dist-tags.latest = 2.0.26         (published 2026-10-08T19:43:12.373Z)
+  time.modified    = 2026-10-10T15:41:48.549Z
+  repository       = git+https://github.com/anomalyco/opencode.git   <-- the v2 product line
+
+$ curl -sS https://registry.npmjs.org/@openai/codex | jq ...
+  dist-tags.latest = 0.162.1        (published 2026-10-09T19:50:30.512Z)
+  time.modified    = 2026-10-10T00:51:16.497Z
+  bin              = { "codex": "bin/codex.js" }
+
+## GitHub REST API
+
+$ curl -sSL https://api.github.com/repos/anthropics/claude-code/commits?per_page=1     # (gh API via -L)
+  HEAD sha   = 2301018b1f61073c501a8e7a4813ef48c239163b
+  committer  = 2026-10-09T19:28:36Z
+  message    = "chore: Update CHANGELOG.md and feed.xml"
+
+$ curl -sSL https://api.github.com/repos/anthropics/claude-code/releases?per_page=3
+  tag v2.1.296  published 2026-10-09T19:28:59Z
+  tag v2.1.295  published 2026-10-08T19:48:38Z
+  tag v2.1.294  published 2026-10-08T05:03:54Z
+$ curl -sSL https://api.github.com/repos/anthropics/claude-code/tags?per_page=5
+  v2.1.296 -> 2301018b1f61073c501a8e7a4813ef48c239163b   (tag == HEAD)
+
+$ curl -sSL https://api.github.com/repos/anthropics/claude-code/commits/b640d94a49629ef004ecceb5e2bd6d8aebf067ce
+  sha = b640d94a49629ef004ecceb5e2bd6d8aebf067ce
+  committer = 2026-01-12T23:12:24Z
+  message = "docs: update installation instructions in README"
+
+$ curl -sSL https://api.github.com/repos/sst/opencode/commits?per_page=1      # 301 -> anomalyco/opencode (repo id 975734319)
+  HEAD sha  = 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937
+  committer = 2026-10-10T15:29:34Z
+  message   = "chore(ci): deploy the update service from production"
+  repo full_name = anomalyco/opencode (default_branch=dev, pushed_at 2026-10-10T21:27:59Z)
+
+$ curl -sSL https://api.github.com/repos/sst/opencode/commits/44b6938b2ad2895bdd89d5d5cf753fb01ca8e3dd
+  sha = 44b6938b2ad2895bdd89d5d5cf753fb01ca8e3dd
+  committer = 2026-07-21T01:54:22Z
+  message = "removed packages/opencode"      files changed = 300
+
+$ curl -sSL https://api.github.com/repos/anomalyco/opencode/git/ref/tags/v1.18.35
+  refs/tags/v1.18.35 -> commit 53d1eabb61e21162157817bf677da0a4ad3332e3
+
+$ curl -sSL https://api.github.com/repos/openai/codex/git/ref/tags/rust-v0.162.1
+  ref object sha = 7a078f6bb4ce0dc2a81408b334ce52979d92c603 (annotated tag object)
+$ curl -sSL 'https://api.github.com/repos/openai/codex/tags?per_page=100' | jq 'select(.name=="rust-v0.162.1")'
+  commit sha = 092d3acd6bec3e3a14bdc7e7a2810ab628ab759d
+  committer  = 2026-10-09T17:39:05Z
+
+## Pinned upstream loader source read for this audit (source-reviewed, not executed)
+
+OpenCode trust check (content grep, not just filenames):
+  $ git clone --depth 1 --branch dev https://github.com/anomalyco/opencode && git checkout 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937
+  $ grep -rInE 'trusted project|workspace trust|project.trust' packages/core/src packages/cli/src   -> (no matches)
+  $ grep -rIn  'trust_level|trustLevel|"trust"' packages                                              -> only a GUI ssh dialog string
+  $ grep -rIn 'trust' packages/core/src    -> only incidental: a TLS/CA comment, a "trusted GitLab OAuth
+                                              application", prompt text, an "untrusted boundary" comment
+  VERDICT: no workspace/project-trust gate for OpenCode config at this revision.
+
+
+OpenCode  @ 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937 (v2 dev line)
+  - packages/core/src/config.ts          (layer assembly order)
+  - packages/core/src/config/discovery.ts(still: which files are discovered; json+jsonc)
+  - packages/core/src/managed-policy.ts  (managed = Console policy statements, NOT /etc/opencode file)
+  - packages/cli/src/config/config.ts    (CLI-local cli.json, unrelated to settings precedence)
+  - NOTE: `grep -ri trust` over the pinned tree returns no workspace-trust concept.
+
+Codex     @ 092d3acd6bec3e3a14bdc7e7a2810ab628ab759d (rust-v0.162.1)
+  - codex-rs/config/src/config_layer_source.rs  (authoritative precedence numbers)
+  - codex-rs/config/src/loader/README.md        (layer model, top overrides bottom)
+  - codex-rs/config/src/loader/mod.rs           (project trust: loaded-but-disabled when untrusted)
+  - codex-rs/config/src/merge.rs                (recursive TOML merge; arrays replace wholesale)
+  - codex-rs/config/src/loader/project_discovery.rs

@@ -8,8 +8,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::adapters::{
-    default_applicability, managed_dirs, Applicability, Candidate, Client, ClientAdapter,
-    DiscoveryPlan, Registry, SourceClass,
+    managed_dirs, Applicability, Candidate, Client, ClientAdapter, DiscoveryPlan, Registry,
+    SourceClass,
 };
 use crate::context::ResolutionContext;
 use crate::filesystem::FileAccess;
@@ -178,12 +178,15 @@ impl ClientAdapter for OpenCodeAdapter {
         Syntax::Jsonc
     }
 
-    fn applicability(&self, layer_id: &str, ctx: &ResolutionContext) -> Applicability {
-        let class = match layer_id {
-            "oc.project" => SourceClass::ProjectShared,
-            _ => SourceClass::User,
-        };
-        default_applicability(class, ctx)
+    fn applicability(&self, _layer_id: &str, _ctx: &ResolutionContext) -> Applicability {
+        // OpenCode has no upstream workspace-trust concept (audit O4): a project config is always
+        // applicable, and `$OPENCODE_CONFIG*` sources never depend on a trust decision.
+        Applicability::Applicable
+    }
+
+    fn trust_applicable(&self) -> bool {
+        // Trust gating is a Claude-Code-only concept; OpenCode never reports a trust gap.
+        false
     }
 }
 

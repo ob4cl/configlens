@@ -12,14 +12,14 @@
     {
       "id": "OC-REPO",
       "kind": "repository-metadata",
-      "url": "https://api.github.com/repos/sst/opencode/commits?per_page=1",
+      "url": "https://api.github.com/repos/sst/opencode/git/refs/tags/v1.18.35",
       "retrieved": "2026-10-10",
-      "note": "HEAD 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937. Historical loader path packages/opencode/src/config/config.ts removed by 44b6938b2ad2895bdd89d5d5cf753fb01ca8e3dd (2026-07-21); no replacement loader SHA pinned."
+      "note": "v1 line pinned: tag v1.18.35 -> commit 53d1eabb61e21162157817bf677da0a4ad3332e3; loader packages/opencode/src/config/config.ts. The v2 dev line (HEAD 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937, shipped as @opencode/cli 2.0.26) is out of scope for this adapter."
     }
   ],
   "tested_client_versions": ["1.18.35"],
   "documented_client_versions": ["1.18.35"],
-  "pinned_commit": null,
+  "pinned_commit": "53d1eabb61e21162157817bf677da0a4ad3332e3",
   "conformance_status": "fixture_verified_max",
   "layers": [
     {

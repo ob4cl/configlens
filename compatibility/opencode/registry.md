@@ -8,12 +8,12 @@ Client under description: OpenCode (`opencode-ai` on npm)
 
 | Field | Value |
 |---|---|
-| Primary source URL | https://docs.opencode.ai/docs/config/ |
+| Primary source URL | https://docs.opencode.ai/docs/config/ (the **v1** config page) |
 | Retrieved (UTC) | 2026-10-10 |
-| Second source | Repository metadata, `sst/opencode` HEAD `7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937` (2026-10-10T15:29:34Z, via GitHub REST API) |
+| Second source | Repository metadata, `sst/opencode` tag `v1.18.35` → commit `53d1eabb61e21162157817bf677da0a4ad3332e3` (via GitHub REST API) |
 | Newest published client version at retrieval | `opencode-ai` **1.18.35** (npm `modified` 2026-10-09) |
-| Pinned loader commit | **Not pinned for the current layout.** The historical loader path `packages/opencode/src/config/config.ts` was removed by commit `44b6938b2ad2895bdd89d5d5cf753fb01ca8e3dd` ("removed packages/opencode", 2026-07-21T01:54:22Z) and the repository was restructured (`packages/{core,cli,ai,…}`). No replacement loader SHA was re-pinned. |
-| Consequence | No rule below may claim `upstream_conformance_verified`. Maximum support in this release is `fixture_verified` (our fixtures vs. the documented order) or `documented`. |
+| Pinned loader commit | **`53d1eabb61e21162157817bf677da0a4ad3332e3`** — the `v1.18.35` tag, i.e. the loader for the documented v1 line: `packages/opencode/src/config/config.ts`. The v2 dev line (`@opencode/cli` 2.0.26, HEAD `7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937`) is a **different product line** and is **out of scope** for this adapter; do not pair a v1 version with a v2 SHA. |
+| Consequence | No rule below may claim `upstream_conformance_verified`. Maximum support in this release is `fixture_verified` (our fixtures vs. the documented v1 order) or `documented`. |
 
 ## Documented precedence order (lowest → highest)
 
@@ -36,6 +36,15 @@ Additional documented source, **position not fully specified by upstream**:
 `$OPENCODE_CONFIG_DIR` — *"The custom directory is loaded after the global config and `.opencode`
 directories, so it can override their settings."* Its relation to project/inline/managed layers is
 not stated, so any key it defines produces a `oc.custom_dir_placement_unverified` coverage gap.
+
+### Workspace trust — not an OpenCode concept
+
+OpenCode documents **no** trust gate for project config, and the pinned v1 loader carries no
+workspace-trust machinery (a content grep for `trust` finds only incidental uses — a TLS/CA comment,
+a GitLab OAuth app, prompt text). ConfigLens therefore makes `oc.project` and every other OpenCode
+source **unconditionally applicable** and never emits a `trust_unknown` / `workspace_untrusted` gap
+or a per-source trust diagnostic for this client. (A Claude-derived trust gate used to be applied
+here; audit finding O4.)
 
 ## Supported keys
 

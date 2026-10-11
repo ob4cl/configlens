@@ -284,6 +284,208 @@ fn files_outside_authorised_roots_are_never_read() {
 }
 
 #[test]
+fn share_mode_pseudonymizes_url_hosts_but_local_mode_keeps_them_for_diagnosis() {
+    let sandbox = seeded_sandbox();
+    // Local mode is the diagnostic view: the private host is shown (spec §7), but never the
+    // userinfo, query or fragment.
+    let local = sandbox
+        .command()
+        .args(["explain", "/mcp/jira/url", "--client", "opencode"])
+        .output()
+        .expect("run");
+    let local_text = channels(&local);
+    assert!(
+        local_text.contains("jira.example"),
+        "local shows the host: {local_text}"
+    );
+    assert!(!local_text.contains("user:pass"));
+    assert!(!local_text.contains(SEED_VALUE));
+
+    // Share mode pseudonymizes the private host in *every* output (text and JSON).
+    for extra in [Vec::<&str>::new(), vec!["--format", "json"]] {
+        let share = sandbox
+            .command()
+            .args([
+                "explain",
+                "/mcp/jira/url",
+                "--client",
+                "opencode",
+                "--paths",
+                "share",
+            ])
+            .args(&extra)
+            .output()
+            .expect("run");
+        let text = channels(&share);
+        assert!(
+            !text.contains("jira.example"),
+            "share mode must pseudonymize the URL host: {text}"
+        );
+        assert!(
+            text.contains("host_"),
+            "share mode must show a host ID: {text}"
+        );
+        assert!(!text.contains("user:pass"));
+        assert!(!text.contains(SEED_VALUE));
+    }
+}
+
+#[test]
+fn share_mode_aliases_embedded_absolute_paths() {
+    let sandbox = Sandbox::new(&[], &[]);
+    let home = sandbox.home.to_str().expect("home").to_string();
+    let shell = format!("{home}/.local/bin/zsh");
+    std::fs::create_dir_all(sandbox.home.join(".config/opencode")).expect("mkdir");
+    std::fs::write(
+        sandbox.home.join(".config/opencode/opencode.json"),
+        format!("{{\"shell\": \"{shell}\"}}"),
+    )
+    .expect("write");
+
+    let share = sandbox
+        .command()
+        .args([
+            "explain", "/shell", "--client", "opencode", "--paths", "share",
+        ])
+        .output()
+        .expect("run");
+    let text = channels(&share);
+    assert!(
+        !text.contains(&home),
+        "share mode must alias the embedded home path: {text}"
+    );
+    assert!(
+        text.contains("$HOME/.local/bin/zsh"),
+        "share mode must show the alias: {text}"
+    );
+}
+
+#[test]
+fn share_mode_text_output_pseudonymizes_unknown_key_names_too() {
+    let sandbox = seeded_sandbox();
+    let key = "totally_unknown";
+    let share = sandbox
+        .command()
+        .args([
+            "explain",
+            &format!("/{key}/nested/deep"),
+            "--client",
+            "opencode",
+            "--paths",
+            "share",
+        ])
+        .output()
+        .expect("run");
+    let text = channels(&share);
+    assert!(
+        !text.contains(key),
+        "share-mode text output must not expose an unknown key name: {text}"
+    );
+}
+
+#[test]
+fn an_unrecognised_session_argument_is_never_echoed() {
+    // A client argument can itself be a credential (`--api-key=…`); it must never be echoed into a
+    // diagnostic. Spec §7 forbids exposing command arguments in reports.
+    let sandbox = Sandbox::new(
+        &[],
+        &[(".claude/settings.json", r#"{"model": "user-model"}"#)],
+    );
+    let secret_arg = "SEEDED-ARG-3f7a2b";
+    let context = format!(
+        r#"{{"schema_version":"1.0","client":"claude","client_arguments":["--api-key","{secret_arg}"]}}"#
+    );
+    let context_path = sandbox.project.join("ctx.json");
+    std::fs::write(&context_path, context).expect("write");
+    for format in [Vec::<&str>::new(), vec!["--format", "json"]] {
+        let output = sandbox
+            .command()
+            .args([
+                "explain",
+                "/model",
+                "--client",
+                "claude",
+                "--client-version",
+                "2.1.296",
+                "--input-context",
+                context_path.to_str().expect("path"),
+            ])
+            .args(&format)
+            .output()
+            .expect("run");
+        let text = channels(&output);
+        assert!(
+            !text.contains(secret_arg),
+            "a session argument must never be echoed: {text}"
+        );
+        if !format.is_empty() {
+            assert!(
+                text.contains("unrecognised_session_flag"),
+                "the gap must still be reported: {text}"
+            );
+        }
+    }
+}
+
+#[test]
+fn support_report_is_share_sanitized_and_preview_writes_nothing() {
+    let sandbox = seeded_sandbox();
+    // Without an explicit output or preview, support-report is a usage error.
+    sandbox
+        .command()
+        .args(["support-report", "--client", "opencode"])
+        .assert()
+        .code(2);
+
+    // Preview: sanitized JSON on stdout, nothing written anywhere.
+    let before_entries = std::fs::read_dir(&sandbox.project)
+        .expect("read dir")
+        .count();
+    let preview = sandbox
+        .command()
+        .args(["support-report", "--client", "opencode", "--preview"])
+        .output()
+        .expect("run");
+    assert!(preview.status.success());
+    let text = channels(&preview);
+    assert!(!text.contains(SEED_VALUE));
+    assert!(!text.contains("user:pass"));
+    assert!(
+        !text.contains("jira.example"),
+        "preview must be share-sanitized"
+    );
+    let parsed: serde_json::Value =
+        serde_json::from_str(&String::from_utf8(preview.stdout).expect("utf8")).expect("json");
+    assert_eq!(parsed["redaction"]["mode"], "share");
+    assert_eq!(
+        std::fs::read_dir(&sandbox.project)
+            .expect("read dir")
+            .count(),
+        before_entries,
+        "preview must not create files in the project"
+    );
+
+    // Explicit output: the file is written and is share-sanitized.
+    let target = sandbox.project.join("support.json");
+    sandbox
+        .command()
+        .args([
+            "support-report",
+            "--client",
+            "opencode",
+            "--output",
+            target.to_str().expect("path"),
+        ])
+        .assert()
+        .success();
+    let written = std::fs::read_to_string(&target).expect("read");
+    assert!(!written.contains(SEED_VALUE));
+    assert!(!written.contains("jira.example"));
+    let parsed: serde_json::Value = serde_json::from_str(&written).expect("json");
+    assert_eq!(parsed["redaction"]["mode"], "share");
+}
+
+#[test]
 fn the_source_tree_never_spawns_processes_or_opens_sockets() {
     let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut offenders = Vec::new();

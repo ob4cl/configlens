@@ -1,0 +1,61 @@
+# Upstream loader execution attempt (2026-10-10) — outcome: NOT achievable in this sandbox
+
+The audit policy is: prefer real upstream loader execution on synthetic inputs; otherwise say so
+explicitly and separate "source-reviewed" from "fixture verified" from "upstream runtime verified".
+This file records what was actually attempted and the real result of each attempt. Nothing here is a
+claim of a run that did not happen.
+
+## Environment available here
+
+  cargo 1.99.0 (5f94df478 2026-08-27)   rustc 1.99.0 (b940084d7 2026-09-28)
+  git 2.53.0 · node v26.7.0 · npm 11.19.0 · jq 1.8.1
+  bun: ABSENT · deno: ABSENT · libssl-dev / libssl.so: ABSENT · pkg-config openssl: ABSENT
+  Prebuilt ConfigLens binaries exist: target/release/configlens, target/debug/configlens
+
+## Attempt 1 — Codex upstream loader (rust-v0.162.1)
+
+$ git clone --depth 1 --branch rust-v0.162.1 --single-branch https://github.com/openai/codex /tmp/codex-src-probe
+  exit 0 · 128M · 9018 files checked out
+
+$ cd /tmp/codex-src-probe/codex-rs && cargo test -p codex-config --lib
+  ... 218 crates compiled, then the dependency graph failed to build:
+  openssl-sys = 0.9.111
+  error: Could not find directory of OpenSSL installation ...
+         Make sure you also have the development packages of openssl installed.
+         For example, `libssl-dev` on Ubuntu or `openssl-devel` on Fedora.
+  warning: build failed, waiting for other jobs to finish...
+
+  VERDICT: blocked by a missing host dependency (libssl-dev). Installing system packages is out of
+  scope for this task and would change the host. codex-config's own unit tests (merge_tests.rs,
+  loader/tests.rs, stack_tests.rs) are exactly the safe synthetic loader harness this audit wants;
+  they were NOT executed here.
+
+## Attempt 2 — OpenCode upstream loader (7b3d4ce3, v2 dev)
+
+  The loader is TypeScript (Effect + jsonc-parser + immer). Running it needs the repo's dependency
+  graph (bun/node_modules). bun is ABSENT, the deps are not installed, and installing them requires a
+  full package fetch. Not exercised here.
+
+  Note on the "run the shipped client" shortcut: it is explicitly forbidden by the ConfigLens spec
+  (no client binary execution, even `--version`) and by this task (no agents/plugins/network model
+  calls). `@openai/codex` and `@opencode/cli` ship wrapper binaries; invoking them would violate that
+  rule, so it was not attempted.
+
+## What IS claimed as evidence for this audit
+
+  source-reviewed        : pinned loader source read and cited (OpenCode 7b3d4ce3, Codex 092d3acd)
+  fixture-verified       : ConfigLens release binary run against the synthetic fixtures in
+                           docs/research/fixtures/ (see evidence/fixture-run.txt). This is the ENGINE's
+                           behaviour, cited back to a primary source — not proof of upstream parity.
+  upstream runtime verified : NOT performed (see Attempts 1 and 2).
+
+## How to close the gap later (harness design lives in compatibility-audit.md §Conformance harness)
+
+  1. Codex: on a host with libssl-dev, run the pinned crate's own tests:
+       git clone --depth 1 --branch rust-v0.162.1 https://github.com/openai/codex
+       cd codex && cargo test -p codex-config --lib
+     and additionally add read-only fixtures asserting ConfigLayerSource::precedence() ordering and
+     the "project layer disabled when untrusted" behaviour. No network, no credentials, no model calls.
+  2. OpenCode: pin the v1 line (tag v1.18.35 -> 53d1eabb...) for the documented /etc/opencode model, or
+     the v2 line (@opencode/cli 2.0.26) for the Console-policy model, install deps once in CI, and run
+     the config service against a temp CODEX_HOME-style directory with network and wellknown disabled.

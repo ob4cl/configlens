@@ -1,0 +1,6 @@
+{
+  "cleanupPeriodDays": 7,
+  "permissions": {
+    "deny": ["Read(./secrets/**)"]
+  }
+}

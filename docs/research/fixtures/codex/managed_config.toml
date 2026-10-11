@@ -1,0 +1,6 @@
+# Synthetic Codex legacy managed defaults (fixture). Overrides user config and CLI -c.
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false

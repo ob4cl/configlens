@@ -1,0 +1,3 @@
+# Synthetic Codex admin requirements (fixture). Enforced; users cannot override.
+allowed_approval_policies = ["on-request"]
+allowed_sandbox_modes = ["read-only", "workspace-write"]

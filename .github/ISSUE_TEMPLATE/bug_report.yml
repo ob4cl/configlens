@@ -1,0 +1,38 @@
+name: Bug report
+description: Report reproducible private-beta behavior with synthetic inputs.
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach real configuration, tokens, credentials, private paths, or unreviewed logs. Use a minimal synthetic fixture. Redaction is not a guarantee. For a security concern, follow SECURITY.md instead."
+  - type: input
+    id: version
+    attributes:
+      label: ConfigLens version or commit, OS and architecture
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Exact command and minimal synthetic input
+      description: Include relevant flags and exit code. Replace identifying paths and values.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed result and expected result
+      description: Separate observations from hypotheses; say what was not tested.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Client version and evidence (if claiming upstream behavior)
+      description: Cite official documentation or a reproducible observation with an exact client version. Passing ConfigLens tests alone is not client-conformance evidence.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy review
+      options:
+        - label: I reviewed all text and attachments and removed secrets and identifying configuration.
+          required: true

@@ -81,6 +81,19 @@ echo "--- share mode: unknown key names and secret values are opaque ---"
 run scan --client opencode --client-version 1.18.35 --paths share --format json
 
 echo
+echo "--- share mode: private URL hosts are pseudonymized too ---"
+run explain /mcp/demo/url --client opencode --client-version 1.18.35 --paths share
+
+echo
+echo "--- support report: explicit preview (writes nothing) ---"
+run support-report --client opencode --client-version 1.18.35 --preview
+
+echo
+echo "--- shell completions and help examples ---"
+run --help
+run completions --shell bash
+
+echo
 echo "--- snapshot + diff (redacted report, owner-only) ---"
 run snapshot --client opencode --client-version 1.18.35 --output "$SANDBOX/before.json"
 run snapshot --client opencode --client-version 1.18.35 --output "$SANDBOX/after.json"

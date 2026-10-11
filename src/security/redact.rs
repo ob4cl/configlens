@@ -199,6 +199,39 @@ pub fn sanitize_url(value: &str) -> Option<String> {
     Some(out)
 }
 
+/// The host (authority without userinfo) of an absolute `http`/`https`/`ws`/`wss` URL.
+///
+/// Used by the share-mode projection to collect the private hosts that must be pseudonymized
+/// (spec §7 "In share mode pseudonymize private hosts").
+pub fn url_host(value: &str) -> Option<String> {
+    let (scheme, rest) = value.split_once("://")?;
+    if !matches!(scheme, "http" | "https" | "ws" | "wss") {
+        return None;
+    }
+    let authority = match rest.find(['/', '?', '#']) {
+        Some(idx) => &rest[..idx],
+        None => rest,
+    };
+    if authority.is_empty() {
+        return None;
+    }
+    Some(match authority.rsplit_once('@') {
+        Some((_, host)) => host.to_string(),
+        None => authority.to_string(),
+    })
+}
+
+/// Rewrite the host of a URL to its share-mode pseudonym.
+///
+/// The most specific public form of the URL (`sanitize_url`) is used as the base, so userinfo,
+/// query and fragment are already gone and the replacement only touches the authority.
+pub fn pseudonymize_url_host(value: &str, hosts: &Pseudonymizer) -> Option<String> {
+    let host = url_host(value)?;
+    let clean = sanitize_url(value)?;
+    let replacement = hosts.host_or_identity(&host);
+    Some(clean.replacen(&host, &replacement, 1))
+}
+
 /// Does the string contain a verified adapter interpolation directive?
 pub fn has_interpolation(value: &str) -> bool {
     value.contains("{env:") || value.contains("{file:")
@@ -408,6 +441,16 @@ impl Pseudonymizer {
             .get(name)
             .cloned()
             .unwrap_or_else(|| "host_?".to_string())
+    }
+
+    /// Pseudonym for a host that was collected during projection. Falls back to a stable literal
+    /// `host_opaque` when the host was not part of the collected set, so no private host string can
+    /// ever survive un-pseudonymized (spec §7).
+    pub fn host_or_identity(&self, name: &str) -> String {
+        self.hosts
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| "host_opaque".to_string())
     }
 }
 
@@ -722,6 +765,17 @@ mod tests {
             sanitize_url("https://host.example/path"),
             Some("https://host.example/path".to_string())
         );
+    }
+
+    #[test]
+    fn url_host_extracts_the_authority_without_userinfo() {
+        assert_eq!(
+            url_host("https://user:pass@jira.internal.example/mcp?x=1"),
+            Some("jira.internal.example".to_string())
+        );
+        assert_eq!(url_host("wss://h.example"), Some("h.example".to_string()));
+        assert_eq!(url_host("file:///etc/passwd"), None);
+        assert_eq!(url_host("not a url"), None);
     }
 
     #[test]

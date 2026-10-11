@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a scoped private-beta improvement.
+body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic examples only. Do not share real configuration, credentials, tokens, or identifying paths. Distinguish observed behavior from assumptions."
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and affected workflow
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome and acceptance criteria
+      description: Include limitations and alternatives; no unsupported conformance claims.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and relevant client versions
+      description: Official references or synthetic reproductions, if available.

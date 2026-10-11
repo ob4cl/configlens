@@ -7,6 +7,7 @@ mod common;
 
 use common::{ctx, mem, policy_for, run, run_with, with_env};
 use configlens::adapters::Client;
+use configlens::context::Trust;
 use configlens::model::event::EventKind;
 use configlens::resolve::{Engine, GapKind, ResolutionStatus};
 use configlens::security::PathMode;
@@ -51,6 +52,39 @@ fn oc_scalar_project_overrides_global() {
     assert!(
         r.selected_location().unwrap_or("").ends_with(":1:11") || r.selected_location().is_some()
     );
+}
+
+#[test]
+fn oc_project_is_never_trust_gated() {
+    // O4 regression: OpenCode has no upstream workspace-trust concept, so `oc.project` must be
+    // unconditionally applicable regardless of the trust hint — no trust gap and no trust
+    // diagnostic. (The old, Claude-derived gate made it conditional/skipped.)
+    for trust in [Trust::Unknown, Trust::Untrusted] {
+        let mut c = oc_ctx();
+        c.trust = trust;
+        let output = run(
+            Client::OpenCode,
+            &c,
+            &[(PROJECT, r#"{"model": "project-model"}"#)],
+        );
+        assert_eq!(
+            output.explain("/model").observed_str(),
+            Some("project-model"),
+            "trust {trust:?} must not gate the OpenCode project config"
+        );
+        assert!(
+            !output.has_gap(GapKind::TrustUnknown, "run"),
+            "OpenCode must never report a trust gap"
+        );
+        assert!(
+            output
+                .diagnostics
+                .iter()
+                .all(|d| d.code != "trust_unknown" && d.code != "workspace_untrusted"),
+            "OpenCode must never report a trust diagnostic: {:?}",
+            output.diagnostics
+        );
+    }
 }
 
 #[test]

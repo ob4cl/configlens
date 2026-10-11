@@ -321,6 +321,7 @@ fn snapshot_is_redacted_and_owner_only_on_unix() {
     let _ = sandbox;
 }
 
+#[cfg(unix)]
 #[test]
 fn snapshot_refuses_a_symlink_destination() {
     let sandbox = opencode_project();
@@ -491,6 +492,52 @@ fn a_malformed_high_priority_file_exits_4_and_is_not_ignored() {
         .assert()
         .code(4)
         .stdout(predicate::str::contains("malformed"));
+}
+
+#[test]
+fn completions_emit_a_script_for_each_shell() {
+    let sandbox = opencode_project();
+    for (shell, needle) in [
+        ("bash", "complete -F _configlens"),
+        ("zsh", "#compdef configlens"),
+        ("fish", "complete -c configlens"),
+    ] {
+        sandbox
+            .command()
+            .args(["completions", "--shell", shell])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains(needle));
+    }
+    sandbox
+        .command()
+        .args(["completions", "--shell", "powershell"])
+        .assert()
+        .code(2);
+}
+
+#[test]
+fn help_lists_the_support_report_and_completions_commands_with_examples() {
+    let sandbox = opencode_project();
+    sandbox
+        .command()
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("support-report"))
+        .stdout(predicate::str::contains("completions"))
+        .stdout(predicate::str::contains("Examples:"));
+}
+
+#[test]
+fn support_report_needs_an_explicit_output_or_preview() {
+    let sandbox = opencode_project();
+    sandbox
+        .command()
+        .args(["support-report", "--client", "opencode"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("--output"));
 }
 
 #[test]

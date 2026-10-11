@@ -142,7 +142,7 @@ Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib u
 | URL userinfo / query / fragment redaction | [x] | `security::redact::tests::urls_have_userinfo_query_and_fragment_removed` |
 | Share mode pseudonymizes paths | [x] | `path_policy` + `model::report::tests::share_mode_pseudonymizes_paths_and_keeps_output_deterministic` |
 | Share mode pseudonymizes unknown key names / instances | [x] | `model::report::tests::share_mode_makes_unknown_key_names_opaque` |
-| Share mode pseudonymizes **URL hosts** | [ ] | **not implemented** — an MCP URL host is shown in both modes; see Known gaps |
+|| Share mode pseudonymizes **URL hosts** | [x] | `security_leaks::share_mode_pseudonymizes_url_hosts_but_local_mode_keeps_them_for_diagnosis` |
 | Tool-rule lists local / pseudonymized in share | [x] | `security::redact::tests::tool_rule_lists_are_shown_locally_and_pseudonymized_in_share_mode` |
 | No global `--show-secrets` | [x] | no such flag exists |
 | Terminal control/OSC/bidi/CR/newline sanitization | [x] | `security::sanitize::tests::*`, `security_leaks::terminal_control_payloads_are_neutralised_in_every_channel` |
@@ -201,10 +201,7 @@ All ten are exercised end to end through the CLI in `tests/acceptance.rs` (8 tes
     unit-tested logic, not OS-verified.
 12. **`v2.1.296` / `1.18.35`** are the newest versions at the retrieval date; neither runtime was
     executed or tested against ConfigLens output.
-13. **Share mode does not pseudonymize URL hosts.** Spec §7 asks share mode to pseudonymize private
-    hosts; currently an MCP URL host is shown in both modes (only userinfo/query/fragment are
-    stripped). This is the one redaction item that is knowingly incomplete for 0.1.
-14. **MSRV 1.85 is declared but not built.** The verified toolchain is 1.99.0.
+13. **MSRV 1.85 is declared but not built.** The verified toolchain is 1.99.0.
 15. **No CI, no benchmarks, no license files, no `fixtures/` files, and no extra design documents**
     (`docs/semantics.md`, `docs/compatibility.md`, `docs/report-schema.md`, `docs/security.md`) are
     present, despite earlier claims in this file.
