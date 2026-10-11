@@ -77,17 +77,20 @@ this checkout does not have (`docs/semantics.md`, `docs/compatibility.md`, `docs
 
 ## Release checklist (not yet satisfied)
 
-`0.1.0` is a private-beta prototype. Before any published release, these must be true — they are the
-"launch dependencies" and are currently open:
+The `0.1.x` line is a private-beta prototype (currently `0.1.0-beta.3`). Before any published
+release, these must be true — they are the "launch dependencies". Open items are marked `[ ]`,
+satisfied ones `[x]`:
 
-- [ ] **Publish target and URL.** `Cargo.toml` still carries the placeholder
-      `repository = "https://github.com/example/configlens"`; set the real repository URL. Confirm
-      crate/crate-name availability before claiming a package.
-- [x] **CI (partly).** `.github/workflows/ci.yml`'s test matrix, `quality` and `msrv` jobs are green
-      ([run 38099457727](https://github.com/ob4cl/configlens/actions/runs/38099457727)); the
-      `dependencies` and `fuzz` jobs have **not** run yet, no `fuzz-scheduled.yml` run has happened,
-      and `prerelease.yml` has never run. Confirm every job is green on the release commit, and that
-      the locked test job includes the secret-leak suite. Actions must stay pinned.
+- [x] **Publish target and URL.** `Cargo.toml` carries the real repository URL
+      (`repository = "https://github.com/ob4cl/configlens"`) plus licence, readme, description,
+      keywords and categories. Still open before publishing to a registry: confirm crate/crate-name
+      availability, and that the metadata is exactly what you want shipped.
+- [x] **CI.** Every `ci.yml` job is green — the Linux/macOS/Windows test matrix, `quality`,
+      `msrv`, `dependencies` (cargo-deny) and the bounded `fuzz` smoke — most recently on `main` at
+      `51a2ca7`. `prerelease.yml` has now run end to end successfully for `v0.1.0-beta.1` and
+      `v0.1.0-beta.2`. The weekly `fuzz-scheduled.yml` has **not** fired yet (its first run lands on
+      its schedule). Continue to confirm every job is green on each release commit, and keep Actions
+      pinned to verified commits.
 - [x] **MSRV actually built.** `cargo +1.85.0 check --locked --all-targets --all-features` exits `0`
       (§8.1 of `verification-log.md`) and the CI `msrv` job runs the same check; local development used
       1.99.0.
