@@ -1,6 +1,6 @@
 # ConfigLens — public-launch README & developer-experience audit
 
-- Repo: /home/user/configlens · branch `main` · HEAD `e746957` · clean tree · private, three private prereleases.
+- Repo: <repo path redacted> · branch `main` · HEAD `e746957` · clean tree · private, three private prereleases.
 - Executed: Sun 11 Oct 2026, WSL/Linux x86_64, cargo/rustc 1.99.0 (default `stable`). All test runs used isolated temp `HOME` and temp `--cwd`; the real `~/.config` and `~/.claude` were never touched.
 - Evidence tags: **[C]** = CONFIRMED (a command I ran or a file:line I read). **[R]** = RECOMMENDATION.
 

@@ -1,7 +1,7 @@
 # ConfigLens — public-hygiene / sensitive-information audit (pre-publication)
 
 - Auditor: `researcher` agent. Date: 2026-10-11 (BST).
-- Target: repo `/home/user/configlens`, branch `main`, `HEAD e746957`, clean tree, currently PRIVATE.
+- Target: repo `<repo path redacted>`, branch `main`, `HEAD e746957`, clean tree, currently PRIVATE.
 - Method: read-only. Worked from git-tracked content only (`git ls-files`, `git grep`) so the audit
   covers exactly what a `git clone` would publish, plus a bounded history scan
   (`git rev-list --all` + `git grep`/`git cat-file`) because a public launch also exposes history.
@@ -23,7 +23,7 @@ PUBLIC-SAFE · REDACT · RELOCATE · OWNER-APPROVAL · STALE (fix before publish
   `SEEDED`, `ZUINFO`, `jira.example`, `.invalid`).
 - The real exposure is **identity**, not secrets: a machine **hostname** and the **maintainer's name**
   in tracked docs, a **local agent path**, machine-fingerprint benchmark text, and a **git-history
-  trail of `/home/user`** and a **personal gmail committer address**.
+  trail of `<home path redacted>`** and a **personal gmail committer address**.
 - The second exposure is **audience**: `docs/beta/*`, `docs/research/*`, `.github/AUTOMATION.md` and
   parts of the spec are internal plans/audits with launch, outreach and business content that were
   never written for a public reader, and several carry **stale** or **mutually contradictory**
@@ -35,7 +35,7 @@ PUBLIC-SAFE · REDACT · RELOCATE · OWNER-APPROVAL · STALE (fix before publish
 
 | # | Location | What | Decision | Reason |
 |---|---|---|---|---|
-| 1.1 | `docs/verification-log.md:10` | Real WSL hostname `DESKTOP-T5SB5DG` (`\| Host \| Linux \`DESKTOP-T5SB5DG\` …`) | **REDACT** | Machine identifier; uniquely names the author's box. Replace with `Linux (WSL2), x86_64`. |
+| 1.1 | `docs/verification-log.md:10` | Real WSL hostname `<hostname redacted>` (`\| Host \| Linux \`<hostname redacted>\` …`) | **REDACT** | Machine identifier; uniquely names the author's box. Replace with `Linux (WSL2), x86_64`. |
 | 1.2 | `docs/implementation-status.md:198` | `Lenovo ThinkPad T440s, Intel i5-4300U 2c/4t (3 vCPU), 4 GB RAM, Linux 6.18.x-microsoft-standard-WSL2` | **REDACT / OWNER-APPROVAL** | Machine fingerprint (exact laptop model + specs). A benchmark needs "hardware class", not the exact device. Keep the repo-pointer risk low: relabel as `WSL2 Ubuntu, x86_64, 3 vCPU, 4 GB`. |
 | 1.3 | `docs/research/fuzz-recovery.md:251` | `SC=~/.hermes/profiles/coder/cache/scratch/prefix-head` | **REDACT** | Absolute local scratch path that leaks the author's agent tooling/profile layout. Replace with `$SCRATCH`. |
 | 1.4 | `docs/beta/windows-regression-plan.md:12-13,38,117` | `$env:USERPROFILE\Desktop\configlens-test…` | PUBLIC-SAFE | Intentional placeholder; no real path. |
@@ -147,16 +147,16 @@ Cross-checked against `Cargo.toml` (`version = "0.1.0-beta.3"`) and the three ta
 
 | # | Scope | Finding | Decision |
 |---|---|---|---|
-| 8.1 | 14 of 19 commits (`git rev-list --all`) | Old revisions of `docs/verification-log.md`, `docs/research/run-fixtures.sh`, `docs/research/fixtures/codex/home/.codex/config.toml`, `docs/research/evidence/fixture-run.txt`, `docs/engineering-verification.md` contain `/home/user/configlens`. | **REDACT (rewrite history or accept)** — HEAD is clean, but a clone exposes the username. Rewrite or accept knowingly. |
-| 8.2 | All 19 commits | `DESKTOP-T5SB5DG` appears in every commit's `verification-log.md` revision. | REDACT — same machine identifier as 1.1, historically. |
-| 8.3 | commit `84c1c77234c994435acf7c54e70364ef9ea2a9aa` ("Add GitHub Actions workflow for Rust project") | Committer/author email `ob4cl@users.noreply.github.com` (git metadata) alongside the `…+ob4cl@users.noreply.github.com` used elsewhere. | **OWNER-APPROVAL** — a personal email becomes public with the push. Confirm/rewrite to the noreply address. |
+| 8.1 | 14 of 19 commits (`git rev-list --all`) | Old revisions of `docs/verification-log.md`, `docs/research/run-fixtures.sh`, `docs/research/fixtures/codex/home/.codex/config.toml`, `docs/research/evidence/fixture-run.txt`, `docs/engineering-verification.md` contain `<repo path redacted>`. | **REDACT (rewrite history or accept)** — HEAD is clean, but a clone exposes the username. Rewrite or accept knowingly. |
+| 8.2 | All 19 commits | `<hostname redacted>` appears in every commit's `verification-log.md` revision. | REDACT — same machine identifier as 1.1, historically. |
+| 8.3 | commit `84c1c77234c994435acf7c54e70364ef9ea2a9aa` ("Add GitHub Actions workflow for Rust project") | Committer/author email `<personal email redacted>` (git metadata) alongside the `…+ob4cl@users.noreply.github.com` used elsewhere. | **OWNER-APPROVAL** — a personal email becomes public with the push. Confirm/rewrite to the noreply address. |
 | 8.4 | all blobs | No secret-like token anywhere in history. | PUBLIC-SAFE. |
 
 ---
 
 ## MUST be handled before the repository is made public
 
-1. **Redact the hostname** `DESKTOP-T5SB5DG` — `docs/verification-log.md:10` **and all history**
+1. **Redact the hostname** `<hostname redacted>` — `docs/verification-log.md:10` **and all history**
    (§1.1, §8.2).
 2. **Redact/replace the machine fingerprint** in `docs/implementation-status.md:198` (§1.2).
 3. **Redact the local agent path** `~/.hermes/profiles/coder/…` — `docs/research/fuzz-recovery.md:251` (§1.3).
@@ -188,5 +188,5 @@ Not required, but decide deliberately: whether to ship the ~10 MB `fuzz/corpus` 
 evidence and the tracked `docs/demo/configlens-demo.cast`, and whether to add the missing
 `docs/demo/README.md` that `demo/record.sh:24` links to (§5).
 
-_Report written to `/home/user/configlens/docs/research/launch-audit-hygiene.md` (the one file this
+_Report written to `<repo path redacted>/docs/research/launch-audit-hygiene.md` (the one file this
 audit was authorised to create)._

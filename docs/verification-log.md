@@ -7,7 +7,7 @@ command that was not executed. Copy/paste each command to reproduce.
 
 | Item | Value |
 |---|---|
-| Host | Linux `DESKTOP-T5SB5DG` `6.18.40.1-microsoft-standard-WSL2` (WSL2), x86_64 |
+| Host | Linux, WSL2, x86_64, kernel `6.18.40.1-microsoft-standard-WSL2` (hostname redacted) |
 | `cargo` | `cargo 1.99.0 (5f94df478 2026-08-27)` |
 | `rustc` | `rustc 1.99.0 (b940084d7 2026-09-28)` |
 | `rustfmt` | `rustfmt 1.10.0-stable (b940084d7e 2026-09-28)` |

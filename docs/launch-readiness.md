@@ -141,10 +141,10 @@ No licensing text has been changed in this branch.
 
 | Item | Where | Class | Note |
 |---|---|---|---|
-| WSL hostname `DESKTOP-T5SB5DG` | `docs/verification-log.md` §1 | **Owner approval** | Machine identifier. Also present in every commit's history, so redacting `HEAD` alone would be a half-measure. Options: accept it, or rewrite history (destructive — needs explicit approval). |
+| WSL hostname (Windows machine name) | `docs/verification-log.md` §1, plus quotations in the audit reports | **Redacted in HEAD; history pending your decision** | The single current-tree occurrence and the audit quotations are now `<hostname redacted>`. It still appears in **all 21** commits, so a public clone exposes it unless history is rewritten (destructive — needs explicit approval). |
 | Exact machine model (Lenovo ThinkPad T440s, i5-4300U, 4 GB) | `docs/implementation-status.md` | **Owner approval** | Same reasoning; benchmark context has some value, so softening it is optional. |
 | Local agent path `~/.hermes/profiles/coder/...` | `docs/research/fuzz-recovery.md` | **Redacted in this branch** | Revealed local tooling layout, not the project. Now `<scratch>/prefix-head`. |
-| Personal email in git history (`ob4cl@users.noreply.github.com`) | 1 commit author | **Owner approval** | Becomes public on push. Removing it requires rewriting history. |
+| Personal email address | 1 commit author (`84c1c77`), plus quotations in the audit reports | **Redacted in HEAD; commit metadata pending your decision** | The audit quotations are now `<personal email redacted>`. The address itself remains in that one commit's author field, which only a history rewrite can change. It is PII (spam/phishing surface), not a credential. |
 | `docs/beta/*` (1,397 lines: pilot guide, outreach messages, launch drafts, success metrics, issue triage, user-actions, tester instructions, release runbook, milestone checklist, windows plan) | tracked | **Needs relocation or acceptance** | Internal planning and business intent. Recommend moving to a private location before publication, or accepting them as maintainer notes. |
 | `docs/spec/ConfigLens_Technical_Specification.md` (458 lines, incl. a business roadmap §10 and an agent brief §12) | tracked | **Needs redaction or relocation** | Strip the commercial/roadmap sections and the coding-agent brief if it is published. |
 | `.github/AUTOMATION.md` | tracked | **Needs relocation or acceptance** | Maintainer release mechanics; harmless but internal in tone. |
@@ -191,6 +191,10 @@ Documentation accuracy only; no legal, licence, workflow, security-setting or co
 - Redacted one local-tooling path (`~/.hermes/profiles/coder/...` → `<scratch>/prefix-head`) in
   `docs/research/fuzz-recovery.md`. This is the only machine-specific string changed; the other
   candidate identifiers are listed in §6 for your decision because they also live in git history.
+- Redacted the machine hostname from its single current-tree occurrence (`docs/verification-log.md`
+  §1, the benchmark host line) and removed the hostname, local home path and personal email address
+  that the audit reports themselves quoted, so HEAD now contains none of them. Note this reduces
+  casual exposure only — all three remain in the commit history, which only a rewrite would change.
 - Added the three audit reports and this plan.
 
 ## 9. Go / no-go
