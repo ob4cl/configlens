@@ -15,7 +15,7 @@ is enforced by `tests/security_leaks.rs::the_source_tree_never_spawns_processes_
 
 > **Test counts in this file are per-session snapshots.** Sections §3 and §6.2 below quote the
 > `cargo test` totals that that session actually produced (286 and 296 at the time). The suite has
-> grown since; the **current, authoritative census is 315 passed / 0 failed / 9 targets**
+> grown since; the **current, authoritative census is 324 passed / 0 failed / 9 targets**
 > (`docs/verification-log.md` §3). Where a number here disagrees with that table, that table wins.
 
 ## 1. Scope of the change (files owned and touched)
@@ -161,7 +161,7 @@ $ python3 $SCRATCH/configlens_acceptance.py target/debug/configlens
 #                     unknown_pointer, malformed_higher_layer, duplicate_keys)     # exit 0
 ```
 
-Test count moved from 270 → 286 (+16) **in this session**; the current authoritative total is 315
+Test count moved from 270 → 286 (+16) **in this session**; the current authoritative total is 324
 (`docs/verification-log.md` §3). New tests added by this session: lib +8 (4 completion tests, the
 `diff` source/coverage test, the URL-host/path projection test, the `url_host` unit test, and the
 split symlink snapshot test), `cli_contract` +3 (completions, help examples, support-report usage),
@@ -269,7 +269,7 @@ $ bash docs/research/run-fixtures.sh        # read-only, isolated, no network   
 ```
 
 Test count moved **286 → 296 (+10)** in this pass (a per-session snapshot; the current authoritative
-total is **315** — `docs/verification-log.md` §3). New tests, each of which fails if its fix is
+total is **324** — `docs/verification-log.md` §3). New tests, each of which fails if its fix is
 reverted:
 
 * unit `src/adapters/mod.rs` +6 — `claude_hkcu_is_the_lowest_managed_layer`,

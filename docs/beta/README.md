@@ -59,9 +59,10 @@ current state, use `docs/implementation-status.md` and `docs/verification-log.md
 
 **Current state (2026-10-11), superseding the snapshot above.** CI workflows now exist and run:
 `ci.yml`'s test matrix, `quality` and `msrv` jobs are green ([run 38099457727](https://github.com/ob4cl/configlens/actions/runs/38099457727)),
-with `dependencies` and `fuzz` jobs added since that run and **not yet exercised in CI**;
-`prerelease.yml` is manual (`workflow_dispatch`) and has **never run**. `LICENSE-MIT`/`LICENSE-APACHE`,
+with `dependencies` and `fuzz` jobs added since that run and now **green in CI**;
+`prerelease.yml` is manual (`workflow_dispatch`) and has completed end to end for `v0.1.0-beta.2`
+and `v0.1.0-beta.3`. `LICENSE-MIT`/`LICENSE-APACHE`,
 `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, issue/PR templates, the
 `benches/resolution.rs` benchmark, three `cargo-fuzz` targets (`fuzz/`) and both compatibility
-registries now exist, and MSRV 1.85 is verified. `HEAD` is `35ad132`, not `b2684c7`, and the current
-test census is **315 passed / 0 failed** (`docs/verification-log.md` §3), not the 270 in the snapshot.
+registries now exist, and MSRV 1.85 is verified. `HEAD` is `e746957`, not `b2684c7`, and the current
+test census is **324 passed / 0 failed** (`docs/verification-log.md` §3), not the 270 in the snapshot.

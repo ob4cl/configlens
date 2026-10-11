@@ -41,8 +41,8 @@ cargo build --locked --release
 ./demo/demo.sh          # isolated synthetic end-to-end smoke test; exits 0
 ```
 
-The recorded run in [`docs/verification-log.md`](docs/verification-log.md) covered 270 tests (177
-library unit tests plus 93 integration tests across `tests/acceptance.rs`, `tests/cli_contract.rs`,
+The recorded run in [`docs/verification-log.md`](docs/verification-log.md) covered 324 tests (194
+library unit tests plus 130 integration tests across `tests/acceptance.rs`, `tests/cli_contract.rs`,
 `tests/conformance.rs`, `tests/rules_claude.rs`, `tests/rules_opencode.rs` and
 `tests/security_leaks.rs`). Keep them all green.
 

@@ -53,19 +53,20 @@ $ cargo test --locked --no-fail-fast
 | `unittests src/lib.rs` | ok. 194 passed; 0 failed; 0 ignored |
 | `unittests src/main.rs` | ok. 0 passed; 0 failed |
 | `tests/acceptance.rs` | ok. 8 passed; 0 failed |
-| `tests/cli_contract.rs` | ok. 24 passed; 0 failed |
+| `tests/cli_contract.rs` | ok. 33 passed; 0 failed |
 | `tests/conformance.rs` | ok. 10 passed; 0 failed |
 | `tests/rules_claude.rs` | ok. 25 passed; 0 failed |
 | `tests/rules_opencode.rs` | ok. 40 passed; 0 failed |
 | `tests/security_leaks.rs` | ok. 14 passed; 0 failed |
 | Doc-tests | ok. 0 passed; 0 failed |
-| **Total** | **315 passed, 0 failed, 0 ignored** (9 targets) |
+| **Total** | **324 passed, 0 failed, 0 ignored** (9 targets) |
 
 Both the library and integration counts above are the current, authoritative census (fresh
-`cargo test --locked --no-fail-fast` on `rustc 1.99.0`). Earlier entries in this log and in
+`cargo test --locked --no-fail-fast` on `rustc 1.99.0`, `0.1.0-beta.3` tree), and §9 records the same
+run for the beta.3 release-quality pass. Earlier entries in this log and in
 `docs/engineering-verification.md` recorded intermediate totals (270, then 286, then 296) as the test
-suite grew; those are historical session snapshots, not the current state. Where they disagree, this
-table is correct.
+suite grew; those are historical session snapshots, not the current state. Where any of them
+disagrees with this table, this table is correct.
 
 ## 4. Release build
 
@@ -307,7 +308,7 @@ conformance claim).
 ```
 $ cargo fmt --all -- --check          -> clean
 $ cargo clippy --locked --all-targets --all-features -- -D warnings   -> clean
-$ cargo test --locked --no-fail-fast  -> 315 passed, 0 failed (see §3)
+$ cargo test --locked --no-fail-fast  -> 324 passed, 0 failed (see §3)
 $ python -m unittest discover -s scripts -p "test_*.py"              -> OK (13 tests)
 $ cargo +stable build --locked --release --bin configlens            -> ok
 $ actionlint                          -> clean (both workflows)

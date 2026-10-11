@@ -62,8 +62,9 @@ gh workflow run prerelease.yml -f tag=vX.Y.Z-beta.N
 - [ ] **There is no smoke-test step.** The build job builds and packages only; it never runs the binary.
       If you want a smoke test (`--version`, `clients`, `schema --kind report`) it must be added to the
       workflow first — do not claim one in the release notes until it exists.
-- [ ] This workflow has **never run**. The first dispatch is an untested procedure: watch it and be
-      ready to fix it forward.
+- [x] This workflow has completed end to end twice — `v0.1.0-beta.2` (run 38149155619) and
+      `v0.1.0-beta.3` (run 38158464200) — each producing the seven-asset layout. Treat the first
+      dispatch of a *changed* workflow shape as untested, and watch it.
 
 ## 3. Artifacts, checksums and integrity
 

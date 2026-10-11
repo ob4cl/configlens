@@ -24,7 +24,7 @@ evidence that changed them — release, licensing and CI in particular. Everythi
 `[ ]` is still true: no runtime conformance, Windows snapshot ACLs unimplemented.
 
 Toolchain used for the verification run: `cargo`/`rustc` 1.99.0 (see `docs/verification-log.md`).
-Test totals for the current recorded run: **315 passed, 0 failed, 0 ignored** (194 lib unit + 121
+Test totals for the current recorded run: **324 passed, 0 failed, 0 ignored** (194 lib unit + 130
 integration, 9 targets) — see `docs/verification-log.md` §3, which is authoritative where older
 totals differ.
 
@@ -65,7 +65,7 @@ runtime-conformance claim.
 | `fixtures/{claude,opencode}/` | [ ] | **not present in the repository** (git cannot track an empty directory, and there are no fixture files to put there); all fixtures are inline in the test files |
 | `examples/` | [ ] | **not present**; the runnable demo lives in `demo/demo.sh` |
 | `benches/resolution.rs` | [x] | present (`harness = false`, no benchmark dependency); run `cargo bench`, numbers below |
-| `.github/workflows/ci.yml`, `prerelease.yml`, `fuzz-scheduled.yml` | [~] | `ci.yml` defines five jobs: `test` (a Linux/macOS/Windows matrix), `quality` (fmt+clippy), `msrv` (1.85.0), `dependencies` (cargo-deny) and `fuzz` (a 60-second smoke per target against the committed, coverage-minimised corpus). `fuzz-scheduled.yml` adds the longer pass — weekly and on manual dispatch, one matrix job per target, each with a bounded wall-clock budget, a resident-memory cap and a 90-minute job timeout. [Run 38099457727](https://github.com/ob4cl/configlens/actions/runs/38099457727) was green for the test matrix, `quality` and `msrv`; it **predates** the `dependencies` and `fuzz` jobs, which have **never run in CI**, and no scheduled fuzz run has happened yet. `prerelease.yml` is manual (`workflow_dispatch` on an existing reviewed tag) and has **never been run**; no release has been published |
+| `.github/workflows/ci.yml`, `prerelease.yml`, `fuzz-scheduled.yml` | [~] | `ci.yml` defines five jobs: `test` (a Linux/macOS/Windows matrix), `quality` (fmt+clippy), `msrv` (1.85.0), `dependencies` (cargo-deny) and `fuzz` (a 60-second smoke per target against the committed, coverage-minimised corpus). `fuzz-scheduled.yml` adds the longer pass — weekly and on manual dispatch, one matrix job per target, each with a bounded wall-clock budget, a resident-memory cap and a 90-minute job timeout. [Run 38099457727](https://github.com/ob4cl/configlens/actions/runs/38099457727) was green for the test matrix, `quality` and `msrv` and **predates** the `dependencies` and `fuzz` jobs. Since then every job has run green on `main` — runs 38145621405 (which added `dependencies` + `fuzz`), 38154401825 / 38155566218 (the `release/0.1.0-beta.3` branch) and 38157888805 (merged `main`) — with all seven jobs passing. `prerelease.yml` is manual (`workflow_dispatch` on an existing reviewed tag) and has completed end to end twice, for `v0.1.0-beta.2` (run 38149155619) and `v0.1.0-beta.3` (run 38158464200), each producing the seven-asset layout (3 archives + 3 SBOMs + `SHA256SUMS`). The weekly `fuzz-scheduled.yml` has **not** fired yet; its first run lands on its schedule |
 | `docs/{semantics,compatibility,report-schema,security}.md` | [ ] | absent |
 | `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, issue/PR templates | [x] | present |
 | `LICENSE-MIT`, `LICENSE-APACHE` | [x] | both texts present, matching the `MIT OR Apache-2.0` SPDX expression in `Cargo.toml` |
@@ -121,7 +121,7 @@ runtime-conformance claim.
 | Exit codes 0/1/2/3/4, priority 2→4→3→1→0 | [x] | `cli::exit_code_*`, `error::tests::exit_codes_match_the_specification` |
 | JSON envelope on stdout, incl. fatal errors | [x] | `error`, `render::json` |
 | No ANSI in JSON; sanitized stderr | [x] | `render::json::tests::output_contains_no_ansi_escape_sequences` |
-| Broken pipe exits without backtrace | [x] | `BrokenPipe` → exit 0 mapping in `error` |
+| Broken pipe | [ ] | **not implemented.** A write to a closed pipe panics and the process exits `101`; the panic hook only suppresses the message. There is no `BrokenPipe`/`SIGPIPE` handling in `src/` |
 
 ## 5. Resolution model (§5)
 
@@ -174,7 +174,7 @@ runtime-conformance claim.
 | No global `--show-secrets` | [x] | no such flag exists |
 | Terminal control/OSC/bidi/CR/newline sanitization | [x] | `security::sanitize::tests::*`, `security_leaks::terminal_control_payloads_are_neutralised_in_every_channel` |
 | No parser error excerpts / raw clap echoes | [x] | diagnostics carry code + role + line/column only |
-| Panic hook suppresses input content | [x] | custom hook in `error` |
+| Panic hook suppresses input content | [x] | custom hook in `src/main.rs` |
 | Limits: 2 MiB/file, 16 MiB total, 128 sources, depth 64, include depth 8, 2000 events/key | [x] | each with its own diagnostic and test |
 | Reject devices/sockets/FIFOs/directories | [x] | `filesystem::tests::{directories_are_refused,sockets_are_refused}` |
 | Symlink loops + escape detected | [x] | `filesystem::tests::symlink_*` |
@@ -190,13 +190,13 @@ runtime-conformance claim.
 | Reducers (scalar/object/list/null/missing, chains, scope exclusion, unknown keys) | [x] | `resolve` + `rules_{claude,opencode}` |
 | Coverage (missing runtime args, MDM, remote defaults, unknown trust/version) | [x] | `acceptance`, `rules_*` |
 | Security (seeded secrets in fields, keys, paths, URLs, args, malformed JSON, env, escapes) | [x] | `security_leaks` (14 tests) |
-| CLI (exit codes, strict, JSON, NO_COLOR, non-TTY, unknown pointer, incompatible snapshots) | [x] | `cli_contract` (24 tests) |
+| CLI (exit codes, strict, JSON, NO_COLOR, non-TTY, unknown pointer, incompatible snapshots) | [x] | `cli_contract` (33 tests) |
 | Conformance (pinned upstream loader) | [~] **not run** | no safe loader harness built; rules stay `documented`/`fixture_verified` |
-| Portability (Linux/macOS/Windows runners) | [~] **CI-verified, not client-verified** | three-OS CI job green ([run](https://github.com/ob4cl/configlens/actions/runs/38099457727)); this proves the test suite runs on those platforms, **not** that the real Claude Code/OpenCode clients behave as modelled there |
+| Portability (Linux/macOS/Windows runners) | [~] **CI-verified, not client-verified** | three-OS CI job green (for example [run 38157888805](https://github.com/ob4cl/configlens/actions/runs/38157888805) on `main`); this proves the test suite runs on those platforms, **not** that the real Claude Code/OpenCode clients behave as modelled there |
 | Property tests (determinism, idempotent redaction, irrelevant-definition independence, no false complete) | [x] | `tests/conformance.rs` (deterministic LCG, no `proptest`) |
 | Fuzz targets | [~] | three `cargo-fuzz` targets exist (`fuzz/{parse_documents,resolve_precedence,hostile_inputs}`) with a committed seed corpus and a bounded CI job; a 120 s-per-target session on the corrected oracle runs clean. Evidence: `docs/research/fuzz-recovery.md` |
 | Benchmarks | [x] | `benches/resolution.rs` (`cargo bench`; `harness = false`, dependency-free, in-memory synthetic documents, writes nothing). Recorded 2026-10-11 on the beta machine (WSL2 Ubuntu, Lenovo ThinkPad T440s, Intel i5-4300U 2c/4t (3 vCPU), 4 GB RAM, Linux `6.18.40.1-microsoft-standard-WSL2`, `rustc 1.99.0`, release profile), idle-machine medians: 0 keys / 1 005 B → **1.620 ms**; 100 keys / 3 395 B → **3.773 ms**; 1 000 keys / 25 895 B → **62.283 ms**; 5 000 keys / 129 895 B → **1 224.459 ms**. Peak RSS ≈17 MB (single probe process) / ≈31 MB (full `cargo bench`). Scaling is **quadratic** (fitted exponent ≈1.85–1.9): the engine resolves every distinct pointer independently (`src/resolve/mod.rs:597-600`) and `collect_contributions` linearly scans all definitions+sources per pointer (`src/resolve/mod.rs:933-943`), i.e. O(P×D) ≈ O(n²) in key count. 5 000 top-level keys far exceeds any real client config (real configs have tens of keys), so per the spec this is **investigated and documented, not optimised** (avoid premature optimisation); the one-line remedy, recorded without a code change, is to index definitions by pointer once instead of rescanning per pointer. Indicative, not statistical: an earlier run under concurrent fuzz/agent load measured 3 883 ms for 5 000 keys (≈3✕), so these figures are load-sensitive |
-| CI | [~] | `ci.yml` (test matrix + quality + MSRV + `dependencies` + `fuzz`). Run 38099457727 covered the test matrix, `quality` and `msrv`; the `dependencies` and `fuzz` jobs have **never run in CI**, and `prerelease.yml` has never run at all |
+| CI | [x] | `ci.yml` (test matrix + quality + MSRV + `dependencies` + `fuzz`): all five jobs green on `main`, most recently [run 38157888805](https://github.com/ob4cl/configlens/actions/runs/38157888805). `prerelease.yml` has completed end to end for `v0.1.0-beta.2` and `v0.1.0-beta.3`. `fuzz-scheduled.yml` has not fired yet |
 
 ## 9. Acceptance examples (§9)
 
@@ -250,5 +250,5 @@ All ten are exercised end to end through the CLI in `tests/acceptance.rs` (8 tes
 Commands actually run, with their real results, are recorded in
 [`docs/verification-log.md`](verification-log.md). The current recorded run: `cargo fmt --check` clean,
 `cargo clippy --locked --all-targets --all-features -- -D warnings` clean, `cargo test --locked
---no-fail-fast` 315/315 passing, `cargo build --locked --release` successful, `demo/demo.sh` exits 0,
+--no-fail-fast` 324/324 passing, `cargo build --locked --release` successful, `demo/demo.sh` exits 0,
 and the independent acceptance harness reports 7/7 checks ok.

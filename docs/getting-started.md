@@ -12,7 +12,7 @@ You need a Rust toolchain. `Cargo.toml` declares `rust-version = "1.85"`, and th
 development used `1.99.0` — see [`verification-log.md`](verification-log.md).
 
 ```sh
-git clone <this repository>       # private beta: use your existing access
+git clone https://github.com/ob4cl/configlens.git   # private beta: use your existing access
 cd configlens
 cargo build --locked --release
 ```

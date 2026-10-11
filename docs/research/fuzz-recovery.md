@@ -248,7 +248,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 cargo test --test security_leaks the_saved_hostile_inputs_crash_artifact_is_neutralised -- --exact
 
 # Isolated pre-fix copy (real tree untouched)
-SC=~/.hermes/profiles/coder/cache/scratch/prefix-head
+SC=<scratch>/prefix-head
 mkdir -p "$SC"; git -C $REPO archive HEAD | tar -x -C "$SC"
 cp $REPO/tests/security_leaks.rs "$SC/tests/security_leaks.rs"
 # ... artifact copied to "$SC/fuzz/results/..." -> RED:
