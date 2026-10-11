@@ -26,6 +26,7 @@
   "tested_client_versions": ["2.1.296"],
   "documented_client_versions": ["2.1.296"],
   "pinned_commit": null,
+  "managed_sources_behavior": "first-wins",
   "conformance_status": "fixture_verified_max",
   "layers": [
     {
@@ -38,7 +39,7 @@
       "id": "cc.project_shared",
       "rank": 20,
       "observable": true,
-      "location": "<project root>/.claude/settings.json"
+      "location": "the session primary working directory/.claude/settings.json"
     },
     {
       "id": "cc.project_local",
@@ -75,7 +76,7 @@
     },
     {
       "id": "cc.managed.hkcu",
-      "rank": 90,
+      "rank": 50,
       "observable": false,
       "location": "HKCU\\SOFTWARE\\Policies\\ClaudeCode (Windows and WSL)",
       "unobservable_reason": "registry_not_read"
@@ -220,13 +221,12 @@
     },
     {
       "pointer": "/modelPicker",
-      "operator": "ordered-replace",
-      "rule_id": "claude.list.ordered-whole-replace",
-      "support": "documented",
+      "operator": "inventory-only",
+      "rule_id": "claude.unknown.inventory-only",
+      "support": "inventory_only",
       "evidence": ["S3"],
       "interpolation": "none",
-      "model_name": true,
-      "tests": ["cc_fallback_model_ordered_whole_replace"]
+      "tests": []
     },
     {
       "pointer": "/env/*",

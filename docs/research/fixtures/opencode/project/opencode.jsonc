@@ -1,0 +1,5 @@
+{
+  // JSONC dialect fixture: a comment and a trailing comma are legal here.
+  "$schema": "https://opencode.ai/config.json",
+  "small_model": "anthropic/claude-haiku-4-5",
+}

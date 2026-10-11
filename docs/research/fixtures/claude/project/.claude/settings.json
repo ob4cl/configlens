@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "claude-opus-5-5",
+  "spinnerTipsEnabled": true,
+  "permissions": {
+    "allow": ["Bash(npm run build)"],
+    "ask": ["Bash(git push *)"]
+  },
+  "extraKnownMarketplaces": {
+    "example-team": { "source": { "source": "github", "repo": "example/team-marketplace" } }
+  }
+}

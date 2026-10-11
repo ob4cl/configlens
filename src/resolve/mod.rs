@@ -297,7 +297,9 @@ impl<'a> Engine<'a> {
                 "client_version_not_tested_or_documented",
             ));
         }
-        if self.ctx.trust == crate::context::Trust::Unknown {
+        // Workspace trust is only a concept for clients that gate project contributions on it
+        // (Claude Code). OpenCode has no upstream trust concept (audit O4), so no gap is emitted.
+        if self.ctx.trust == crate::context::Trust::Unknown && self.adapter.trust_applicable() {
             coverage.push(CoverageGap::run(
                 GapKind::TrustUnknown,
                 "run",
@@ -744,16 +746,19 @@ impl<'a> Engine<'a> {
                         ));
                         index += 2;
                     }
-                    (other, _) => {
+                    (_, _) => {
                         diagnostics.push(Diagnostic {
                             severity: Severity::Warning,
                             code: "unrecognised_session_flag".to_string(),
                             location: Some("supplied session arguments".to_string()),
                             line: None,
                             column: None,
+                            // The raw flag is never echoed: a client argument can itself be a
+                            // credential (`--api-key=…`), and spec §7 forbids exposing command
+                            // arguments in reports. The position is enough to act on.
                             message: format!(
-                                "flag {} is not a verified option; resolution for affected keys is partial",
-                                crate::security::sanitize(other)
+                                "argument #{} is not a verified option; resolution for affected keys is partial",
+                                index + 1
                             ),
                         });
                         index += 1;
@@ -952,17 +957,22 @@ fn collect_contributions(
         }
         if rule.trust_gated
             && inputs.ctx.trust != crate::context::Trust::Trusted
-            && matches!(
-                source.class,
-                crate::adapters::SourceClass::ProjectShared
-                    | crate::adapters::SourceClass::ProjectLocal
-            )
+            && source.class == crate::adapters::SourceClass::ProjectShared
         {
-            // Keep the applicability reason the adapter chose: an explicitly untrusted workspace is
-            // `workspace_untrusted`, while an undetermined one is `trust_unknown`. Never overwrite
-            // the more specific skip reason (spec §9 examples 5/5b).
+            // Key-granular trust gate (audit C4). Upstream applies only `permissions.allow`,
+            // `additionalDirectories`, `extraKnownMarketplaces` and most `env` values after the
+            // folder is trusted; `deny`/`ask` apply right away, and an *untracked* local file's
+            // allow rules apply without the trust step. So only a trust-gated key from the *shared*
+            // project file is ignored here; local and the deny/ask rules are not. The reason is the
+            // adapter's own applicability note (`workspace_untrusted` vs `trust_unknown`).
             if ignored.is_none() {
-                ignored = Some("trust_unknown".to_string());
+                ignored = Some(
+                    source
+                        .applicability
+                        .note()
+                        .unwrap_or("trust_unknown")
+                        .to_string(),
+                );
             }
         }
         let excluded_value = raw

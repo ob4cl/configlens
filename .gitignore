@@ -4,3 +4,5 @@
 /snapshots-local
 .idea/
 .vscode/
+__pycache__/
+*.pyc

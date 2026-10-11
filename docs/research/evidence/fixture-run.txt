@@ -1,0 +1,1144 @@
+### A. claude: user + shared project + local project, trust UNKNOWN
+$ claude_env /home/user/configlens/target/release/configlens scan --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --format text --paths local
+ConfigLens scan — client claude (adapter revision 0.1.0)
+Sources (3):
+  [10] cc.user  $HOME/.claude/settings.json  observed  applicable
+  [20] cc.project_shared  $PROJECT/.claude/settings.json  observed  not unconditional (trust_unknown)
+  [30] cc.project_local  $PROJECT/.claude/settings.local.json  observed  not unconditional (trust_unknown)
+Coverage gaps (6):
+  - run — client_version_not_tested_or_documented (version_untested)
+  - run — project_trust_unknown (trust_unknown)
+  - cc.managed.mdm — platform_policy_store_not_read (expected_unobservable)
+  - cc.managed.server — remote_source_not_fetched (expected_unobservable)
+  - cc.managed.hkcu — registry_not_read (expected_unobservable)
+  - cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)
+
+### B. claude: explain /model with trust UNKNOWN (project layers conditional)
+$ claude_env /home/user/configlens/target/release/configlens explain /model --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --client-version 2.1.296 --format text
+/model = "claude-haiku-5-5" (observed)
+Observed winner: $PROJECT/.claude/settings.local.json:3:12
+  "claude-sonnet-5"  $HOME/.claude/settings.json:3:12  replaced_by_later_layer
+  "claude-opus-5-5"  $PROJECT/.claude/settings.json:3:12  replaced_by_later_layer
+  "claude-haiku-5-5"  $PROJECT/.claude/settings.local.json:3:12  observed_winner
+Rule: claude.scalar.layer-override
+Coverage: partial — cc.managed.mdm — platform_policy_store_not_read (expected_unobservable); cc.managed.server — remote_source_not_fetched (expected_unobservable); cc.managed.hkcu — registry_not_read (expected_unobservable); cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)
+Support: fixture_verified; confidence: evidence_class:fixture_verified
+Conclusion: "claude-haiku-5-5" wins among the observed applicable sources; effective value withheld.
+Diagnostics (2):
+  [warning] trust_unknown  $PROJECT/.claude/settings.json  location unavailable
+  [warning] trust_unknown  $PROJECT/.claude/settings.local.json  location unavailable
+
+### C. claude: explain /model with supplied context project_trust=trusted
+$ claude_env /home/user/configlens/target/release/configlens explain /model --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --input-context /home/user/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+/model = "claude-haiku-5-5" (observed)
+Observed winner: $PROJECT/.claude/settings.local.json:3:12
+  "claude-sonnet-5"  $HOME/.claude/settings.json:3:12  replaced_by_later_layer
+  "claude-opus-5-5"  $PROJECT/.claude/settings.json:3:12  replaced_by_later_layer
+  "claude-haiku-5-5"  $PROJECT/.claude/settings.local.json:3:12  observed_winner
+Rule: claude.scalar.layer-override
+Coverage: partial — cc.managed.mdm — platform_policy_store_not_read (expected_unobservable); cc.managed.server — remote_source_not_fetched (expected_unobservable); cc.managed.hkcu — registry_not_read (expected_unobservable); cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)
+Support: fixture_verified; confidence: evidence_class:fixture_verified
+Conclusion: "claude-haiku-5-5" wins among the observed applicable sources; effective value withheld.
+
+### D. claude: explain /model with supplied context project_trust=untrusted
+$ claude_env /home/user/configlens/target/release/configlens explain /model --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --input-context /home/user/configlens/docs/research/fixtures/context-claude-untrusted.json --format text
+/model = "claude-sonnet-5" (observed)
+Observed winner: $HOME/.claude/settings.json:3:12
+  "claude-sonnet-5"  $HOME/.claude/settings.json:3:12  observed_winner
+  ignored: $PROJECT/.claude/settings.json:3:12  workspace_untrusted
+  ignored: $PROJECT/.claude/settings.local.json:3:12  workspace_untrusted
+Rule: claude.scalar.layer-override
+Coverage: partial — cc.managed.mdm — platform_policy_store_not_read (expected_unobservable); cc.managed.server — remote_source_not_fetched (expected_unobservable); cc.managed.hkcu — registry_not_read (expected_unobservable); cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)
+Support: fixture_verified; confidence: evidence_class:fixture_verified
+Conclusion: "claude-sonnet-5" wins among the observed applicable sources; effective value withheld.
+Diagnostics (2):
+  [warning] workspace_untrusted  $PROJECT/.claude/settings.json  location unavailable
+  [warning] workspace_untrusted  $PROJECT/.claude/settings.local.json  location unavailable
+
+### E. claude: explain /permissions/allow (list concat provenance, not authorization)
+$ claude_env /home/user/configlens/target/release/configlens explain /permissions/allow --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --input-context /home/user/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+/permissions/allow = ["Bash(npm run lint)","Bash(npm run test *)","Bash(npm run build)"] (observed)
+  ["Bash(npm run lint)","Bash(npm run test *)"]  $HOME/.claude/settings.json:6:14  list_contribution
+  ["Bash(npm run build)"]  $PROJECT/.claude/settings.json:6:14  list_contribution
+  ["Bash(npm run test *)"]  $PROJECT/.claude/settings.local.json:5:14  list_contribution
+Rule: claude.permissions.list-concat
+Coverage: partial — cc.managed.mdm — platform_policy_store_not_read (expected_unobservable); cc.managed.server — remote_source_not_fetched (expected_unobservable); cc.managed.hkcu — registry_not_read (expected_unobservable); cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)
+Support: fixture_verified; confidence: evidence_class:fixture_verified
+Note: this is a provenance merge of list entries and not an authorization decision
+Caveat: this is a provenance merge of list entries and not an authorization decision
+Conclusion: ["Bash(npm run lint)","Bash(npm run test *)","Bash(npm run build)"] wins among the observed applicable sources; effective value withheld.
+Child pointers (2):
+  /permissions/allow/0
+  /permissions/allow/1
+
+### F. claude: explain /spinnerTipsEnabled (shared project beats user)
+$ claude_env /home/user/configlens/target/release/configlens explain /spinnerTipsEnabled --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --input-context /home/user/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+/spinnerTipsEnabled = true (observed)
+Observed winner: $PROJECT/.claude/settings.json:4:25
+  false  $HOME/.claude/settings.json:4:25  replaced_by_later_layer
+  true  $PROJECT/.claude/settings.json:4:25  observed_winner
+Rule: claude.scalar.layer-override
+Coverage: partial — cc.managed.mdm — platform_policy_store_not_read (expected_unobservable); cc.managed.server — remote_source_not_fetched (expected_unobservable); cc.managed.hkcu — registry_not_read (expected_unobservable); cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)
+Support: documented; confidence: evidence_class:documented
+Conclusion: true wins among the observed applicable sources; effective value withheld.
+
+### G. claude: explain /permissions/defaultMode scope exclusion
+$ claude_env /home/user/configlens/target/release/configlens explain /permissions/defaultMode --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --input-context /home/user/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+/permissions/defaultMode = <redacted:absent> (observed)
+Rule: claude.permissions.default-mode-scope-exclusion
+Coverage: complete
+Support: documented; confidence: evidence_class:documented
+Conclusion: no observed source defines this key.
+
+### H. claude: JSON scan (share paths) - redaction check
+$ claude_env /home/user/configlens/target/release/configlens scan --client claude --cwd /home/user/configlens/docs/research/fixtures/claude/project --project-root /home/user/configlens/docs/research/fixtures/claude/project --format json --paths share
+{
+  "adapter_revision": "0.1.0",
+  "client": "claude",
+  "command": "scan",
+  "compatibility": {
+    "conformance_status": "fixture_verified_max",
+    "documented_versions": [
+      "2.1.296"
+    ],
+    "evidence": [
+      {
+        "id": "S3",
+        "kind": "documentation",
+        "retrieved": "2026-10-10",
+        "url": "https://code.claude.com/docs/en/settings"
+      },
+      {
+        "id": "S3-MANAGED",
+        "kind": "documentation",
+        "retrieved": "2026-10-10",
+        "url": "https://code.claude.com/docs/en/managed-settings"
+      },
+      {
+        "id": "CC-NPM",
+        "kind": "package-registry",
+        "note": "latest 2.1.296; GitHub release v2.1.296 published 2026-10-09T19:28:59Z",
+        "retrieved": "2026-10-10",
+        "url": "https://registry.npmjs.org/@anthropic-ai%2fclaude-code"
+      }
+    ],
+    "provisional": true,
+    "tested_versions": [
+      "2.1.296"
+    ]
+  },
+  "context": {
+    "client_version": "unknown",
+    "cwd": "$PROJECT",
+    "environment_keys": [
+      "HOME",
+      "XDG_CONFIG_HOME"
+    ],
+    "os": "wsl",
+    "paths": "share",
+    "project_root": "$PROJECT",
+    "simulated": false,
+    "strict": false,
+    "trust": "unknown"
+  },
+  "coverage": [
+    {
+      "blocks_completeness": true,
+      "kind": "version_untested",
+      "reason": "client_version_not_tested_or_documented",
+      "subject": "run"
+    },
+    {
+      "blocks_completeness": true,
+      "kind": "trust_unknown",
+      "reason": "project_trust_unknown",
+      "subject": "run"
+    },
+    {
+      "blocks_completeness": true,
+      "kind": "expected_unobservable",
+      "rank": 70,
+      "reason": "platform_policy_store_not_read",
+      "subject": "cc.managed.mdm"
+    },
+    {
+      "blocks_completeness": true,
+      "kind": "expected_unobservable",
+      "rank": 80,
+      "reason": "remote_source_not_fetched",
+      "subject": "cc.managed.server"
+    },
+    {
+      "blocks_completeness": true,
+      "kind": "expected_unobservable",
+      "rank": 90,
+      "reason": "registry_not_read",
+      "subject": "cc.managed.hkcu"
+    },
+    {
+      "blocks_completeness": true,
+      "kind": "managed_state_unknown",
+      "rank": 60,
+      "reason": "managed_file_absent_does_not_prove_policy_absent",
+      "subject": "cc.managed.file"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "trust_unknown",
+      "location": "$PROJECT/.claude/settings.json",
+      "message": "the source is not unconditionally applicable",
+      "severity": "warning"
+    },
+    {
+      "code": "trust_unknown",
+      "location": "$PROJECT/.claude/settings.local.json",
+      "message": "the source is not unconditionally applicable",
+      "severity": "warning"
+    }
+  ],
+  "errors": [],
+  "redaction": {
+    "mode": "share",
+    "rules_applied": [
+      "sensitive_field_names",
+      "redacted_subtrees",
+      "value_allowlist_per_adapter",
+      "url_userinfo_query_fragment",
+      "terminal_control_sanitization"
+    ],
+    "snapshot_acl": "owner_only_0600",
+    "values_redacted": 34
+  },
+  "resolutions": [
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 2,
+          "kind": "ignored",
+          "location": "$HOME/.claude/settings.json:2:14",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 1,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        },
+        {
+          "definition_id": 15,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:2:14",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        },
+        {
+          "definition_id": 29,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.local.json:2:14",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 3,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/field_1",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "unsupported",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 3,
+          "kind": "ignored",
+          "location": "$HOME/.claude/settings.json:9:10",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 1,
+          "value": {
+            "kind": "object",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "object",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/env",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "unsupported",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 4,
+          "kind": "ignored",
+          "location": "$HOME/.claude/settings.json:10:24",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.env.inventory-only-trust-gated",
+          "source_id": 1,
+          "value": {
+            "kind": "string",
+            "reason": "environment_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "known key with inventory_only support: no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/env/field_4",
+      "rule_id": "claude.env.inventory-only-trust-gated",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 5,
+          "kind": "ignored",
+          "location": "$HOME/.claude/settings.json:11:22",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.env.inventory-only-trust-gated",
+          "source_id": 1,
+          "value": {
+            "kind": "string",
+            "reason": "environment_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "known key with inventory_only support: no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/env/field_5",
+      "rule_id": "claude.env.inventory-only-trust-gated",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 16,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:9:29",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "object",
+            "reason": "inventory_only",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "known key with inventory_only support: no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "object",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/extraKnownMarketplaces",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 17,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:10:21",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "object",
+            "reason": "inventory_only",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "known key with inventory_only support: no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "object",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/extraKnownMarketplaces/field_6",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 18,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:10:33",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "object",
+            "reason": "inventory_only",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "known key with inventory_only support: no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "object",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/extraKnownMarketplaces/field_6/field_8",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 19,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:10:63",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "string",
+            "reason": "inventory_only",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "known key with inventory_only support: no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/extraKnownMarketplaces/field_6/field_8/field_7",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 20,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:10:45",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "string",
+            "reason": "inventory_only",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "known key with inventory_only support: no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/extraKnownMarketplaces/field_6/field_8/field_8",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [
+        "cc.managed.mdm — platform_policy_store_not_read (expected_unobservable)",
+        "cc.managed.server — remote_source_not_fetched (expected_unobservable)",
+        "cc.managed.hkcu — registry_not_read (expected_unobservable)",
+        "cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)"
+      ],
+      "events": [
+        {
+          "definition_id": 6,
+          "kind": "replaced",
+          "location": "$HOME/.claude/settings.json:3:12",
+          "reason_code": "replaced_by_later_layer",
+          "rule_id": "claude.scalar.layer-override",
+          "source_id": 1,
+          "value": {
+            "kind": "string",
+            "reason": "verified_model_name",
+            "value": "claude-sonnet-5"
+          }
+        },
+        {
+          "definition_id": 21,
+          "kind": "replaced",
+          "location": "$PROJECT/.claude/settings.json:3:12",
+          "reason_code": "replaced_by_later_layer",
+          "rule_id": "claude.scalar.layer-override",
+          "source_id": 2,
+          "value": {
+            "kind": "string",
+            "reason": "verified_model_name",
+            "value": "claude-opus-5-5"
+          }
+        },
+        {
+          "definition_id": 30,
+          "kind": "selected",
+          "location": "$PROJECT/.claude/settings.local.json:3:12",
+          "reason_code": "observed_winner",
+          "rule_id": "claude.scalar.layer-override",
+          "source_id": 3,
+          "value": {
+            "kind": "string",
+            "reason": "verified_model_name",
+            "value": "claude-haiku-5-5"
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "verified_model_name",
+        "value": "claude-haiku-5-5"
+      },
+      "pointer": "/model",
+      "rule_id": "claude.scalar.layer-override",
+      "status": "unsupported",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [
+        "cc.managed.mdm — platform_policy_store_not_read (expected_unobservable)",
+        "cc.managed.server — remote_source_not_fetched (expected_unobservable)",
+        "cc.managed.hkcu — registry_not_read (expected_unobservable)",
+        "cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)"
+      ],
+      "events": [
+        {
+          "definition_id": 7,
+          "kind": "contributed",
+          "location": "$HOME/.claude/settings.json:5:18",
+          "reason_code": "container_child_merge",
+          "rule_id": "claude.object.recursive-merge",
+          "source_id": 1,
+          "value": {
+            "kind": "object",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        },
+        {
+          "definition_id": 22,
+          "kind": "contributed",
+          "location": "$PROJECT/.claude/settings.json:5:18",
+          "reason_code": "container_child_merge",
+          "rule_id": "claude.object.recursive-merge",
+          "source_id": 2,
+          "value": {
+            "kind": "object",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        },
+        {
+          "definition_id": 31,
+          "kind": "contributed",
+          "location": "$PROJECT/.claude/settings.local.json:4:18",
+          "reason_code": "container_child_merge",
+          "rule_id": "claude.object.recursive-merge",
+          "source_id": 3,
+          "value": {
+            "kind": "object",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3-MANAGED"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed",
+        "container value: each child pointer is resolved on its own"
+      ],
+      "observed_value": {
+        "kind": "object",
+        "reason": "unclassified_value",
+        "redacted": true
+      },
+      "pointer": "/permissions",
+      "rule_id": "claude.object.recursive-merge",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [
+        "run — project_trust_unknown (trust_unknown)",
+        "cc.managed.mdm — platform_policy_store_not_read (expected_unobservable)",
+        "cc.managed.server — remote_source_not_fetched (expected_unobservable)",
+        "cc.managed.hkcu — registry_not_read (expected_unobservable)",
+        "cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)"
+      ],
+      "events": [
+        {
+          "definition_id": 8,
+          "kind": "contributed",
+          "location": "$HOME/.claude/settings.json:6:14",
+          "reason_code": "list_contribution",
+          "rule_id": "claude.permissions.list-concat",
+          "source_id": 1,
+          "value": {
+            "kind": "array",
+            "reason": "tool_rule_share_mode",
+            "value": [
+              "rule_1",
+              "rule_2"
+            ]
+          }
+        },
+        {
+          "definition_id": 23,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:6:14",
+          "reason_code": "trust_unknown",
+          "rule_id": "claude.permissions.list-concat",
+          "source_id": 2,
+          "value": {
+            "kind": "array",
+            "reason": "tool_rule_share_mode",
+            "value": [
+              "rule_1"
+            ]
+          }
+        },
+        {
+          "definition_id": 32,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.local.json:5:14",
+          "reason_code": "trust_unknown",
+          "rule_id": "claude.permissions.list-concat",
+          "source_id": 3,
+          "value": {
+            "kind": "array",
+            "reason": "tool_rule_share_mode",
+            "value": [
+              "rule_1"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        "S3",
+        "S3-MANAGED"
+      ],
+      "notes": [
+        "this is a provenance merge of list entries and not an authorization decision",
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "array",
+        "reason": "tool_rule_share_mode",
+        "value": [
+          "rule_1",
+          "rule_2"
+        ]
+      },
+      "pointer": "/permissions/allow",
+      "rule_id": "claude.permissions.list-concat",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 9,
+          "kind": "ignored",
+          "location": "$HOME/.claude/settings.json:6:15",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 1,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        },
+        {
+          "definition_id": 24,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:6:15",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        },
+        {
+          "definition_id": 33,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.local.json:5:15",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 3,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/permissions/allow/field_2",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "unsupported",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 10,
+          "kind": "ignored",
+          "location": "$HOME/.claude/settings.json:6:37",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 1,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/permissions/allow/field_3",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "unsupported",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [
+        "cc.managed.mdm — platform_policy_store_not_read (expected_unobservable)",
+        "cc.managed.server — remote_source_not_fetched (expected_unobservable)",
+        "cc.managed.hkcu — registry_not_read (expected_unobservable)",
+        "cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)"
+      ],
+      "events": [
+        {
+          "definition_id": 25,
+          "kind": "contributed",
+          "location": "$PROJECT/.claude/settings.json:7:12",
+          "reason_code": "list_contribution",
+          "rule_id": "claude.permissions.list-concat",
+          "source_id": 2,
+          "value": {
+            "kind": "array",
+            "reason": "tool_rule_share_mode",
+            "value": [
+              "rule_1"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        "S3",
+        "S3-MANAGED"
+      ],
+      "notes": [
+        "this is a provenance merge of list entries and not an authorization decision",
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "array",
+        "reason": "tool_rule_share_mode",
+        "value": [
+          "rule_1"
+        ]
+      },
+      "pointer": "/permissions/ask",
+      "rule_id": "claude.permissions.list-concat",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 26,
+          "kind": "ignored",
+          "location": "$PROJECT/.claude/settings.json:7:13",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 2,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/permissions/ask/field_2",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "unsupported",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [
+        "cc.managed.mdm — platform_policy_store_not_read (expected_unobservable)",
+        "cc.managed.server — remote_source_not_fetched (expected_unobservable)",
+        "cc.managed.hkcu — registry_not_read (expected_unobservable)",
+        "cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)"
+      ],
+      "events": [
+        {
+          "definition_id": 11,
+          "kind": "contributed",
+          "location": "$HOME/.claude/settings.json:7:13",
+          "reason_code": "list_contribution",
+          "rule_id": "claude.permissions.list-concat",
+          "source_id": 1,
+          "value": {
+            "kind": "array",
+            "reason": "tool_rule_share_mode",
+            "value": [
+              "rule_1"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        "S3",
+        "S3-MANAGED"
+      ],
+      "notes": [
+        "this is a provenance merge of list entries and not an authorization decision",
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "array",
+        "reason": "tool_rule_share_mode",
+        "value": [
+          "rule_1"
+        ]
+      },
+      "pointer": "/permissions/deny",
+      "rule_id": "claude.permissions.list-concat",
+      "status": "partial",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [],
+      "events": [
+        {
+          "definition_id": 12,
+          "kind": "ignored",
+          "location": "$HOME/.claude/settings.json:7:14",
+          "reason_code": "inventory_only",
+          "rule_id": "claude.unknown.inventory-only",
+          "source_id": 1,
+          "value": {
+            "kind": "string",
+            "reason": "unclassified_value",
+            "redacted": true
+          }
+        }
+      ],
+      "evidence": [],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      },
+      "pointer": "/permissions/deny/field_2",
+      "rule_id": "claude.unknown.inventory-only",
+      "status": "unsupported",
+      "support": "unsupported"
+    },
+    {
+      "confidence": "unverified",
+      "coverage_gaps": [
+        "cc.managed.mdm — platform_policy_store_not_read (expected_unobservable)",
+        "cc.managed.server — remote_source_not_fetched (expected_unobservable)",
+        "cc.managed.hkcu — registry_not_read (expected_unobservable)",
+        "cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)"
+      ],
+      "events": [
+        {
+          "definition_id": 13,
+          "kind": "replaced",
+          "location": "$HOME/.claude/settings.json:4:25",
+          "reason_code": "replaced_by_later_layer",
+          "rule_id": "claude.scalar.layer-override",
+          "source_id": 1,
+          "value": {
+            "kind": "bool",
+            "reason": "public_primitive",
+            "value": false
+          }
+        },
+        {
+          "definition_id": 27,
+          "kind": "selected",
+          "location": "$PROJECT/.claude/settings.json:4:25",
+          "reason_code": "observed_winner",
+          "rule_id": "claude.scalar.layer-override",
+          "source_id": 2,
+          "value": {
+            "kind": "bool",
+            "reason": "public_primitive",
+            "value": true
+          }
+        }
+      ],
+      "evidence": [
+        "S3"
+      ],
+      "notes": [
+        "the claimed client version is not in the adapter's tested or documented set; no merge result is claimed"
+      ],
+      "observed_value": {
+        "kind": "bool",
+        "reason": "public_primitive",
+        "value": true
+      },
+      "pointer": "/spinnerTipsEnabled",
+      "rule_id": "claude.scalar.layer-override",
+      "status": "unsupported",
+      "support": "unsupported"
+    }
+  ],
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "applicability": "applicable",
+      "bytes": 355,
+      "class": "user",
+      "id": 1,
+      "layer": "cc.user",
+      "location": "$HOME/.claude/settings.json",
+      "rank": 10,
+      "status": "observed"
+    },
+    {
+      "applicability": "conditional",
+      "applicability_note": "trust_unknown",
+      "bytes": 356,
+      "class": "project_shared",
+      "id": 2,
+      "layer": "cc.project_shared",
+      "location": "$PROJECT/.claude/settings.json",
+      "rank": 20,
+      "status": "observed"
+    },
+    {
+      "applicability": "conditional",
+      "applicability_note": "trust_unknown",
+      "bytes": 167,
+      "class": "project_local",
+      "id": 3,
+      "layer": "cc.project_local",
+      "location": "$PROJECT/.claude/settings.local.json",
+      "rank": 30,
+      "status": "observed"
+    }
+  ],
+  "tool_version": "0.1.0"
+}
+
+### I. opencode: scan (global + project, both json and jsonc dialects)
+$ oc_env /home/user/configlens/target/release/configlens scan --client opencode --cwd /home/user/configlens/docs/research/fixtures/opencode/project --project-root /home/user/configlens/docs/research/fixtures/opencode/project --format text --paths local
+ConfigLens scan — client opencode (adapter revision 0.1.0)
+Sources (3):
+  [10] oc.global  $XDG_CONFIG/opencode/opencode.json  observed  applicable
+  [30] oc.project  $PROJECT/opencode.json  observed  not unconditional (trust_unknown)
+  [30] oc.project  $PROJECT/opencode.jsonc  observed  not unconditional (trust_unknown)
+Coverage gaps (5):
+  - run — client_version_not_tested_or_documented (version_untested)
+  - run — project_trust_unknown (trust_unknown)
+  - oc.remote.wellknown — remote_source_not_fetched (expected_unobservable)
+  - oc.opencode_dirs — not_a_settings_document (expected_unobservable)
+  - oc.managed_macos_prefs — platform_prefs_not_parsed (expected_unobservable)
+
+### J. opencode: explain /model (project overrides global)
+$ oc_env /home/user/configlens/target/release/configlens explain /model --client opencode --cwd /home/user/configlens/docs/research/fixtures/opencode/project --project-root /home/user/configlens/docs/research/fixtures/opencode/project --client-version 1.18.35 --input-context /home/user/configlens/docs/research/fixtures/context-opencode-trusted.json --format text
+/model = "anthropic/claude-opus-4-6" (observed)
+Observed winner: $PROJECT/opencode.json:3:12
+  "anthropic/claude-sonnet-4-5"  $XDG_CONFIG/opencode/opencode.json:3:12  replaced_by_later_layer
+  "anthropic/claude-opus-4-6"  $PROJECT/opencode.json:3:12  observed_winner
+Rule: opencode.scalar.layer-override
+Coverage: partial — oc.opencode_dirs — not_a_settings_document (expected_unobservable); oc.managed_macos_prefs — platform_prefs_not_parsed (expected_unobservable)
+Support: fixture_verified; confidence: evidence_class:fixture_verified
+Conclusion: "anthropic/claude-opus-4-6" wins among the observed applicable sources; effective value withheld.
+
+### K. opencode: explain /share (enum provenance)
+$ oc_env /home/user/configlens/target/release/configlens explain /share --client opencode --cwd /home/user/configlens/docs/research/fixtures/opencode/project --project-root /home/user/configlens/docs/research/fixtures/opencode/project --input-context /home/user/configlens/docs/research/fixtures/context-opencode-trusted.json --format text
+/share = "disabled" (observed)
+Observed winner: $PROJECT/opencode.json:5:12
+  "manual"  $XDG_CONFIG/opencode/opencode.json:5:12  replaced_by_later_layer
+  "disabled"  $PROJECT/opencode.json:5:12  observed_winner
+Rule: opencode.scalar.layer-override
+Coverage: partial — oc.opencode_dirs — not_a_settings_document (expected_unobservable); oc.managed_macos_prefs — platform_prefs_not_parsed (expected_unobservable)
+Support: fixture_verified; confidence: evidence_class:fixture_verified
+Conclusion: "disabled" wins among the observed applicable sources; effective value withheld.
+
+### L. opencode: explain /mcp/jira/environment (whole map must be redacted)
+$ oc_env /home/user/configlens/target/release/configlens explain /mcp/jira/environment --client opencode --cwd /home/user/configlens/docs/research/fixtures/opencode/project --project-root /home/user/configlens/docs/research/fixtures/opencode/project --format text
+/mcp/jira/environment = <redacted:mcp_environment_map> (observed)
+  <redacted:mcp_environment_map>  $PROJECT/opencode.json:11:22  container_child_merge
+Rule: opencode.object.recursive-merge
+Coverage: partial — oc.opencode_dirs — not_a_settings_document (expected_unobservable); oc.managed_macos_prefs — platform_prefs_not_parsed (expected_unobservable)
+Support: unsupported; confidence: evidence_class:unverified
+Note: the claimed client version is not in the adapter's tested or documented set; no merge result is claimed
+Note: container value: each child pointer is resolved on its own
+Conclusion: <redacted:mcp_environment_map> wins among the observed applicable sources; effective value withheld.
+Diagnostics (2):
+  [warning] trust_unknown  $PROJECT/opencode.json  location unavailable
+  [warning] trust_unknown  $PROJECT/opencode.jsonc  location unavailable
+Child pointers (1):
+  /mcp/jira/environment/JIRA_API_KEY
+

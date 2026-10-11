@@ -1,0 +1,11 @@
+# Synthetic Codex user config (fixture; NOT read by ConfigLens 0.1 - codex is unsupported).
+model = "gpt-5.5"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+model_reasoning_effort = "medium"
+
+[shell_environment_policy]
+inherit = "core"
+
+[projects."/home/user/configlens/docs/research/fixtures/codex/project"]
+trust_level = "trusted"

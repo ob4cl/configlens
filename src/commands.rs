@@ -1,5 +1,6 @@
 //! Command implementations: snapshot and diff (spec §4).
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use serde_json::Value;
@@ -91,6 +92,8 @@ pub enum DiffKind {
     Provenance,
     Coverage,
     Status,
+    /// A source (file/layer) was added, removed or changed status/applicability.
+    Source,
     RedactedUnknown,
 }
 
@@ -101,6 +104,7 @@ impl DiffKind {
             DiffKind::Provenance => "provenance",
             DiffKind::Coverage => "coverage",
             DiffKind::Status => "status",
+            DiffKind::Source => "source",
             DiffKind::RedactedUnknown => "unknown_redacted",
         }
     }
@@ -343,12 +347,124 @@ pub fn diff_reports(before: &Value, after: &Value) -> Result<DiffResult, CliErro
         }
     }
 
+    // --- Report-level provenance: the source inventory and the run coverage gaps ----
+    // Spec §4: `diff` distinguishes value, provenance and coverage changes. Changes to *which*
+    // sources exist (a file added/removed, a status or applicability change) are provenance changes
+    // at the report level, and so are changes to the run-wide coverage gaps.
+    let left_sources = source_entries(before);
+    let right_sources = source_entries(after);
+    let mut source_ids: Vec<String> = left_sources
+        .keys()
+        .chain(right_sources.keys())
+        .cloned()
+        .collect();
+    source_ids.sort();
+    source_ids.dedup();
+    for id in source_ids {
+        match (left_sources.get(&id), right_sources.get(&id)) {
+            (Some(left), None) => entries.push(DiffEntry {
+                pointer: format!("source:{id}"),
+                kind: DiffKind::Source,
+                before: source_summary(left),
+                after: "<removed>".to_string(),
+            }),
+            (None, Some(right)) => entries.push(DiffEntry {
+                pointer: format!("source:{id}"),
+                kind: DiffKind::Source,
+                before: "<added>".to_string(),
+                after: source_summary(right),
+            }),
+            (Some(left), Some(right)) => {
+                let before_summary = source_summary(left);
+                let after_summary = source_summary(right);
+                if before_summary != after_summary {
+                    entries.push(DiffEntry {
+                        pointer: format!("source:{id}"),
+                        kind: DiffKind::Source,
+                        before: before_summary,
+                        after: after_summary,
+                    });
+                }
+            }
+            (None, None) => {}
+        }
+    }
+    let before_run_coverage = run_coverage(before);
+    let after_run_coverage = run_coverage(after);
+    if before_run_coverage != after_run_coverage {
+        entries.push(DiffEntry {
+            pointer: "run".to_string(),
+            kind: DiffKind::Coverage,
+            before: before_run_coverage,
+            after: after_run_coverage,
+        });
+    }
+
     Ok(DiffResult {
         client: client_before.to_string(),
         schema_version,
         entries,
         uncompared,
     })
+}
+
+/// Index a report's `sources` array by id (falling back to its display location).
+fn source_entries(report: &Value) -> BTreeMap<String, &Value> {
+    let mut map = BTreeMap::new();
+    if let Some(items) = report.get("sources").and_then(Value::as_array) {
+        for item in items {
+            let key = match item.get("id") {
+                Some(id) => id.to_string(),
+                None => item
+                    .get("location")
+                    .and_then(Value::as_str)
+                    .unwrap_or("?")
+                    .to_string(),
+            };
+            map.insert(key, item);
+        }
+    }
+    map
+}
+
+/// A one-line, source-level summary used for source diffs.
+fn source_summary(source: &Value) -> String {
+    format!(
+        "{} {} status={} applicability={}",
+        source.get("layer").and_then(Value::as_str).unwrap_or("?"),
+        source
+            .get("location")
+            .and_then(Value::as_str)
+            .unwrap_or("?"),
+        source.get("status").and_then(Value::as_str).unwrap_or("?"),
+        source
+            .get("applicability")
+            .and_then(Value::as_str)
+            .unwrap_or("?")
+    )
+}
+
+/// The run-wide coverage gaps as a stable, sorted string.
+fn run_coverage(report: &Value) -> String {
+    let mut items: Vec<String> = report
+        .get("coverage")
+        .and_then(Value::as_array)
+        .map(|gaps| {
+            gaps.iter()
+                .map(|gap| {
+                    format!(
+                        "{}:{}:{}",
+                        gap.get("kind").and_then(Value::as_str).unwrap_or("?"),
+                        gap.get("subject").and_then(Value::as_str).unwrap_or("?"),
+                        gap.get("reason").and_then(Value::as_str).unwrap_or("?")
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    items.sort();
+    items.dedup();
+    items.join(";")
 }
 
 /// Text rendering for `diff`.
@@ -520,7 +636,50 @@ mod tests {
     }
 
     #[test]
-    fn snapshot_refuses_a_symlink_and_requires_overwrite() {
+    fn source_and_run_coverage_changes_are_reported() {
+        let left = json!({
+            "schema_version": "1.0",
+            "client": "opencode",
+            "resolutions": [],
+            "sources": [{
+                "id": 1, "layer": "oc.global", "location": "$HOME/x.json",
+                "status": "observed", "applicability": "applicable"
+            }],
+            "coverage": [{
+                "kind": "expected_unobservable", "subject": "oc.remote.wellknown",
+                "reason": "remote_source_not_fetched"
+            }],
+        });
+        let right = json!({
+            "schema_version": "1.0",
+            "client": "opencode",
+            "resolutions": [],
+            "sources": [
+                {
+                    "id": 1, "layer": "oc.global", "location": "$HOME/x.json",
+                    "status": "malformed", "applicability": "applicable"
+                },
+                {
+                    "id": 2, "layer": "oc.project", "location": "$PROJECT/opencode.json",
+                    "status": "observed", "applicability": "applicable"
+                }
+            ],
+            "coverage": [{
+                "kind": "managed_state_unknown", "subject": "oc.managed_file",
+                "reason": "managed_file_absent_does_not_prove_policy_absent"
+            }],
+        });
+        let result = diff_reports(&left, &right).expect("diff");
+        let kinds: Vec<&str> = result.entries.iter().map(|e| e.kind.name()).collect();
+        assert!(kinds.contains(&"source"), "source changes: {kinds:?}");
+        assert!(kinds.contains(&"coverage"), "coverage changes: {kinds:?}");
+        let text = render_diff(&result);
+        assert!(text.contains("status=malformed"), "got: {text}");
+        assert!(text.contains("<added>"));
+    }
+
+    #[test]
+    fn snapshot_create_new_and_overwrite_are_explicit() {
         let dir = tempfile::tempdir().expect("temp");
         let target = dir.path().join("out.json");
         let first = write_snapshot(&target, "{}", false).expect("create");
@@ -532,7 +691,12 @@ mod tests {
             2
         );
         assert!(write_snapshot(&target, "{}", true).is_ok());
+    }
 
+    #[cfg(unix)]
+    #[test]
+    fn snapshot_refuses_a_symlink_destination() {
+        let dir = tempfile::tempdir().expect("temp");
         let real = dir.path().join("real.json");
         std::fs::write(&real, "{}").expect("write");
         let link = dir.path().join("link.json");

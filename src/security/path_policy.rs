@@ -120,6 +120,33 @@ impl PathPolicy {
             Err("outside_approved_roots")
         }
     }
+
+    /// Project an *already revealed* string that may embed an absolute path.
+    ///
+    /// Share mode replaces every known alias root inside the text with its alias name, so a value
+    /// such as a shell path (`/home/dev/.local/bin/zsh`) cannot leak the machine-specific prefix
+    /// (spec §7 "In share mode pseudonymize ... user/repo paths"). Local mode keeps the diagnostic
+    /// view. The result is always sanitized.
+    pub fn alias_embedded(&self, text: &str, mode: crate::security::PathMode) -> String {
+        if mode != crate::security::PathMode::Share {
+            return sanitize_bounded(text, 256);
+        }
+        let mut aliases: Vec<&Alias> = self
+            .aliases
+            .iter()
+            .filter(|a| !a.root.as_os_str().is_empty() && a.root != Path::new("/"))
+            .collect();
+        // Longest root first, so `$PROJECT` wins over `$HOME` when they are nested.
+        aliases.sort_by_key(|a| std::cmp::Reverse(a.root.components().count()));
+        let mut out = text.to_string();
+        for alias in aliases {
+            let root = alias.root.to_string_lossy();
+            if !root.is_empty() && out.contains(root.as_ref()) {
+                out = out.replace(root.as_ref(), alias.name);
+            }
+        }
+        sanitize_bounded(&out, 256)
+    }
 }
 
 #[cfg(test)]

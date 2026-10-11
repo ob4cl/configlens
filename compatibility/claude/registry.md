@@ -33,19 +33,32 @@ Verbatim from the "Settings precedence" stack, highest first:
 Environment variables are explicitly **not** a level: *"which one applies is decided per pair, not by
 level"*. Modelled separately, per key.
 
-Managed tier internals (from the managed-settings page):
+Managed tier internals (from the managed-settings page). Claude Code combines managed *sources*
+**first-wins** by default: `managedSourcesBehavior = "first-wins"` reads the highest-ranked source
+that delivers at least one policy key and *ignores the rest rather than merging them*. `"merge"` is
+opt-in from Claude Code v2.1.242 or later. ConfigLens models **single-source** managed resolution
+only: `registry.json` declares `managed_sources_behavior = "first-wins"` and ranks the layers so the
+highest-ranked source wins. The documented cross-source key set (keys read from *every* admin source
+with their own combination rules — `sandbox.network.allowManagedDomainsOnly`, `allowAllClaudeAiMcps`,
+`deniedMcpServers`, `maxEffortLevel`, per-variable `env`, `forceRemoteSettingsRefresh`, …) and
+`policyHelper` (a helper that emits `managedSettings`, which then becomes the only managed settings
+for the session) are **not modelled** — a documented gap.
 
-| # | Layer id | Location | Observable? |
-|---|---|---|---|
-| 1 | `cc.managed.server` | claude.ai server-managed settings / gateway | **No** |
-| 2 | `cc.managed.mdm` | macOS `com.anthropic.claudecode` profile; Windows `HKLM\SOFTWARE\Policies\ClaudeCode` | **No** |
-| 3 | `cc.managed.file` | `managed-settings.json` then `managed-settings.d/*.json` (alphabetical, non-hidden, `*.json` only) in `/Library/Application Support/ClaudeCode/` (macOS), `/etc/claude-code/` (Linux and WSL), `C:\Program Files\ClaudeCode\` (Windows) | Yes |
-| 4 | `cc.managed.hkcu` | `HKCU\SOFTWARE\Policies\ClaudeCode` (Windows/WSL, only when no higher source delivers a key) | **No** |
+| # | Layer id | registry rank | Location | Observable? |
+|---|---|---|---|---|
+| 1 | `cc.managed.server` | 80 | claude.ai server-managed settings / gateway | **No** |
+| 2 | `cc.managed.mdm` | 70 | macOS `com.anthropic.claudecode` profile; Windows `HKLM\SOFTWARE\Policies\ClaudeCode` | **No** |
+| 3 | `cc.managed.file` | 60 | `managed-settings.json` then `managed-settings.d/*.json` (alphabetical, non-hidden, `*.json` only) in `/Library/Application Support/ClaudeCode/` (macOS), `/etc/claude-code/` (Linux and WSL), `C:\Program Files\ClaudeCode\` (Windows) | Yes |
+| 4 | `cc.managed.hkcu` | 50 | `HKCU\SOFTWARE\Policies\ClaudeCode` (Windows/WSL, only when no higher source delivers a key) | **No** |
 
-Managed file/directory merge rules (documented): single values → later file replaces; lists →
-combine with duplicates removed; nested blocks → merge key by key; `fallbackModel` → later chain
-replaces whole; `extraKnownMarketplaces`/`managedMcpServers` → later same-name entry replaces whole;
-`modelPicker` → later lineup replaces whole.
+Ranks ascend with precedence, so `cc.managed.hkcu` (rank **50**) is the **lowest** managed source —
+below the file tier — matching upstream's bottom-managed fallback and *not* the previously inverted
+rank 90.
+
+Managed file/directory merge rules (documented, *within the single file source*): single values →
+later file replaces; lists → combine with duplicates removed; nested blocks → merge key by key;
+`fallbackModel` → later chain replaces whole; `extraKnownMarketplaces`/`managedMcpServers` → later
+same-name entry replaces whole.
 
 ## Supported keys
 
@@ -57,6 +70,7 @@ replaces whole; `extraKnownMarketplaces`/`managedMcpServers` → later same-name
 | `/permissions/allow`, `/permissions/ask`, `/permissions/deny` | array | stable concat + dedupe | `claude.permissions.list-concat` | `fixture_verified` | *"Claude Code combines the lists instead of picking one"* + managed tier *"combine, with duplicates removed"*. **Authorization semantics: none** |
 | `/permissions/defaultMode` | enum | replace + scope exclusion | `claude.permissions.default-mode-scope-exclusion` | `documented` | *"values `auto` and `bypassPermissions` don't take effect from project or local settings"* |
 | `/availableModels` | array | constraint (lock) | `claude.availableModels.managed-lock` | `documented` | *"a flag such as `--model` picks only from the models your organization allows"* |
+| `/modelPicker` | array | inventory-only | `claude.unknown.inventory-only` | `inventory_only` | Upstream takes `modelPicker` from managed / `--settings` / user only and **ignores it in project and local settings** (v2.1.242+); that scope is not modelled, so no merge is claimed |
 | `/env/<NAME>` | string | inventory-only | `claude.env.inventory-only-trust-gated` | `inventory_only` | `env` is an ordinary key; values redacted; project-file values wait for trust |
 | `/hooks/…`, `/permissions/additionalDirectories`, `/extraKnownMarketplaces`, `/plugins/…`, `/mcpServers` | any | inventory-only | `claude.unknown.inventory-only` | `inventory_only` | Bodies never read (spec §7); merge rules not verified |
 | `/permissions`, `/sandbox`, `/statusLine` | object | object-merge | `claude.object.recursive-merge` | `documented` | Nested blocks merge key by key (managed-tier rule) |
@@ -67,13 +81,22 @@ which applies *only when no file sets `model`*). Other pairs are not modelled an
 `claude.env_pair_not_modelled` coverage gap when the supplied environment contains an `ANTHROPIC_*`
 variable.
 
-## Trust gating (documented)
+## Trust gating (documented, key-granular)
+
+Trust gates *specific keys*, not whole files. From the **shared project** file only:
 
 * `permissions.allow`, `permissions.additionalDirectories`, `extraKnownMarketplaces` and most `env`
-  values from the **shared project** file apply only after the folder is trusted.
+  values apply only after the folder is trusted.
 * `deny` and `ask` rules apply right away.
-* Consequence in ConfigLens: `Trust::Unknown` ⟹ those contributions are `Conditional`, the result is
-  `partial`, and a `trust_unknown` coverage gap is emitted.
+* From the **local** file: its `allow` rules apply *without* the trust step while the file stays
+  **untracked**; if it is tracked by git, the trust step applies to it too.
+
+ConfigLens consequence (0.1): applicability is **key-granular**. An untrusted/unknown workspace makes
+the project layers `Conditional`, and only a *trust-gated* key (`permissions.allow`, `env`) quoted
+from the **shared** project file is ignored; the reason is `workspace_untrusted` (untrusted) or
+`trust_unknown` (undetermined). `deny`/`ask` from either project file, and `allow` from the local
+file, still apply. Git-tracking of the local file is **not observable offline**, so ConfigLens
+assumes the local file is untracked — a documented gap.
 
 ## Rule → test IDs
 
@@ -97,5 +120,5 @@ variable.
 | `upstream_conformance_verified` | *(none — closed-source loader, no safe harness)* |
 | `fixture_verified` | `/model`, `/permissions/{allow,ask,deny}` merge/dedupe, file layer order |
 | `documented` | `/effortLevel`, `/theme`, `/verbose`, `/spinnerTipsEnabled`, `/cleanupPeriodDays`, `/fallbackModel`, `/permissions/defaultMode` scope exclusion, `/availableModels` lock, object-merge containers |
-| `inventory_only` | `env` values, hooks, plugins, marketplaces, MCP server definitions, all other keys |
-| `unsupported` | managed MDM/registry/server-managed content, special-list rules beyond `fallbackModel`, `modelPicker`/`modelSettings` semantics |
+| `inventory_only` | `env` values, hooks, plugins, marketplaces, MCP server definitions, `modelPicker`, all other keys |
+| `unsupported` | managed MDM/registry/server-managed content, special-list rules beyond `fallbackModel`, cross-source managed keys and `policyHelper` |

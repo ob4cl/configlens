@@ -30,6 +30,10 @@ fn shown(value: &crate::security::PublicValue) -> String {
 }
 
 /// Render one resolution as the user-facing explanation.
+///
+/// Shape: the value line, a concise **winner** line, a **losers** block, the rule, coverage and
+/// support, then actionable **next inspection** hints. Everything is derived from the redacted
+/// resolution, so share-mode projections (opaque pointers, pseudonymized hosts/paths) are respected.
 pub fn render_explain(
     run: &RunOutput,
     resolution: &Resolution,
@@ -44,23 +48,62 @@ pub fn render_explain(
             shown(&resolution.observed_value)
         )),
     }
+
+    // Concise winner: the winning value, its location and the reason code that selected it.
     if let Some(location) = resolution.selected_location() {
-        out.push_str(&format!("Observed winner: {location}\n"));
+        let detail = resolution
+            .events
+            .iter()
+            .find(|e| e.kind == EventKind::Selected)
+            .map(|e| {
+                let value = e
+                    .value
+                    .as_ref()
+                    .map(shown)
+                    .unwrap_or_else(|| "-".to_string());
+                let reason = e.reason_code.as_deref().unwrap_or("observed_winner");
+                format!("  {value}  {reason}")
+            })
+            .unwrap_or_default();
+        out.push_str(&format!("Observed winner: {location}{detail}\n"));
     }
+
+    // Losers: every definition that did not win, with the reason it lost.
+    let losers: Vec<_> = resolution
+        .events
+        .iter()
+        .filter(|e| matches!(e.kind, EventKind::Replaced | EventKind::Ignored))
+        .collect();
+    if !losers.is_empty() {
+        out.push_str("Losers:\n");
+        for event in losers {
+            let location = event.location.as_deref().unwrap_or("-");
+            let reason = event.reason_code.as_deref().unwrap_or("");
+            if event.kind == EventKind::Ignored {
+                out.push_str(&format!("  ignored: {location}  {reason}\n"));
+            } else {
+                let value = event
+                    .value
+                    .as_ref()
+                    .map(shown)
+                    .unwrap_or_else(|| "-".to_string());
+                out.push_str(&format!("  {value}  {location}  {reason}\n"));
+            }
+        }
+    }
+
+    // Contributions (list/object merges), constraints and unresolved interpolations.
     for event in &resolution.events {
-        let value = event
-            .value
-            .as_ref()
-            .map(shown)
-            .unwrap_or_else(|| "-".to_string());
         let location = event.location.as_deref().unwrap_or("-");
         let reason = event.reason_code.as_deref().unwrap_or("");
         match event.kind {
-            EventKind::Selected | EventKind::Replaced | EventKind::Contributed => {
-                out.push_str(&format!("  {value}  {location}  {reason}\n"));
-            }
-            EventKind::Ignored => {
-                out.push_str(&format!("  ignored: {location}  {reason}\n"));
+            EventKind::Contributed => {
+                let value = event
+                    .value
+                    .as_ref()
+                    .map(shown)
+                    .unwrap_or_else(|| "-".to_string());
+                out.push_str(&format!("  contributed: {value}  {location}  {reason}\n"));
             }
             EventKind::Constrained => {
                 out.push_str(&format!("  constrained by: {location}  {reason}\n"));
@@ -71,6 +114,7 @@ pub fn render_explain(
             EventKind::Unresolved => {
                 out.push_str(&format!("  unresolved: {location}  {reason}\n"));
             }
+            _ => {}
         }
     }
     if let Some(rule_id) = &resolution.rule_id {
@@ -114,6 +158,13 @@ pub fn render_explain(
             out.push_str("Conclusion: no observed source defines this key.\n")
         }
     }
+    let tips = next_inspections(resolution);
+    if !tips.is_empty() {
+        out.push_str("Next inspection:\n");
+        for tip in tips {
+            out.push_str(&format!("  - {tip}\n"));
+        }
+    }
     // A run-level diagnostic (a malformed or blocked high-priority file, a duplicate key) must be
     // visible in the human-readable explanation too, not only in `doctor` and the JSON envelope.
     // Otherwise a malformed higher layer could be silently reported as "no source defines this key"
@@ -136,6 +187,62 @@ pub fn render_explain(
         }
     }
     out
+}
+
+/// Actionable follow-up hints derived only from the redacted resolution (spec §5, §9).
+///
+/// Hints name the *next thing to inspect* to remove a coverage gap or fix a problem; they never
+/// invent a value and never claim an effective result.
+fn next_inspections(resolution: &Resolution) -> Vec<String> {
+    let mut tips: Vec<String> = Vec::new();
+    let gaps = resolution.coverage_gaps.join(" ").to_lowercase();
+    let notes = resolution.notes.join(" ").to_lowercase();
+    match resolution.status {
+        ResolutionStatus::Resolved => {}
+        ResolutionStatus::Unsupported => {
+            tips.push("run `configlens clients` for the supported keys and tested versions".into());
+            tips.push("check the pointer spelling: RFC 6901, e.g. /model".into());
+        }
+        ResolutionStatus::Invalid => {
+            tips.push("fix the malformed source at or above the winner, then re-run".into());
+        }
+        ResolutionStatus::Absent => {
+            tips.push(
+                "no observed source defines this key; confirm the file you expect to edit is under $PROJECT or $HOME"
+                    .into(),
+            );
+        }
+        ResolutionStatus::Partial => {}
+    }
+    if gaps.contains("managed") {
+        tips.push("supply the managed settings file with --input-context to include it".into());
+    }
+    if gaps.contains("trust") {
+        tips.push(
+            "declare project trust in an input-context file (project_trust) to include project layers"
+                .into(),
+        );
+    }
+    if gaps.contains("version") {
+        tips.push("pass the exact tested --client-version to remove the provisional label".into());
+    }
+    if gaps.contains("remote") || gaps.contains("mdm") || gaps.contains("plist") {
+        tips.push(
+            "remote/MDM layers are not observable here; re-run where the managed source is readable"
+                .into(),
+        );
+    }
+    if notes.contains("interpolation") || notes.contains("derived") {
+        tips.push(
+            "the value comes from {env:...}/{file:...}; supply the referenced value to resolve it"
+                .into(),
+        );
+    }
+    if resolution.status == ResolutionStatus::Partial && resolution.coverage_gaps.is_empty() {
+        tips.push("review the notes above; a documented rule boundary applies".into());
+    }
+    tips.truncate(3);
+    tips
 }
 
 /// Render the inventory: sources with their status and applicability.

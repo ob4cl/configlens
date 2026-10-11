@@ -299,6 +299,11 @@ pub struct RegistryFile {
     pub documented_client_versions: Vec<String>,
     #[serde(default)]
     pub pinned_commit: Option<String>,
+    /// How upstream combines multiple managed sources. Upstream default is `first-wins` (take the
+    /// highest-ranked source that delivers any policy key and ignore the rest); `merge` is opt-in
+    /// from Claude Code v2.1.242. ConfigLens models single-source managed resolution only.
+    #[serde(default)]
+    pub managed_sources_behavior: Option<String>,
     pub conformance_status: String,
     pub layers: Vec<LayerEntry>,
     pub rules: Vec<RuleEntry>,
@@ -357,6 +362,7 @@ impl Registry {
                 tested_client_versions: Vec::new(),
                 documented_client_versions: Vec::new(),
                 pinned_commit: None,
+                managed_sources_behavior: None,
                 conformance_status: "unavailable".to_string(),
                 layers: Vec::new(),
                 rules: Vec::new(),
@@ -392,6 +398,12 @@ impl Registry {
 
     pub fn pinned_commit(&self) -> Option<&str> {
         self.file.pinned_commit.as_deref()
+    }
+
+    /// How upstream combines multiple managed sources (`first-wins` by default). `None` when the
+    /// registry does not declare it; ConfigLens only claims single-source managed resolution.
+    pub fn managed_sources_behavior(&self) -> Option<&str> {
+        self.file.managed_sources_behavior.as_deref()
     }
 
     pub fn conformance_status(&self) -> &str {
@@ -580,6 +592,12 @@ pub trait ClientAdapter {
     fn syntax_for(&self, layer_id: &str) -> Syntax;
     /// Whether a source applies in this context.
     fn applicability(&self, layer_id: &str, ctx: &ResolutionContext) -> Applicability;
+    /// Whether workspace trust is a concept for this client at all. Claude Code gates project
+    /// contributions on trust; OpenCode has no upstream trust concept (audit finding O4), so its
+    /// adapter never reports a trust gap and its project config is always applicable.
+    fn trust_applicable(&self) -> bool {
+        true
+    }
 }
 
 /// Construct the adapter for a client.
@@ -591,11 +609,17 @@ pub fn adapter_for(client: Client) -> Box<dyn ClientAdapter> {
 }
 
 /// Default applicability helper shared by adapters.
+///
+/// A project layer is never *fully* dropped by an untrusted workspace: upstream only gates a fixed
+/// set of keys (`permissions.allow`, `additionalDirectories`, `extraKnownMarketplaces`, most `env`)
+/// on trust, while `deny`/`ask` apply right away. So an untrusted/unknown workspace yields a
+/// `Conditional` layer; the per-key trust gate is applied during reduction (`resolve`), where the
+/// rule's `trust_gated` flag and the source class decide whether a *contribution* is ignored.
 pub(crate) fn default_applicability(class: SourceClass, ctx: &ResolutionContext) -> Applicability {
     match class {
         SourceClass::ProjectShared | SourceClass::ProjectLocal => match ctx.trust {
             Trust::Trusted => Applicability::Applicable,
-            Trust::Untrusted => Applicability::Skipped("workspace_untrusted".to_string()),
+            Trust::Untrusted => Applicability::Conditional("workspace_untrusted".to_string()),
             Trust::Unknown => Applicability::Conditional("trust_unknown".to_string()),
         },
         _ => Applicability::Applicable,
@@ -667,14 +691,107 @@ mod tests {
             assert_eq!(registry.adapter_revision(), "0.1.0");
             assert!(!registry.tested_client_versions().is_empty());
             assert!(registry.evidence().iter().all(|e| !e.url.is_empty()));
-            assert_eq!(
-                registry.pinned_commit(),
-                None,
-                "no loader SHA is pinned yet"
-            );
         }
+        // Claude Code is closed source: no loader SHA exists.
+        assert_eq!(claude().pinned_commit(), None);
+        // OpenCode is pinned to the v1 line that the registry documents (audit O1).
+        assert_eq!(
+            opencode().pinned_commit(),
+            Some("53d1eabb61e21162157817bf677da0a4ad3332e3")
+        );
         assert_eq!(opencode().client(), "opencode");
         assert_eq!(claude().client(), "claude");
+    }
+
+    #[test]
+    fn opencode_registry_matches_its_pinned_v1_line() {
+        // O1/O2/O3: the tested version and the pinned SHA must belong to the same product line.
+        let oc = opencode();
+        assert_eq!(oc.tested_client_versions(), ["1.18.35"]);
+        assert_eq!(oc.documented_client_versions(), ["1.18.35"]);
+        assert_eq!(
+            oc.pinned_commit(),
+            Some("53d1eabb61e21162157817bf677da0a4ad3332e3")
+        );
+        let note = oc
+            .evidence()
+            .iter()
+            .find(|e| e.id == "OC-REPO")
+            .and_then(|e| e.note.clone())
+            .unwrap_or_default();
+        assert!(note.contains("53d1eabb"), "v1 tag must be cited: {note}");
+        assert!(
+            !note.contains("no replacement loader"),
+            "the stale 'no loader' wording must not survive: {note}"
+        );
+    }
+
+    #[test]
+    fn claude_hkcu_is_the_lowest_managed_layer() {
+        // C1: upstream ranks HKCU as the bottom managed fallback, so its rank must sit *below*
+        // cc.managed.file. A regression to the inverted rank makes this fail.
+        let cc = claude();
+        let hkcu = cc.layer("cc.managed.hkcu").expect("hkcu layer");
+        let file = cc.layer("cc.managed.file").expect("managed file layer");
+        assert!(
+            hkcu.rank < file.rank,
+            "HKCU ({}) must rank below the managed file tier ({})",
+            hkcu.rank,
+            file.rank
+        );
+        let managed: Vec<(&str, u32)> = cc
+            .layers()
+            .into_iter()
+            .filter(|l| l.id.starts_with("cc.managed."))
+            .map(|l| (l.id.as_str(), l.rank))
+            .collect();
+        assert_eq!(
+            managed,
+            vec![
+                ("cc.managed.hkcu", 50),
+                ("cc.managed.file", 60),
+                ("cc.managed.mdm", 70),
+                ("cc.managed.server", 80),
+            ],
+            "server > MDM > file > HKCU, lowest precedence first"
+        );
+    }
+
+    #[test]
+    fn claude_project_shared_location_names_the_primary_working_directory() {
+        // C2: the shared file is read from the session's primary working directory, not the repo
+        // root (registry.md already said so; registry.json must agree).
+        let cc = claude();
+        let shared = cc.layer("cc.project_shared").expect("shared layer");
+        assert_eq!(
+            shared.location,
+            "the session primary working directory/.claude/settings.json"
+        );
+    }
+
+    #[test]
+    fn claude_managed_sources_behavior_is_first_wins() {
+        // C3: managed sources combine first-wins by default; `merge` is opt-in (v2.1.242+).
+        // ConfigLens only claims single-source managed resolution.
+        assert_eq!(claude().managed_sources_behavior(), Some("first-wins"));
+        assert_eq!(opencode().managed_sources_behavior(), None);
+    }
+
+    #[test]
+    fn claude_model_picker_is_inventory_only() {
+        // C5: upstream ignores modelPicker in project/local, so ConfigLens must not claim an
+        // ordered-replace merge for it. It is inventory-only, matching registry.md.
+        let rule = claude().rule_for("/modelPicker");
+        assert_eq!(rule.operator, Operator::InventoryOnly);
+        assert_eq!(rule.support, SupportLevel::InventoryOnly);
+        assert_eq!(rule.rule_id, "claude.unknown.inventory-only");
+    }
+
+    #[test]
+    fn trust_is_a_claude_only_concept() {
+        // O4: OpenCode has no workspace-trust concept; only the Claude adapter reports trust gaps.
+        assert!(adapter_for(Client::Claude).trust_applicable());
+        assert!(!adapter_for(Client::OpenCode).trust_applicable());
     }
 
     #[test]
@@ -705,7 +822,7 @@ mod tests {
                 "oc.managed_macos_prefs",
             ]
         );
-        // The documented Claude order, lowest first.
+        // The documented Claude order, lowest first. HKCU is the lowest *managed* layer (C1).
         assert_eq!(
             claude()
                 .layers()
@@ -717,10 +834,10 @@ mod tests {
                 "cc.project_shared",
                 "cc.project_local",
                 "cc.session_args",
+                "cc.managed.hkcu",
                 "cc.managed.file",
                 "cc.managed.mdm",
                 "cc.managed.server",
-                "cc.managed.hkcu",
             ]
         );
     }

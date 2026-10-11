@@ -57,7 +57,16 @@ pub enum PathsChoice {
     about = "Explain which AI configuration value wins, and why",
     long_about = "ConfigLens is a local, read-only CLI that traces supported AI coding-tool settings \
                   through configuration files and supplied session inputs. It never executes your \
-                  configuration, makes network requests or reads credentials."
+                  configuration, makes network requests or reads credentials.",
+    after_help = "Examples:\n  \
+                  configlens clients\n  \
+                  configlens scan --client claude --cwd . --client-version 2.1.296\n  \
+                  configlens explain /model --client claude --paths share\n  \
+                  configlens doctor --client opencode --format json --strict\n  \
+                  configlens snapshot --client claude --output before.json\n  \
+                  configlens diff before.json after.json\n  \
+                  configlens support-report --client claude --preview\n  \
+                  configlens completions --shell bash"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -71,6 +80,10 @@ pub enum Command {
     /// Inventory candidate sources, applicability and readability.
     Scan(CommonArgs),
     /// Explain one configuration key.
+    #[command(after_help = "Examples:\n  \
+                            configlens explain /model --client claude\n  \
+                            configlens explain /permissions/allow --client claude --format json\n  \
+                            configlens explain /mcp/jira/url --client opencode --paths share")]
     Explain(ExplainArgs),
     /// Parse/schema/applicability/coverage diagnostics.
     Doctor(DoctorArgs),
@@ -80,6 +93,16 @@ pub enum Command {
     Diff(DiffArgs),
     /// Emit the bundled report schema.
     Schema(SchemaArgs),
+    /// Emit a shell completion script (offline; nothing is written).
+    #[command(after_help = "Examples:\n  \
+                            configlens completions --shell bash\n  \
+                            source <(configlens completions --shell bash)")]
+    Completions(CompletionsArgs),
+    /// Build a sanitized, share-mode report to attach to a support issue.
+    #[command(after_help = "Examples:\n  \
+                            configlens support-report --client claude --preview\n  \
+                            configlens support-report --client claude --output support.json")]
+    SupportReport(SupportReportArgs),
 }
 
 #[derive(Args, Debug)]
@@ -187,6 +210,28 @@ pub struct SchemaArgs {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum SchemaKind {
     Report,
+}
+
+#[derive(Args, Debug)]
+pub struct CompletionsArgs {
+    /// Shell to generate a completion script for.
+    #[arg(long, value_enum)]
+    pub shell: crate::completions::Shell,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct SupportReportArgs {
+    #[command(flatten)]
+    pub common: CommonArgs,
+    /// Destination file for the sanitized report (required unless --preview).
+    #[arg(long)]
+    pub output: Option<PathBuf>,
+    /// Replace an existing destination file.
+    #[arg(long)]
+    pub overwrite: bool,
+    /// Print the sanitized report to stdout and write nothing.
+    #[arg(long)]
+    pub preview: bool,
 }
 
 /// Text output is coloured only when asked for, and never when `NO_COLOR` is set or stdout is
@@ -313,6 +358,39 @@ fn dispatch(cli: Cli) -> Result<i32, CliError> {
             }
             Ok(0)
         }
+        Command::Completions(args) => {
+            print!("{}", crate::completions::script(args.shell));
+            Ok(0)
+        }
+        Command::SupportReport(args) => {
+            let client = resolve_client(args.common.client.as_deref())?;
+            // A support report is always share-sanitized, whatever `--paths` says: paths, hosts,
+            // unknown keys and secrets are all projected before anything is shown or written.
+            let mut common = args.common.clone();
+            common.paths = PathsChoice::Share;
+            let prepared = prepare(client, &common)?;
+            let report = compose_report("support-report", &prepared, Vec::new())?;
+            let json = render_json::render(&report);
+            if args.preview {
+                // Explicit preview: the sanitized report goes to stdout, nothing is written.
+                print!("{json}");
+                eprintln!(
+                    "configlens: preview only — nothing was written. Add --output <path> to save the sanitized report."
+                );
+            } else if let Some(output) = &args.output {
+                // Explicit output; never an automatic upload, and never a default path.
+                let outcome = crate::commands::write_snapshot(output, &json, args.overwrite)?;
+                eprintln!(
+                    "configlens: wrote {} bytes of share-mode support report to {} (permissions: {}). Review it before attaching it anywhere.",
+                    outcome.bytes, outcome.location, outcome.permissions
+                );
+            } else {
+                return Err(CliError::usage(
+                    "support-report needs --output <path> to save the sanitized report, or --preview to print it",
+                ));
+            }
+            Ok(exit_code_for_run(&prepared, &common, FailOn::Error, None)?.exit_code())
+        }
         Command::Diff(args) => {
             let before = std::fs::read_to_string(&args.before).map_err(|_| {
                 CliError::file_problem("report_unreadable", &args.before.display().to_string())
@@ -424,7 +502,18 @@ fn print_report(
         Format::Json => print!("{}", render_json::render(report)),
         Format::Text => match explain_pointer {
             Some(pointer) => {
-                let resolution = prepared.run.explain(pointer);
+                // Share mode rewrites pointers, URL hosts and embedded path roots inside the
+                // report; render the *projected* resolution so text output obeys `--paths share`
+                // exactly like the JSON envelope. Index correspondence holds because
+                // `project_resolutions` maps the resolutions in order without filtering.
+                let index = prepared
+                    .run
+                    .resolutions
+                    .iter()
+                    .position(|r| r.pointer == pointer);
+                let resolution = index
+                    .and_then(|i| report.resolutions.get(i).cloned())
+                    .unwrap_or_else(|| prepared.run.explain(pointer));
                 let color = should_color(
                     ColorChoice::Auto,
                     std::env::var_os("NO_COLOR").is_some(),
@@ -435,14 +524,14 @@ fn print_report(
                     "{}",
                     render_text::render_explain(&prepared.run, &resolution, &prepared.context)
                 );
-                let children: Vec<&str> = prepared
-                    .run
+                let base = resolution.pointer.clone();
+                let children: Vec<&str> = report
                     .resolutions
                     .iter()
                     .filter(|r| {
-                        r.pointer.starts_with(pointer)
-                            && r.pointer.len() > pointer.len()
-                            && r.pointer[pointer.len()..].starts_with('/')
+                        r.pointer.starts_with(&base)
+                            && r.pointer.len() > base.len()
+                            && r.pointer[base.len()..].starts_with('/')
                     })
                     .map(|r| r.pointer.as_str())
                     .collect();

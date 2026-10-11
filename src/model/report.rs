@@ -148,8 +148,8 @@ pub fn build(input: ReportInput<'_>, mode: PathMode) -> Report {
     environment_keys.sort();
     environment_keys.dedup();
 
-    // Project pointers per mode before the client string is moved into the report.
-    let resolutions = project_resolutions(input.resolutions, mode, &input.client);
+    // Project pointers, values and hosts per mode before the client string is moved into the report.
+    let resolutions = project_resolutions(input.resolutions, mode, &input.client, input.paths);
     Report {
         schema_version: REPORT_SCHEMA_VERSION.to_string(),
         tool_version: TOOL_VERSION.to_string(),
@@ -184,13 +184,19 @@ pub fn build(input: ReportInput<'_>, mode: PathMode) -> Report {
                 PathMode::Local => "local".to_string(),
                 PathMode::Share => "share".to_string(),
             },
-            rules_applied: vec![
-                "sensitive_field_names".to_string(),
-                "redacted_subtrees".to_string(),
-                "value_allowlist_per_adapter".to_string(),
-                "url_userinfo_query_fragment".to_string(),
-                "terminal_control_sanitization".to_string(),
-            ],
+            rules_applied: {
+                let mut rules = vec![
+                    "sensitive_field_names".to_string(),
+                    "redacted_subtrees".to_string(),
+                    "value_allowlist_per_adapter".to_string(),
+                    "url_userinfo_query_fragment".to_string(),
+                    "terminal_control_sanitization".to_string(),
+                ];
+                if mode == PathMode::Share {
+                    rules.push("share_mode_path_and_host_pseudonymization".to_string());
+                }
+                rules
+            },
             snapshot_acl: snapshot_acl_support().to_string(),
             values_redacted,
         },
@@ -227,37 +233,143 @@ fn known_key_segments(client: &str) -> BTreeSet<String> {
     known
 }
 
-/// Rewrite resolution pointers for the requested path mode.
+/// Rewrite resolution pointers *and* revealed values for the requested path mode.
 ///
 /// In share mode every pointer segment that is not a documented key (an unknown key, an instance
 /// name such as an MCP server, an environment variable) is replaced by a deterministic opaque
-/// field ID. Local mode keeps the native names because it is the diagnostic view (spec §7).
+/// field ID, every private URL host is replaced by a deterministic host ID, and every revealed
+/// string has known path roots aliased. Local mode keeps the native names and hosts because it is
+/// the diagnostic view (spec §7).
 fn project_resolutions(
     resolutions: &[Resolution],
     mode: PathMode,
     client: &str,
+    paths: &PathPolicy,
 ) -> Vec<Resolution> {
     if mode == PathMode::Local {
         return resolutions.to_vec();
     }
     let known = known_key_segments(client);
     let mut opaque: Vec<String> = Vec::new();
+    let mut hosts: Vec<String> = Vec::new();
     for resolution in resolutions {
         for segment in resolution.pointer.split('/') {
             if !segment.is_empty() && !known.contains(segment) {
                 opaque.push(segment.to_string());
             }
         }
+        for value in resolution_values(resolution) {
+            if let Some(value) = value.as_value() {
+                collect_url_hosts(value, &mut hosts);
+            }
+        }
     }
-    let pseudonymizer = Pseudonymizer::new(opaque, Vec::new());
+    let pseudonymizer = Pseudonymizer::new(opaque, hosts);
     resolutions
         .iter()
         .map(|resolution| {
             let mut projected = resolution.clone();
             projected.pointer = pseudonymize_pointer(&resolution.pointer, &known, &pseudonymizer);
+            projected.observed_value =
+                share_project_value(&resolution.observed_value, &pseudonymizer, paths);
+            projected.effective_value = resolution
+                .effective_value
+                .as_ref()
+                .map(|value| share_project_value(value, &pseudonymizer, paths));
+            projected.events = resolution
+                .events
+                .iter()
+                .map(|event| {
+                    let mut event = event.clone();
+                    event.value = event
+                        .value
+                        .as_ref()
+                        .map(|value| share_project_value(value, &pseudonymizer, paths));
+                    event
+                })
+                .collect();
             projected
         })
         .collect()
+}
+
+/// Every value a resolution carries, in a stable order.
+fn resolution_values(resolution: &Resolution) -> Vec<&PublicValue> {
+    let mut values: Vec<&PublicValue> = vec![&resolution.observed_value];
+    values.extend(resolution.effective_value.iter());
+    values.extend(
+        resolution
+            .events
+            .iter()
+            .filter_map(|event| event.value.as_ref()),
+    );
+    values
+}
+
+/// Collect the URL hosts that appear in a revealed value (string or array of strings).
+fn collect_url_hosts(value: &serde_json::Value, out: &mut Vec<String>) {
+    match value {
+        serde_json::Value::String(text) => {
+            if let Some(host) = crate::security::redact::url_host(text) {
+                out.push(host);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                collect_url_hosts(item, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Rewrite a revealed public value for share mode: pseudonymize URL hosts and alias embedded
+/// path roots. Redacted values and non-string shapes are returned unchanged.
+fn share_project_value(
+    value: &PublicValue,
+    hosts: &Pseudonymizer,
+    paths: &PathPolicy,
+) -> PublicValue {
+    if value.is_redacted() {
+        return value.clone();
+    }
+    let Some(raw) = value.as_value() else {
+        return value.clone();
+    };
+    let projected = match raw {
+        serde_json::Value::String(text) => {
+            serde_json::Value::String(share_project_string(text, hosts, paths))
+        }
+        serde_json::Value::Array(items) => serde_json::Value::Array(
+            items
+                .iter()
+                .map(|item| match item {
+                    serde_json::Value::String(text) => {
+                        serde_json::Value::String(share_project_string(text, hosts, paths))
+                    }
+                    other => other.clone(),
+                })
+                .collect(),
+        ),
+        other => other.clone(),
+    };
+    if &projected == raw {
+        return value.clone();
+    }
+    let reason = value.reason_str();
+    if reason.is_empty() {
+        PublicValue::revealed(projected)
+    } else {
+        PublicValue::revealed_with_reason(projected, reason)
+    }
+}
+
+/// Convert one revealed string into its share-mode form.
+fn share_project_string(text: &str, hosts: &Pseudonymizer, paths: &PathPolicy) -> String {
+    if let Some(rewritten) = crate::security::redact::pseudonymize_url_host(text, hosts) {
+        return rewritten;
+    }
+    paths.alias_embedded(text, PathMode::Share)
 }
 
 fn pseudonymize_pointer(
@@ -522,6 +634,52 @@ mod tests {
         // Local mode keeps the native key name: it is the diagnostic view (spec §7).
         let local = build(input(&ctx, &[], &resolutions, &paths), PathMode::Local);
         assert!(to_json(&local).expect("json").contains(secret));
+    }
+
+    #[test]
+    fn share_mode_pseudonymizes_url_hosts_and_aliases_embedded_paths() {
+        let ctx = ctx();
+        let paths = PathPolicy::new(&ctx.home, &ctx.xdg_config, None, &[], &[]);
+        let mut url = Resolution::new("/mcp/jira/url");
+        url.status = crate::resolve::ResolutionStatus::Resolved;
+        url.observed_value = PublicValue::revealed_with_reason(
+            // This is the *already projected* form the report carries (redact_value strips
+            // userinfo/query/fragment before a URL becomes public); share mode must additionally
+            // pseudonymize the host.
+            serde_json::json!("https://jira.internal.example/mcp?[redacted]"),
+            "allowlisted_url_sanitized",
+        );
+        let mut shell = Resolution::new("/shell");
+        shell.status = crate::resolve::ResolutionStatus::Resolved;
+        shell.observed_value = PublicValue::revealed_with_reason(
+            serde_json::json!("/home/dev/.local/bin/zsh"),
+            "allowlisted_string",
+        );
+        let resolutions = vec![url, shell];
+
+        // Local mode: the private host and path stay visible for diagnosis, userinfo does not.
+        let local = to_json(&build(
+            input(&ctx, &[], &resolutions, &paths),
+            PathMode::Local,
+        ))
+        .expect("json");
+        assert!(
+            local.contains("jira.internal.example"),
+            "local keeps the host"
+        );
+        assert!(!local.contains("user:pass"));
+        assert!(local.contains("/home/dev/.local/bin/zsh"));
+
+        // Share mode: the host becomes a deterministic ID and the path is aliased.
+        let share = to_json(&build(
+            input(&ctx, &[], &resolutions, &paths),
+            PathMode::Share,
+        ))
+        .expect("json");
+        assert!(!share.contains("jira.internal.example"), "{share}");
+        assert!(share.contains("host_1"), "{share}");
+        assert!(!share.contains("/home/dev/.local/bin"), "{share}");
+        assert!(share.contains("$HOME/.local/bin/zsh"), "{share}");
     }
 
     #[test]

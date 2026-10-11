@@ -289,6 +289,91 @@ fn cc_allow_from_project_conditional_when_trust_unknown() {
 }
 
 #[test]
+fn cc_untrusted_shared_project_gates_only_allow_deny_still_applies() {
+    // C4 regression: trust gating is key-granular, not file-granular. From an untrusted *shared*
+    // project file the `allow` rule waits for trust, but `deny` applies immediately — the whole
+    // file must not be dropped (the pre-fix behaviour).
+    let untrusted = with_trust(cc_ctx(), Trust::Untrusted);
+    let output = run(
+        Client::Claude,
+        &untrusted,
+        &[(
+            PROJECT,
+            r#"{"permissions": {"allow": ["Bash(ls)"], "deny": ["Read(./.env)"]}}"#,
+        )],
+    );
+
+    let allow = output.explain("/permissions/allow");
+    assert_eq!(allow.status, ResolutionStatus::Partial);
+    assert!(
+        allow.ignored_reasons().contains(&"workspace_untrusted"),
+        "shared allow must be gated: {:?}",
+        allow.ignored_reasons()
+    );
+
+    let deny = output.explain("/permissions/deny");
+    assert!(
+        deny.ignored_reasons().is_empty(),
+        "deny rules apply right away, even in an untrusted project: {:?}",
+        deny.ignored_reasons()
+    );
+    let list = deny
+        .observed_value
+        .as_value()
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(list, vec![serde_json::json!("Read(./.env)")]);
+}
+
+#[test]
+fn cc_untrusted_local_allow_applies_without_trust() {
+    // C4 regression: an *untracked* local file's allow rules apply without the trust step.
+    let untrusted = with_trust(cc_ctx(), Trust::Untrusted);
+    let output = run(
+        Client::Claude,
+        &untrusted,
+        &[(
+            LOCAL,
+            r#"{"permissions": {"allow": ["Bash(npm run test *)"]}}"#,
+        )],
+    );
+    let allow = output.explain("/permissions/allow");
+    assert!(
+        allow.ignored_reasons().is_empty(),
+        "untracked local allow applies without trust: {:?}",
+        allow.ignored_reasons()
+    );
+    let list = allow
+        .observed_value
+        .as_value()
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(list, vec![serde_json::json!("Bash(npm run test *)")]);
+}
+
+#[test]
+fn cc_untrusted_project_non_permission_keys_still_apply() {
+    // C4 regression: only the trust-gated keys wait for trust; ordinary keys (e.g. `model`) from a
+    // project file apply even when the workspace is untrusted.
+    let untrusted = with_trust(cc_ctx(), Trust::Untrusted);
+    let output = run(
+        Client::Claude,
+        &untrusted,
+        &[
+            (USER, r#"{"model": "user-model"}"#),
+            (PROJECT, r#"{"model": "project-model"}"#),
+        ],
+    );
+    assert_eq!(
+        output.explain("/model").observed_str(),
+        Some("project-model"),
+        "a non-permission project key is not trust-gated"
+    );
+}
+
+#[test]
 fn cc_env_values_from_project_files_are_redacted_and_trust_gated() {
     let output = run(
         Client::Claude,

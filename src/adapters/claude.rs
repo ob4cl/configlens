@@ -461,8 +461,13 @@ mod tests {
         let mut untrusted = ctx;
         untrusted.trust = Trust::Untrusted;
         assert_eq!(
+            adapter.applicability("cc.project_shared", &untrusted),
+            Applicability::Conditional("workspace_untrusted".to_string()),
+            "an untrusted shared project is not dropped whole: deny/ask still apply (audit C4)"
+        );
+        assert_eq!(
             adapter.applicability("cc.project_local", &untrusted),
-            Applicability::Skipped("workspace_untrusted".to_string())
+            Applicability::Conditional("workspace_untrusted".to_string())
         );
     }
 

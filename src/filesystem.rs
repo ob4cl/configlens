@@ -352,6 +352,7 @@ mod tests {
         assert_eq!(out.kind, FileKind::Regular);
     }
 
+    #[cfg(unix)]
     #[test]
     fn symlink_inside_an_authorized_root_is_followed() {
         let dir = temp();
@@ -363,6 +364,7 @@ mod tests {
         assert_eq!(out.kind, FileKind::Regular);
     }
 
+    #[cfg(unix)]
     #[test]
     fn symlink_escaping_the_authorized_root_is_refused() {
         let outside = temp();
@@ -377,6 +379,7 @@ mod tests {
         assert_eq!(out.kind.diagnostic_code(), "symlink_escape");
     }
 
+    #[cfg(unix)]
     #[test]
     fn symlink_loops_do_not_hang_and_are_refused() {
         let dir = temp();
@@ -388,6 +391,7 @@ mod tests {
         assert!(!out.is_readable());
     }
 
+    #[cfg(unix)]
     #[test]
     fn sockets_are_refused() {
         let dir = temp();

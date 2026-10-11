@@ -11,6 +11,7 @@
 pub mod adapters;
 pub mod cli;
 pub mod commands;
+pub mod completions;
 pub mod context;
 pub mod error;
 pub mod filesystem;

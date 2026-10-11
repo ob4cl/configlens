@@ -1,0 +1,1 @@
+not json - must be ignored by managed-settings.d discovery
