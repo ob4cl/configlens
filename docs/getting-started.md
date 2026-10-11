@@ -7,8 +7,9 @@ If you only want to see it work, jump to [Run the demo](#2-run-the-demo).
 
 ## 1. Build from source
 
-You need a Rust toolchain. `Cargo.toml` declares `rust-version = "1.85"`, but the project has only
-been built and tested with `1.99.0` so far — see [`verification-log.md`](verification-log.md).
+You need a Rust toolchain. `Cargo.toml` declares `rust-version = "1.85"`, and that MSRV is
+**verified** (`cargo +1.85.0 check --locked --all-targets --all-features` exits `0`); local
+development used `1.99.0` — see [`verification-log.md`](verification-log.md).
 
 ```sh
 git clone <this repository>       # private beta: use your existing access

@@ -68,3 +68,47 @@ jobs:
       - run: rustup toolchain install 1.85.0 --profile minimal
       - name: Check declared MSRV without rewriting the lockfile
         run: cargo +1.85.0 check --locked --all-targets --all-features
+
+  dependencies:
+    name: Dependency policy (cargo-deny)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2
+        with:
+          tool: cargo-deny@0.20.2
+      # deny.toml fails the build (not warns) on: a RustSec advisory or yanked release in the
+      # graph, any licence outside the reviewed allow-list, a wildcard or git dependency, and any
+      # registry other than crates.io. The policy is checked against the union of all features.
+      - name: Advisories, licences, bans and sources
+        run: cargo deny check
+
+  fuzz:
+    name: Fuzz smoke (bounded)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - run: rustup toolchain install nightly --profile minimal
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked --version 0.13.2
+      - name: Build the fuzz targets
+        run: cargo +nightly fuzz build
+      # Spec §8: "Run short fuzz smoke in CI; longer scheduled runs outside PR latency budget."
+      # The committed corpus in fuzz/corpus seeds every target, so this is a regression run, not a
+      # cold start. A crash or a broken invariant fails the build.
+      - name: Fuzz every target for 60 seconds
+        run: |
+          for target in parse_documents resolve_precedence hostile_inputs; do
+            echo "::group::fuzz $target"
+            cargo +nightly fuzz run "$target" -- -max_total_time=60 -rss_limit_mb=4096
+            echo "::endgroup::"
+          done

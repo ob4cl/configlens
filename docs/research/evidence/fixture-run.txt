@@ -1,5 +1,5 @@
 ### A. claude: user + shared project + local project, trust UNKNOWN
-$ claude_env /home/thai/configlens/target/release/configlens scan --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --format text --paths local
+$ claude_env $REPO/target/release/configlens scan --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --format text --paths local
 ConfigLens scan — client claude (adapter revision 0.1.0)
 Sources (3):
   [10] cc.user  $HOME/.claude/settings.json  observed  applicable
@@ -14,7 +14,7 @@ Coverage gaps (6):
   - cc.managed.file — managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)
 
 ### B. claude: explain /model with trust UNKNOWN (project layers conditional)
-$ claude_env /home/thai/configlens/target/release/configlens explain /model --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --client-version 2.1.296 --format text
+$ claude_env $REPO/target/release/configlens explain /model --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --client-version 2.1.296 --format text
 /model = "claude-haiku-5-5" (observed)
 Observed winner: $PROJECT/.claude/settings.local.json:3:12
   "claude-sonnet-5"  $HOME/.claude/settings.json:3:12  replaced_by_later_layer
@@ -29,7 +29,7 @@ Diagnostics (2):
   [warning] trust_unknown  $PROJECT/.claude/settings.local.json  location unavailable
 
 ### C. claude: explain /model with supplied context project_trust=trusted
-$ claude_env /home/thai/configlens/target/release/configlens explain /model --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --input-context /home/thai/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+$ claude_env $REPO/target/release/configlens explain /model --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --input-context $REPO/docs/research/fixtures/context-claude-trusted.json --format text
 /model = "claude-haiku-5-5" (observed)
 Observed winner: $PROJECT/.claude/settings.local.json:3:12
   "claude-sonnet-5"  $HOME/.claude/settings.json:3:12  replaced_by_later_layer
@@ -41,7 +41,7 @@ Support: fixture_verified; confidence: evidence_class:fixture_verified
 Conclusion: "claude-haiku-5-5" wins among the observed applicable sources; effective value withheld.
 
 ### D. claude: explain /model with supplied context project_trust=untrusted
-$ claude_env /home/thai/configlens/target/release/configlens explain /model --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --input-context /home/thai/configlens/docs/research/fixtures/context-claude-untrusted.json --format text
+$ claude_env $REPO/target/release/configlens explain /model --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --input-context $REPO/docs/research/fixtures/context-claude-untrusted.json --format text
 /model = "claude-sonnet-5" (observed)
 Observed winner: $HOME/.claude/settings.json:3:12
   "claude-sonnet-5"  $HOME/.claude/settings.json:3:12  observed_winner
@@ -56,7 +56,7 @@ Diagnostics (2):
   [warning] workspace_untrusted  $PROJECT/.claude/settings.local.json  location unavailable
 
 ### E. claude: explain /permissions/allow (list concat provenance, not authorization)
-$ claude_env /home/thai/configlens/target/release/configlens explain /permissions/allow --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --input-context /home/thai/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+$ claude_env $REPO/target/release/configlens explain /permissions/allow --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --input-context $REPO/docs/research/fixtures/context-claude-trusted.json --format text
 /permissions/allow = ["Bash(npm run lint)","Bash(npm run test *)","Bash(npm run build)"] (observed)
   ["Bash(npm run lint)","Bash(npm run test *)"]  $HOME/.claude/settings.json:6:14  list_contribution
   ["Bash(npm run build)"]  $PROJECT/.claude/settings.json:6:14  list_contribution
@@ -72,7 +72,7 @@ Child pointers (2):
   /permissions/allow/1
 
 ### F. claude: explain /spinnerTipsEnabled (shared project beats user)
-$ claude_env /home/thai/configlens/target/release/configlens explain /spinnerTipsEnabled --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --input-context /home/thai/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+$ claude_env $REPO/target/release/configlens explain /spinnerTipsEnabled --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --input-context $REPO/docs/research/fixtures/context-claude-trusted.json --format text
 /spinnerTipsEnabled = true (observed)
 Observed winner: $PROJECT/.claude/settings.json:4:25
   false  $HOME/.claude/settings.json:4:25  replaced_by_later_layer
@@ -83,7 +83,7 @@ Support: documented; confidence: evidence_class:documented
 Conclusion: true wins among the observed applicable sources; effective value withheld.
 
 ### G. claude: explain /permissions/defaultMode scope exclusion
-$ claude_env /home/thai/configlens/target/release/configlens explain /permissions/defaultMode --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --input-context /home/thai/configlens/docs/research/fixtures/context-claude-trusted.json --format text
+$ claude_env $REPO/target/release/configlens explain /permissions/defaultMode --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --input-context $REPO/docs/research/fixtures/context-claude-trusted.json --format text
 /permissions/defaultMode = <redacted:absent> (observed)
 Rule: claude.permissions.default-mode-scope-exclusion
 Coverage: complete
@@ -91,7 +91,7 @@ Support: documented; confidence: evidence_class:documented
 Conclusion: no observed source defines this key.
 
 ### H. claude: JSON scan (share paths) - redaction check
-$ claude_env /home/thai/configlens/target/release/configlens scan --client claude --cwd /home/thai/configlens/docs/research/fixtures/claude/project --project-root /home/thai/configlens/docs/research/fixtures/claude/project --format json --paths share
+$ claude_env $REPO/target/release/configlens scan --client claude --cwd $REPO/docs/research/fixtures/claude/project --project-root $REPO/docs/research/fixtures/claude/project --format json --paths share
 {
   "adapter_revision": "0.1.0",
   "client": "claude",
@@ -1091,7 +1091,7 @@ $ claude_env /home/thai/configlens/target/release/configlens scan --client claud
 }
 
 ### I. opencode: scan (global + project, both json and jsonc dialects)
-$ oc_env /home/thai/configlens/target/release/configlens scan --client opencode --cwd /home/thai/configlens/docs/research/fixtures/opencode/project --project-root /home/thai/configlens/docs/research/fixtures/opencode/project --format text --paths local
+$ oc_env $REPO/target/release/configlens scan --client opencode --cwd $REPO/docs/research/fixtures/opencode/project --project-root $REPO/docs/research/fixtures/opencode/project --format text --paths local
 ConfigLens scan — client opencode (adapter revision 0.1.0)
 Sources (3):
   [10] oc.global  $XDG_CONFIG/opencode/opencode.json  observed  applicable
@@ -1105,7 +1105,7 @@ Coverage gaps (5):
   - oc.managed_macos_prefs — platform_prefs_not_parsed (expected_unobservable)
 
 ### J. opencode: explain /model (project overrides global)
-$ oc_env /home/thai/configlens/target/release/configlens explain /model --client opencode --cwd /home/thai/configlens/docs/research/fixtures/opencode/project --project-root /home/thai/configlens/docs/research/fixtures/opencode/project --client-version 1.18.35 --input-context /home/thai/configlens/docs/research/fixtures/context-opencode-trusted.json --format text
+$ oc_env $REPO/target/release/configlens explain /model --client opencode --cwd $REPO/docs/research/fixtures/opencode/project --project-root $REPO/docs/research/fixtures/opencode/project --client-version 1.18.35 --input-context $REPO/docs/research/fixtures/context-opencode-trusted.json --format text
 /model = "anthropic/claude-opus-4-6" (observed)
 Observed winner: $PROJECT/opencode.json:3:12
   "anthropic/claude-sonnet-4-5"  $XDG_CONFIG/opencode/opencode.json:3:12  replaced_by_later_layer
@@ -1116,7 +1116,7 @@ Support: fixture_verified; confidence: evidence_class:fixture_verified
 Conclusion: "anthropic/claude-opus-4-6" wins among the observed applicable sources; effective value withheld.
 
 ### K. opencode: explain /share (enum provenance)
-$ oc_env /home/thai/configlens/target/release/configlens explain /share --client opencode --cwd /home/thai/configlens/docs/research/fixtures/opencode/project --project-root /home/thai/configlens/docs/research/fixtures/opencode/project --input-context /home/thai/configlens/docs/research/fixtures/context-opencode-trusted.json --format text
+$ oc_env $REPO/target/release/configlens explain /share --client opencode --cwd $REPO/docs/research/fixtures/opencode/project --project-root $REPO/docs/research/fixtures/opencode/project --input-context $REPO/docs/research/fixtures/context-opencode-trusted.json --format text
 /share = "disabled" (observed)
 Observed winner: $PROJECT/opencode.json:5:12
   "manual"  $XDG_CONFIG/opencode/opencode.json:5:12  replaced_by_later_layer
@@ -1127,7 +1127,7 @@ Support: fixture_verified; confidence: evidence_class:fixture_verified
 Conclusion: "disabled" wins among the observed applicable sources; effective value withheld.
 
 ### L. opencode: explain /mcp/jira/environment (whole map must be redacted)
-$ oc_env /home/thai/configlens/target/release/configlens explain /mcp/jira/environment --client opencode --cwd /home/thai/configlens/docs/research/fixtures/opencode/project --project-root /home/thai/configlens/docs/research/fixtures/opencode/project --format text
+$ oc_env $REPO/target/release/configlens explain /mcp/jira/environment --client opencode --cwd $REPO/docs/research/fixtures/opencode/project --project-root $REPO/docs/research/fixtures/opencode/project --format text
 /mcp/jira/environment = <redacted:mcp_environment_map> (observed)
   <redacted:mcp_environment_map>  $PROJECT/opencode.json:11:22  container_child_merge
 Rule: opencode.object.recursive-merge

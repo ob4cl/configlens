@@ -1,0 +1,113 @@
+ConfigLens — evidence for $OPENCODE_CONFIG_DIR semantics (OpenCode 1.18.35)
+================================================================================
+Retrieved: 2026-10-11 (BST)
+Pinned commit: 53d1eabb61e21162157817bf677da0a4ad3332e3  (tag v1.18.35)
+Trigger: a real Windows beta run of ConfigLens v0.1.0-beta.1 reported a directory-valued
+         OPENCODE_CONFIG_DIR as blocked (`not_a_regular_file`) and accepted a file-valued
+         OPENCODE_CONFIG_DIR as a source. Both behaviours were checked against upstream.
+
+1. Upstream source read at the pinned commit
+--------------------------------------------------------------------------------
+$ curl -sSL -o config.ts "https://raw.githubusercontent.com/sst/opencode/53d1eabb61e21162157817bf677da0a4ad3332e3/packages/opencode/src/config/config.ts"
+$ curl -sSL -o paths.ts  "https://raw.githubusercontent.com/sst/opencode/53d1eabb61e21162157817bf677da0a4ad3332e3/packages/opencode/src/config/paths.ts"
+
+packages/opencode/src/config/paths.ts — which directories are scanned:
+
+    export const directories = Effect.fn("ConfigPaths.directories")(function* (directory: string, worktree?: string) {
+      const afs = yield* FSUtil.Service
+      return unique([
+        Global.Path.config,
+        ...(!Flag.OPENCODE_DISABLE_PROJECT_CONFIG
+          ? yield* afs.up({ targets: [".opencode"], start: directory, stop: worktree })
+          : []),
+        ...(yield* afs.up({ targets: [".opencode"], start: Global.Path.home, stop: Global.Path.home })),
+        ...(Flag.OPENCODE_CONFIG_DIR ? [Flag.OPENCODE_CONFIG_DIR] : []),
+      ])
+    })
+
+=> OPENCODE_CONFIG_DIR is a DIRECTORY, appended LAST to the scanned-directory list; it is
+   not included at all when the variable is unset.
+
+packages/opencode/src/config/config.ts — merge order (abridged, real line numbers):
+
+    415:  if (Flag.OPENCODE_CONFIG) {
+    416:    yield* merge(Flag.OPENCODE_CONFIG, yield* loadFile(Flag.OPENCODE_CONFIG, authEnv))
+              # a FILE path, merged after the global config directory
+    420:  if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
+    421:    for (const file of yield* ConfigPaths.files("opencode", ctx.directory, ctx.worktree)...) {
+              # project files, merged next
+    432:  if (Flag.OPENCODE_CONFIG_DIR) {
+    433:    yield* Effect.logDebug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
+    437:  for (const dir of directories) {
+    439:    if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
+    440:      for (const file of ["opencode.json", "opencode.jsonc"]) {
+    441:        const source = path.join(dir, file)
+              # both files INSIDE the directory, json then jsonc
+    482:  if (process.env.OPENCODE_CONFIG_CONTENT) {
+              # inline content, merged last of the three
+
+2. Conclusions (each one encoded in compatibility/opencode/registry.json + registry.md)
+--------------------------------------------------------------------------------
+a. The env value is a directory; upstream reads <dir>/opencode.json then <dir>/opencode.jsonc
+   from inside it. opencode.jsonc wins because it is merged second.
+b. Placement is fixed: after the project files (.opencode directories included) and before
+   $OPENCODE_CONFIG_CONTENT. So rank 45 (between oc.opencode_dirs=40 and oc.inline=50) is
+   source-verified: placement_verified = true, no placement gap.
+c. A file-valued variable contributes nothing upstream (it would look for <file>/opencode.json).
+d. Missing files / missing directory: nothing is merged and nothing is reported — not an error.
+e. Still unverified: runtime behaviour (no upstream loader harness is run), so the adapter stays
+   fixture_verified at most, and every unreadable managed layer keeps its coverage gap.
+
+3. Regression evidence: before/after on a faithful replica of the Windows report
+--------------------------------------------------------------------------------
+Layout: proj/opencode.json = project-model, home/.config/opencode/opencode.json = global-model,
+        configlens-test-global/opencode.json = custom-dir-model.
+
+BEFORE (v0.1.0-beta.1, as packaged):
+  RUN 1  OPENCODE_CONFIG_DIR=<the directory>  -> source blocked, diagnostic not_a_regular_file,
+         winner = project-model. Correct upstream usage did nothing.
+  RUN 2  OPENCODE_CONFIG_DIR=<the file>       -> both files read, winner = custom-dir-model.
+         A claim upstream does not support.
+
+AFTER (working tree, 2026-10-11):
+  $ cd proj && env -i HOME=... XDG_CONFIG_HOME=... OPENCODE_CONFIG_DIR=<the directory> \
+      configlens explain /model --client opencode --client-version 1.18.35 \
+      --allow-read-root <the directory>
+  /model = "custom-dir-model" (observed)
+  Observed winner: .../configlens-test-global/opencode.json:1:10  "custom-dir-model"  observed_winner
+  Losers:
+    "global-model"  $XDG_CONFIG/opencode/opencode.json:1:10  replaced_by_later_layer
+    "project-model"  $PROJECT/opencode.json:1:10  replaced_by_later_layer
+  Rule: opencode.scalar.layer-override
+  Coverage: partial — oc.managed_macos_prefs — platform_prefs_not_parsed (expected_unobservable)
+  Support: fixture_verified; confidence: evidence_class:fixture_verified
+  Conclusion: "custom-dir-model" wins among the observed applicable sources; effective value withheld.
+
+  $ ... OPENCODE_CONFIG_DIR=<the file> configlens explain /model --client opencode --client-version 1.18.35 --allow-read-root <the directory>
+  /model = "project-model" (observed)
+  Observed winner: $PROJECT/opencode.json:1:10  "project-model"  observed_winner
+  # the file is no longer read as a custom directory
+
+  $ ... configlens scan --client opencode --client-version 1.18.35 --allow-read-root <the directory>
+  ConfigLens scan — client opencode (adapter revision 0.1.0)
+  Sources (3):
+    [10] oc.global  $XDG_CONFIG/opencode/opencode.json  observed  applicable
+    [45] oc.custom_dir  .../configlens-test-global/opencode.json  observed  applicable
+    [30] oc.project  $PROJECT/opencode.json  observed  applicable
+  Coverage gaps (3):
+    - oc.remote.wellknown — remote_source_not_fetched (expected_unobservable)
+    - oc.opencode_dirs — not_a_settings_document (expected_unobservable)
+    - oc.managed_macos_prefs — platform_prefs_not_parsed (expected_unobservable)
+
+Tests covering all of the above (tests/rules_opencode.rs, ids cited in registry.md):
+  oc_custom_dir_reads_the_config_inside_the_directory
+  oc_custom_dir_jsonc_wins_over_json_inside_the_directory
+  oc_custom_dir_ignores_a_file_valued_environment_variable
+  oc_custom_dir_without_config_files_contributes_nothing
+  oc_custom_dir_stays_below_inline_content
+  oc_custom_dir_outside_the_read_roots_is_reported_as_blocked_not_ignored
+  oc_custom_dir_is_read_from_windows_shaped_paths
+  oc_custom_dir_absent_from_the_environment_is_a_clean_run
+Adapter unit tests (src/adapters/opencode.rs):
+  custom_path_and_inline_come_from_the_allowlisted_environment
+  custom_dir_never_treats_the_environment_value_as_a_config_file

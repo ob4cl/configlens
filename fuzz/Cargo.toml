@@ -1,0 +1,43 @@
+[package]
+name = "configlens-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# fuzz/ is its own workspace so `cargo fuzz` never rewrites, and never needs, the crate's
+# Cargo.lock. Nothing in here is published and nothing here ships.
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde_json = "1.0"
+
+[dependencies.configlens]
+path = ".."
+
+[[bin]]
+name = "parse_documents"
+path = "fuzz_targets/parse_documents.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "resolve_precedence"
+path = "fuzz_targets/resolve_precedence.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hostile_inputs"
+path = "fuzz_targets/hostile_inputs.rs"
+test = false
+doc = false
+bench = false
+
+[profile.release]
+debug = 1

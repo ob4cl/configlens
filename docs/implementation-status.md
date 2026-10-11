@@ -21,10 +21,21 @@ This file was written from a local, uncommitted worktree. The work has since
 been committed and pushed to the private repository, so several rows below were stale in the
 *pessimistic* direction (they said a file was absent when it had been added). Corrected rows carry the
 evidence that changed them — release, licensing and CI in particular. Everything still marked `[~]` or
-`[ ]` is still true: no runtime conformance, no benchmarks, Windows snapshot ACLs unimplemented.
+`[ ]` is still true: no runtime conformance, Windows snapshot ACLs unimplemented.
 
 Toolchain used for the verification run: `cargo`/`rustc` 1.99.0 (see `docs/verification-log.md`).
-Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib unit + 93 integration).
+Test totals for the current recorded run: **315 passed, 0 failed, 0 ignored** (194 lib unit + 121
+integration, 9 targets) — see `docs/verification-log.md` §3, which is authoritative where older
+totals differ.
+
+**Refresh (2026-10-11, project discovery).** The OpenCode `oc.project` layer no longer reads a single
+file: it now collects every `opencode.json`/`opencode.jsonc` from the working directory up to the
+project boundary (`--project-root`, else the nearest Git directory) and merges them outermost-first,
+matching upstream `config/paths.ts::files` → `packages/core/src/fs-util.ts::up` at the pinned commit
+(`compatibility/opencode/registry.{json,md}`, evidence `OC-PROJECT-SOURCE-20261011`). The wrong-winner
+path recorded as independent-audit finding A3 is fixed and regression-tested
+(`docs/research/project-config-discovery-finding-20261011.md`). Still `fixture_verified`, never a
+runtime-conformance claim.
 
 ---
 
@@ -48,7 +59,7 @@ Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib u
 | `fixtures/{claude,opencode}/` | [ ] | **not present in the repository** (git cannot track an empty directory, and there are no fixture files to put there); all fixtures are inline in the test files |
 | `examples/` | [ ] | **not present**; the runnable demo lives in `demo/demo.sh` |
 | `benches/resolution.rs` | [x] | present (`harness = false`, no benchmark dependency); run `cargo bench`, numbers below |
-| `.github/workflows/ci.yml`, `prerelease.yml` | [x] | present and executed: `ci.yml` runs a Linux/macOS/Windows test matrix, a format+clippy job and an MSRV 1.85 job; all five jobs green ([run](https://github.com/ob4cl/configlens/actions/runs/38099457727)). `prerelease.yml` is a manual workflow producing per-platform archives with checksums; it has **not** been run |
+| `.github/workflows/ci.yml`, `prerelease.yml`, `fuzz-scheduled.yml` | [~] | `ci.yml` defines five jobs: `test` (a Linux/macOS/Windows matrix), `quality` (fmt+clippy), `msrv` (1.85.0), `dependencies` (cargo-deny) and `fuzz` (a 60-second smoke per target against the committed, coverage-minimised corpus). `fuzz-scheduled.yml` adds the longer pass — weekly and on manual dispatch, one matrix job per target, each with a bounded wall-clock budget, a resident-memory cap and a 90-minute job timeout. [Run 38099457727](https://github.com/ob4cl/configlens/actions/runs/38099457727) was green for the test matrix, `quality` and `msrv`; it **predates** the `dependencies` and `fuzz` jobs, which have **never run in CI**, and no scheduled fuzz run has happened yet. `prerelease.yml` is manual (`workflow_dispatch` on an existing reviewed tag) and has **never been run**; no release has been published |
 | `docs/{semantics,compatibility,report-schema,security}.md` | [ ] | absent |
 | `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, issue/PR templates | [x] | present |
 | `LICENSE-MIT`, `LICENSE-APACHE` | [x] | both texts present, matching the `MIT OR Apache-2.0` SPDX expression in `Cargo.toml` |
@@ -169,17 +180,17 @@ Test totals for the recorded run: **270 passed, 0 failed, 0 ignored** (177 lib u
 | Layer | Status | Evidence |
 |---|---|---|
 | Parsers (comments, strings, trailing comma, duplicates, malformed, spans, Unicode, limits) | [x] | `parse::json`/`parse::jsonc` unit tests |
-| Discovery (cwd depth, home, XDG, worktree `.git`, missing, blocked symlink) | [x] | `adapters::tests`, `filesystem::tests` |
+| Discovery (cwd depth, home, XDG, worktree `.git`, every ancestor `opencode.json(c)` from cwd to the boundary, missing, blocked symlink) | [x] | `adapters::tests`, `filesystem::tests`, `rules_opencode` project-discovery tests |
 | Reducers (scalar/object/list/null/missing, chains, scope exclusion, unknown keys) | [x] | `resolve` + `rules_{claude,opencode}` |
 | Coverage (missing runtime args, MDM, remote defaults, unknown trust/version) | [x] | `acceptance`, `rules_*` |
-| Security (seeded secrets in fields, keys, paths, URLs, args, malformed JSON, env, escapes) | [x] | `security_leaks` (6 tests) |
-| CLI (exit codes, strict, JSON, NO_COLOR, non-TTY, unknown pointer, incompatible snapshots) | [x] | `cli_contract` (21 tests) |
+| Security (seeded secrets in fields, keys, paths, URLs, args, malformed JSON, env, escapes) | [x] | `security_leaks` (14 tests) |
+| CLI (exit codes, strict, JSON, NO_COLOR, non-TTY, unknown pointer, incompatible snapshots) | [x] | `cli_contract` (24 tests) |
 | Conformance (pinned upstream loader) | [~] **not run** | no safe loader harness built; rules stay `documented`/`fixture_verified` |
 | Portability (Linux/macOS/Windows runners) | [~] **CI-verified, not client-verified** | three-OS CI job green ([run](https://github.com/ob4cl/configlens/actions/runs/38099457727)); this proves the test suite runs on those platforms, **not** that the real Claude Code/OpenCode clients behave as modelled there |
 | Property tests (determinism, idempotent redaction, irrelevant-definition independence, no false complete) | [x] | `tests/conformance.rs` (deterministic LCG, no `proptest`) |
-| Fuzz targets | [~] | bounded deterministic byte-mutation smoke in `tests/conformance.rs`; no long `cargo-fuzz` campaign |
-| Benchmarks | [x] | `benches/resolution.rs` (`cargo bench`). Recorded 2026-10-11 on this WSL2 box, release profile, one full engine pass per iteration (median of 21 runs, 9 above 1 000 keys): 0 keys / 1 005 B → **2.40 ms**; 100 keys / 3 395 B → **5.48 ms**; 1 000 keys / 25 895 B → **68.1 ms**; 5 000 keys / 129 895 B → **1 182 ms**. Indicative, not statistical: a regression is visible, an absolute number is not a promise |
-| CI | [x] | `ci.yml` (matrix + format/clippy + MSRV), run 38099457727 and later runs green; release workflow exists but has never been run |
+| Fuzz targets | [~] | three `cargo-fuzz` targets exist (`fuzz/{parse_documents,resolve_precedence,hostile_inputs}`) with a committed seed corpus and a bounded CI job; a 120 s-per-target session on the corrected oracle runs clean. Evidence: `docs/research/fuzz-recovery.md` |
+| Benchmarks | [x] | `benches/resolution.rs` (`cargo bench`; `harness = false`, dependency-free, in-memory synthetic documents, writes nothing). Recorded 2026-10-11 on the beta machine (WSL2 Ubuntu, Lenovo ThinkPad T440s, Intel i5-4300U 2c/4t (3 vCPU), 4 GB RAM, Linux `6.18.40.1-microsoft-standard-WSL2`, `rustc 1.99.0`, release profile), idle-machine medians: 0 keys / 1 005 B → **1.620 ms**; 100 keys / 3 395 B → **3.773 ms**; 1 000 keys / 25 895 B → **62.283 ms**; 5 000 keys / 129 895 B → **1 224.459 ms**. Peak RSS ≈17 MB (single probe process) / ≈31 MB (full `cargo bench`). Scaling is **quadratic** (fitted exponent ≈1.85–1.9): the engine resolves every distinct pointer independently (`src/resolve/mod.rs:597-600`) and `collect_contributions` linearly scans all definitions+sources per pointer (`src/resolve/mod.rs:933-943`), i.e. O(P×D) ≈ O(n²) in key count. 5 000 top-level keys far exceeds any real client config (real configs have tens of keys), so per the spec this is **investigated and documented, not optimised** (avoid premature optimisation); the one-line remedy, recorded without a code change, is to index definitions by pointer once instead of rescanning per pointer. Indicative, not statistical: an earlier run under concurrent fuzz/agent load measured 3 883 ms for 5 000 keys (≈3✕), so these figures are load-sensitive |
+| CI | [~] | `ci.yml` (test matrix + quality + MSRV + `dependencies` + `fuzz`). Run 38099457727 covered the test matrix, `quality` and `msrv`; the `dependencies` and `fuzz` jobs have **never run in CI**, and `prerelease.yml` has never run at all |
 
 ## 9. Acceptance examples (§9)
 
@@ -191,9 +202,12 @@ All ten are exercised end to end through the CLI in `tests/acceptance.rs` (8 tes
 
 1. **No upstream conformance run.** No pinned loader harness exists for either client; every
    advertised rule is at most `fixture_verified`.
-2. **OpenCode loader commit not pinned for the current layout.** The historical path
-   `packages/opencode/src/config/config.ts` was removed upstream (commit `44b6938b…`, 2026-07-21) and
-   the repository was restructured; no replacement loader SHA was re-pinned.
+2. **OpenCode loader pinned to the v1 line (resolved).** The adapter pins tag `v1.18.35` → loader
+   `packages/opencode/src/config/config.ts` at commit `53d1eabb61e21162157817bf677da0a4ad3332e3`, and
+   cites `paths.ts`/`config.ts` at that commit (`compatibility/opencode/registry.{json,md}`, evidence
+   `OC-CONFIGDIR-SOURCE-20261011`). The newer `@opencode/cli` 2.x line is a separate product line with
+   a different documented merge model and is explicitly out of scope — a version boundary, not a
+   missing re-pin.
 3. **Managed/runtime state is never assumed absent.** OpenCode remote defaults and macOS MDM
    preference domains, and Claude server-managed/MDM/HKCU sources, are `expected_unobservable`.
 4. **macOS `.plist` and Windows registry managed sources are not parsed** (only their locations are
@@ -211,15 +225,19 @@ All ten are exercised end to end through the CLI in `tests/acceptance.rs` (8 tes
     unit-tested logic, not OS-verified.
 12. **`v2.1.296` / `1.18.35`** are the newest versions at the retrieval date; neither runtime was
     executed or tested against ConfigLens output.
-13. **MSRV 1.85 is declared but not built.** The verified toolchain is 1.99.0.
-15. **No CI, no benchmarks, no license files, no `fixtures/` files, and no extra design documents**
-    (`docs/semantics.md`, `docs/compatibility.md`, `docs/report-schema.md`, `docs/security.md`) are
-    present, despite earlier claims in this file.
+13. **MSRV 1.85 is declared and verified.** `cargo +1.85.0 check --locked --all-targets --all-features`
+    exits `0` (§8.1 of `docs/verification-log.md`) and the CI `msrv` job runs the same check; local
+    development used `1.99.0`.
+15. **Optional design docs are absent; CI, benchmarks and license files are present.** There is no
+    `fixtures/` tree (fixtures are inline in the tests) and the extra documents named by the spec
+    (`docs/semantics.md`, `docs/compatibility.md`, `docs/report-schema.md`, `docs/security.md`) do not
+    exist — link to the registries and this file instead. CI (`.github/workflows/`), the benchmark
+    harness (`benches/resolution.rs`) and both `LICENSE-*` files **are** present.
 
 ## 11. Verification log
 
 Commands actually run, with their real results, are recorded in
-[`docs/verification-log.md`](verification-log.md). The recorded run: `cargo fmt --check` clean,
-`cargo clippy --locked --all-targets -- -D warnings` clean, `cargo test --locked --no-fail-fast`
-270/270 passing, `cargo build --locked --release` successful, `demo/demo.sh` exits 0, and the
-independent acceptance harness reports 7/7 checks ok.
+[`docs/verification-log.md`](verification-log.md). The current recorded run: `cargo fmt --check` clean,
+`cargo clippy --locked --all-targets --all-features -- -D warnings` clean, `cargo test --locked
+--no-fail-fast` 315/315 passing, `cargo build --locked --release` successful, `demo/demo.sh` exits 0,
+and the independent acceptance harness reports 7/7 checks ok.

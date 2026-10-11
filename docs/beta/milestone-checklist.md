@@ -18,16 +18,16 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 
 | Area | Done | Partial | Todo/Decision |
 |---|---|---|---|
-| 1 Correctness | 4 | 1 | 3 |
-| 2 Privacy | 5 | 2 | 1 |
-| 3 Cross-platform CI | 0 | 0 | 6 |
+| 1 Correctness | 6 | 1 | 1 |
+| 2 Privacy | 5 | 3 | 0 |
+| 3 Cross-platform CI | 1 | 1 | 4 |
 | 4 MSRV | 0 | 2 | 0 |
-| 5 Releases | 0 | 0 | 7 |
+| 5 Releases | 0 | 1 | 6 |
 | 6 Checksums | 0 | 0 | 3 |
-| 7 README | 3 | 2 | 2 |
+| 7 README | 1 | 3 | 2 |
 | 8 Contribution docs | 0 | 0 | 7 |
 | 9 Compatibility | 3 | 1 | 2 |
-| 10 Conformance | 0 | 0 | 3 |
+| 10 Conformance | 2 | 0 | 1 |
 | 11 Codex feature (0.2) | 0 | 0 | 2 |
 | 12 Early users | 1 | 0 | 3 |
 | 13 Maintenance | 0 | 1 | 5 |
@@ -38,14 +38,14 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 
 | ID | Item | Truth now | Acceptance criteria | Status |
 |---|---|---|---|---|
-| C1 | Every advertised rule has positive, negative and boundary tests | Rule→test maps exist in both registries; 296 tests pass locally and in the three-OS CI matrix | For each rule ID in `compatibility/*/registry.md`: ≥1 positive, ≥1 negative, ≥1 boundary test; mapped by test ID | PARTIAL |
+| C1 | Every advertised rule has positive, negative and boundary tests | Rule→test maps exist in both registries; **315** tests pass locally (see `docs/verification-log.md` §3; earlier snapshots said 296) and the three-OS CI matrix is green (run 38099457727) | For each rule ID in `compatibility/*/registry.md`: ≥1 positive, ≥1 negative, ≥1 boundary test; mapped by test ID | PARTIAL |
 | C2 | Deterministic output | Passing (`conformance` property test) | Identical context ⇒ byte-identical report; seed recorded on failure | DONE |
 | C3 | Exit-code contract | Passing (`cli::exit_*`, `error::tests`) | 0/1/2/3/4 with priority 2→4→3→1→0 asserted by a matrix test | DONE |
 | C4 | Ten acceptance examples end-to-end | Passing (`tests/acceptance.rs` + others) | All §9 examples exercised through the CLI | DONE |
 | C5 | No network / subprocess / client execution | Passing (source-scan test) | `src/` never spawns processes or opens sockets; test enforced | DONE |
 | C6 | Independent, checked-in acceptance harness | The harness used in the log (`configlens_acceptance.py`) is **not** in the repo | Harness committed under `tests/` or `tools/`, runs offline on synthetic inputs, documented in the README | TODO |
-| C7 | Fuzzing | Only a bounded deterministic byte-mutation smoke test | `cargo-fuzz` targets: parser, JSON Pointer, reducers, sanitizer, traversal; short CI smoke, no panics / unbounded growth | PARTIAL |
-| C8 | Benchmarks (no fake numbers) | `benches/` empty; no harness | Publish hardware + fixture size + measured distribution, **or** state plainly "no benchmarks published". Target (§8, not a claim): <150 ms warm, <50 MiB | TODO |
+| C7 | Fuzzing | Three `cargo-fuzz` targets (`fuzz/{parse_documents,resolve_precedence,hostile_inputs}`) with a committed corpus and a bounded CI job; a 120 s-per-target session runs clean | `cargo-fuzz` targets: parser, JSON Pointer, reducers, sanitizer, traversal; short CI smoke, no panics / unbounded growth | DONE |
+| C8 | Benchmarks (no fake numbers) | `benches/resolution.rs` runs (`cargo bench`); hardware, fixture sizes, medians and the quadratic scaling are recorded in `docs/implementation-status.md` §8. The 5 000-key figure exceeds the §8 target, which is stated rather than hidden | Publish hardware + fixture size + measured distribution, **or** state plainly "no benchmarks published". Target (§8, not a claim): <150 ms warm, <50 MiB | DONE |
 
 ---
 
@@ -54,7 +54,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 | ID | Item | Truth now | Acceptance criteria | Status |
 |---|---|---|---|---|
 | P1 | Redact-unless-allowlisted projection | DONE by design (D4/D5); no `Serialize` on raw values | Renderers can only receive redacted DTOs; enforced by types | DONE |
-| P2 | Seeded-secret leak suite | 6 tests pass in local mode | Seeded secrets absent from stdout, stderr, JSON, snapshot, diff and debug — in **local and share** modes | PARTIAL |
+| P2 | Seeded-secret leak suite | 14 tests pass, covering local **and** share modes | Seeded secrets absent from stdout, stderr, JSON, snapshot, diff and debug — in **local and share** modes | PARTIAL |
 || P3 | `--paths share` pseudonymizes URL hosts | Fixed: `url_host` + `Pseudonymizer` collect and replace host authorities in share mode; local mode keeps them for diagnosis | URL authority replaced by a deterministic opaque ID in share mode; test `share_mode_pseudonymizes_url_hosts_but_local_mode_keeps_them_for_diagnosis` asserts the real host is absent | DONE |
 | P4 | Snapshot permissions | Unix `0600` verified; Windows ACL not implemented (reported) | Per-target-OS verification, or an honest "not implemented on Windows" that the report already emits | PARTIAL |
 | P5 | Resource limits (2 MiB/file, 16 MiB, 128 sources, depth 64, 2000 events) | Each limit has a diagnostic + test | No silent truncation; hitting a limit yields invalid/partial | DONE |
@@ -68,12 +68,12 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 
 | ID | Item | Truth now | Acceptance criteria | Status |
 |---|---|---|---|---|
-| X1 | `ci.yml` | `ci.yml` present and running: format+clippy job, three-OS test matrix, MSRV job; actions pinned by commit SHA; `permissions: contents: read` (run 38099457727) | `fmt --check`, `clippy -D warnings`, `test --locked` on ubuntu + macos + windows; actions pinned by commit SHA; least privilege | TODO |
+| X1 | `ci.yml` | `ci.yml` present and running: a `test` matrix (ubuntu/macos/windows), a `quality` (fmt+clippy) job and an `msrv` job, all green (run 38099457727); actions pinned by commit SHA; `permissions: contents: read`. It also defines `dependencies` and `fuzz` jobs, which have **not** run yet | `fmt --check`, `clippy -D warnings`, `test --locked` on ubuntu + macos + windows; actions pinned by commit SHA; least privilege | DONE |
 | X2 | `release.yml` | `prerelease.yml` present but **manual** (`workflow_dispatch` on an existing reviewed tag, not tag-triggered): re-runs CI on that tag, builds per-target Archives, verifies every checksum, creates the prerelease; write permission only in the publish job | Tag-triggered build matrix, per-target assets, smoke test each binary, no publish credentials in PR-triggered jobs | TODO |
 | X3 | OS-verified behaviour | Three-OS CI green (Linux/macOS/Windows, run 38099457727). Platform path behaviour is asserted through synthetic OS contexts — **no run against the real clients on macOS or Windows** | macOS + Windows runner tests green; path/root discovery asserted per OS | TODO |
-| X4 | Dependency audit + license check job | absent | `cargo-deny` (advisories, licenses, bans) or equivalent in CI | TODO |
+| X4 | Dependency audit + license check job | `deny.toml` + a `dependencies` CI job (cargo-deny 0.20.2, pinned by action commit) exist; `cargo deny check` passes locally. The CI job has **not** run yet | `cargo-deny` (advisories, licenses, bans) or equivalent in CI | PARTIAL |
 | X5 | Bundled JSON-schema validation job | Covered inside the CI matrix by the suite that asserts the bundled schema is valid and that emitted reports validate against it; no separate job | `schema --kind report` + validation of emitted reports against the bundled schema in CI | TODO |
-| X6 | Secret-leak job in CI | `tests/security_leaks.rs` (11 tests) runs in the matrix and fails the job; not a separate workflow | Seeded-secret suite runs in CI and blocks on failure | TODO |
+| X6 | Secret-leak job in CI | `tests/security_leaks.rs` (14 tests) runs in the matrix and fails the job; not a separate workflow | Seeded-secret suite runs in CI and blocks on failure | TODO |
 
 ---
 
@@ -94,7 +94,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 | R2 | Tagged source release | none | Annotated tag `vX.Y.Z`, matching `Cargo.toml`, source archive attached | TODO |
 | R3 | Binary targets | none built for release | Promote only targets actually tested (§10): proposed x86_64/aarch64 linux, x86_64/aarch64 macos, x86_64 windows | TODO |
 | R4 | Release notes / CHANGELOG | `CHANGELOG.md` present (keep-a-changelog, honest limitations) + release-notes text in `release-runbook.md` §4 and in the prerelease workflow | `CHANGELOG.md` + honest release notes listing scope, limits and known gaps | TODO |
-| R5 | SBOM / provenance (aspiration) | none | SBOM + build provenance attestation where practical; labeled aspirational until reproduced | TODO |
+| R5 | SBOM / provenance (aspiration) | SBOM exists: `scripts/generate_sbom.py` (CycloneDX 1.5, validated, reproducible normalised output) + an `sbom` job in `prerelease.yml`. Build provenance attestation is **not** done. Neither the job nor any release has run | SBOM + build provenance attestation where practical; labeled aspirational until reproduced | PARTIAL |
 | R6 | Rollback / yank procedure | none | Documented: how to unpublish/yank, re-tag, and tell users | TODO |
 | R7 | crates.io publish + name check | not published | Name availability + trademark check done; `cargo publish` gated on green CI and license files | DECISION |
 
@@ -117,7 +117,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 | D1 | Accurate description, commands, exit codes, security posture | Present and honest | Matches shipped behaviour; "this README is not a completeness claim" kept | DONE |
 | D2 | Real repository URL | `Cargo.toml` and `README.md` point at `github.com/ob4cl/configlens` | Canonical URL set; README links resolve | DECISION |
 | D3 | Support matrix current | Points to implementation-status; no dedicated compatibility doc | `docs/compatibility.md` (or README table) lists per-key support states and tested versions | PARTIAL |
-| D4 | 20-second terminal demo | demo script exists; no recording | Real recording committed/linked; used in launch material (never a fake) | TODO |
+| D4 | 20-second terminal demo | A real asciinema recording exists in the working tree (`docs/demo/configlens-demo.cast`, produced by `demo/record.sh` + `demo/record_pty.py`) but is **not committed**; `demo/demo.sh` is tracked and runs | Real recording committed/linked; used in launch material (never a fake) | PARTIAL |
 | D5 | Install instructions | "build from checkout" only | Copy-paste build + (once published) `cargo install configlens`; manual verification path documented | PARTIAL |
 | D6 | Bundled examples run without an AI client | README + `docs/getting-started.md` show the real captured `explain` output (re-run 2026-10-11); `demo/demo.sh` runs; `examples/` is not shipped and the README no longer references it | Either ship `examples/` fixtures or adjust the README so every example command runs against what exists | TODO |
 
@@ -142,7 +142,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 | ID | Item | Truth now | Acceptance criteria | Status |
 |---|---|---|---|---|
 | K1 | Bundled registries (claude, opencode) | `registry.json` + `registry.md` present | Registries load; pinned to a revision; evidence URLs + retrieval date | DONE |
-| K2 | Pinned upstream commits | Claude: none (closed source). OpenCode: historical loader removed, not re-pinned | Every rule carries a pinned commit **or** an explicit "not pinnable" note; no broad version ranges | PARTIAL |
+| K2 | Pinned upstream commits | Claude: none (closed source). OpenCode: re-pinned to `v1.18.35` → commit `53d1eabb…` (loader `config/config.ts`); the 2.x line is out of scope | Every rule carries a pinned commit **or** an explicit "not pinnable" note; no broad version ranges | PARTIAL |
 | K3 | Per-key support states | Present (`inventory_only` … `fixture_verified`) | No rule labelled higher than its evidence supports | DONE |
 | K4 | Tested-version boundaries | Only "declared"; no tested matrix | Where a boundary is claimed, it is tested; otherwise output stays provisional | TODO |
 | K5 | Unsupported clients labelled | `clients` labels Codex/Gemini/etc. unsupported | No compatibility claim from shared file names | DONE |
@@ -156,7 +156,7 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 |---|---|---|---|---|
 | F1 | Pinned loader harness | None; no safe loader built | Loader-only harness on synthetic inputs, isolated home, blocked network, no real creds — or an explicit, documented downgrade | TODO |
 | F2 | Claude conformance | Closed source; impossible to reach | Documented rationale; rules stay at most `fixture_verified`. No invented parity | DONE (documented as impossible) |
-| F3 | OpenCode loader re-pin | Not re-pinned after upstream restructure | A replacement loader SHA pinned, or the affected rules downgraded with a note | TODO |
+| F3 | OpenCode loader re-pin | Re-pinned: tag `v1.18.35` → loader `packages/opencode/src/config/config.ts` at commit `53d1eabb…`, cited in the registry with a source transcript | A replacement loader SHA pinned, or the affected rules downgraded with a note | DONE |
 
 ---
 
@@ -197,14 +197,14 @@ releases — not on stars. Every "DONE" below must survive a stranger running th
 
 Minimum bar for a first release a respected CLI would stand behind:
 
-1. C1 rule tests complete; C2/C3/C4/C5 green in CI. (C7 fuzz smoke at least present.) — **DONE**: 296 tests green locally and in the matrix; C7 remains a bounded smoke test (no `cargo-fuzz` targets), which the release notes must say.
+1. C1 rule tests complete; C2/C3/C4/C5 green in CI. (C7 fuzz smoke at least present.) — **DONE**: 315 tests green locally; the three-OS matrix is green. C7 now ships three `cargo-fuzz` targets with a bounded CI job that has not yet run in CI, which the release notes must say.
 2. **P3 share-mode URL-host gap fixed** — DONE (`1fae794`); shown by the
    `share_mode_path_and_host_pseudonymization` block in `demo/demo.sh` and §6.3 of
    `docs/engineering-verification.md`.
-3. X1–X6 CI green on three OSes; X6 secret-leak job blocking. — **DONE as amended**: X1/X5/X6 done; X3 green but CI-level only (no real-client run on macOS/Windows); X2 is the manual prerelease workflow, not tag-triggered; **X4 (`cargo-deny`) is still missing** — state it in the release notes or finish it before publishing.
+3. X1–X6 CI green on three OSes; X6 secret-leak job blocking. — **DONE as amended**: X1/X5/X6 done; X3 green but CI-level only (no real-client run on macOS/Windows); X2 is the manual prerelease workflow, not tag-triggered and never run; **X4 (`cargo-deny`) is now present** (`deny.toml` + a `dependencies` job) but has not yet run in CI — say so in the release notes.
 4. M1 MSRV build green (or declaration corrected). — **DONE**: the 1.85.0 job is green in CI.
 5. N1, N2, N3, N5, N6 present; R4 release notes; S1 checksums + S3 verify instructions. — **DONE except S1**: everything is present; S1 completes when the first prerelease actually publishes assets.
-6. D2 real repo URL; D4 real demo; D6 README examples actually run. — **DONE except D4**: no terminal recording exists yet; the demo script is real and runs.
+6. D2 real repo URL; D4 real demo; D6 README examples actually run. — **DONE except D4**: a real recording exists in the working tree (`docs/demo/configlens-demo.cast`) but is not committed; the tracked demo script is real and runs.
 7. E2 (optional) 2–3 testers completed, **or** an explicit decision to publish without a pilot and
    take feedback as issues; E4 serious findings closed either way.
 
@@ -213,8 +213,10 @@ Minimum bar for a first release a respected CLI would stand behind:
    log lives outside it (`pilot-guide.md`), and anonymous aggregates only.
 8. No launch material claims a capability that is not DONE above.
 
-Still open, and to be labelled honestly in the release notes: **D4** (terminal recording), **X4**
-(dependency/licence audit job), **C7** (real `cargo-fuzz` targets), **R5** (SBOM/provenance),
-**F3** (the OpenCode *v2* line is out of scope: a different documented merge model), and **Codex**
-(no verified upstream evidence, so no adapter). Benchmarks (C8) are no longer in this list:
-`benches/resolution.rs` runs and its numbers are recorded in `docs/implementation-status.md`.
+Still open, and to be labelled honestly in the release notes: **D4** (a terminal recording exists in
+the working tree but is not committed), **R5** (SBOM present; provenance attestation not done),
+**S1/S2/S3** (no release has been published, so checksums, signatures and verify instructions are
+unexercised), **X4 / the `fuzz` and `sbom` jobs** (defined in CI but never run; `prerelease.yml` has
+never run at all), **F1** (no pinned loader harness), and **Codex** (no verified upstream evidence,
+so no adapter). Benchmarks (C8) are no longer open: `benches/resolution.rs` runs and its numbers — and
+its quadratic scaling — are recorded in `docs/implementation-status.md`.

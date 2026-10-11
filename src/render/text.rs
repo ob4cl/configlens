@@ -40,11 +40,12 @@ pub fn render_explain(
     _ctx: &ResolutionContext,
 ) -> String {
     let mut out = String::new();
+    // A pointer segment comes from the configuration file, so the display form is sanitized.
+    let pointer = crate::security::display_pointer(&resolution.pointer);
     match &resolution.effective_value {
-        Some(value) => out.push_str(&format!("{} = {}\n", resolution.pointer, shown(value))),
+        Some(value) => out.push_str(&format!("{pointer} = {}\n", shown(value))),
         None => out.push_str(&format!(
-            "{} = {} (observed)\n",
-            resolution.pointer,
+            "{pointer} = {} (observed)\n",
             shown(&resolution.observed_value)
         )),
     }
@@ -365,7 +366,7 @@ pub fn render_clients() -> String {
 pub fn render_summary(resolution: &Resolution) -> String {
     format!(
         "{}: {} — {} (rule {}; support {})",
-        resolution.pointer,
+        crate::security::display_pointer(&resolution.pointer),
         resolution.status.name(),
         shown(&resolution.observed_value),
         resolution.rule_id.as_deref().unwrap_or("none"),

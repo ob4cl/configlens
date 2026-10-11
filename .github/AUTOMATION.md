@@ -4,10 +4,26 @@
 
 `ci.yml` tests locked dependencies on Ubuntu 24.04 (x64), macOS 15
 (Apple Silicon), and Windows Server 2022 (x64). Separate required-to-pass jobs
-check formatting, Clippy (`-D warnings`), and the declared Rust 1.85.0 MSRV
-(`check --locked --all-targets --all-features`). No job hides failures with
-`continue-on-error`. Stable Rust moves over time; Cargo.lock is not rewritten.
-Synthetic tests demonstrate the implemented contract, not upstream-client conformance.
+check formatting (`fmt --check`), Clippy (`--all-targets --all-features -D
+warnings`), the declared Rust 1.85.0 MSRV (`check --locked --all-targets
+--all-features`), and the dependency policy (`cargo deny check`: advisories,
+licences, bans, sources). A `fuzz` job builds the three `cargo-fuzz` targets and
+runs each for 60 seconds against the committed seed corpus, so a crash or a
+broken invariant fails fast. No job hides failures with `continue-on-error`.
+Stable Rust moves over time; Cargo.lock is not rewritten. Synthetic tests
+demonstrate the implemented contract, not upstream-client conformance.
+
+`fuzz-scheduled.yml` is the longer pass and is **not** part of PR latency: it runs
+weekly (and on manual dispatch) on Ubuntu 24.04, one matrix job per target, each
+fuzzing for a bounded wall-clock budget (`-max_total_time`, default 600 s,
+adjustable on dispatch) under an explicit memory cap (`-rss_limit_mb=4096`) and a
+per-input hang timeout (`-timeout=25`), with a 90-minute job timeout. A crash
+fails the job and uploads the reproducer plus the evolved corpus as a
+short-retention artifact. Nothing in it comments on, opens or publishes anything.
+
+The committed corpus under `fuzz/corpus/` is the seed for both jobs; it is kept as
+the libFuzzer coverage-minimised set (every retained input adds coverage), not the
+raw accumulated corpus.
 
 Python standard-library packaging tests run on all three platforms. No caching,
 third-party toolchain action, installer service, secrets, or user config is needed.
@@ -62,7 +78,7 @@ public without separately reviewing existing assets and release policy.
 
 ```sh
 python3 -m unittest discover -s scripts -p 'test_*.py' -v
-actionlint .github/workflows/ci.yml .github/workflows/prerelease.yml
+actionlint .github/workflows/ci.yml .github/workflows/prerelease.yml .github/workflows/fuzz-scheduled.yml
 cargo +1.85.0 check --locked --all-targets --all-features
 cargo +stable fmt --all -- --check
 cargo +stable clippy --locked --all-targets --all-features -- -D warnings

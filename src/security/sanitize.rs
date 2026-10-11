@@ -112,6 +112,19 @@ pub fn sanitize_bounded(input: &str, max_chars: usize) -> String {
     out
 }
 
+/// Sanitize a JSON Pointer for display (spec §7: "Apply to errors, paths, *pointer displays*, …
+/// and all user-derived strings").
+///
+/// The pointer an engine carries is exact: its segments are object keys taken verbatim from the
+/// configuration document, and that exact form is what `explain` matches on. But a key name is
+/// attacker-controlled text, so any pointer that reaches a rendering channel — the JSON report, the
+/// text report, a diff — must have terminal escape sequences, control characters, bidi controls and
+/// untrusted line breaks removed first. Otherwise a configuration file could paint the terminal of
+/// whoever reads the report.
+pub fn display_pointer(pointer: &str) -> String {
+    sanitize(pointer)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

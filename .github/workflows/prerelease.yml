@@ -89,8 +89,43 @@ jobs:
           retention-days: 7
           compression-level: 0
 
+  sbom:
+    name: SBOM (CycloneDX)
+    needs: [preflight, checks]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal
+      - name: Install the pinned SBOM tool
+        run: cargo install --locked --version 0.5.9 cargo-cyclonedx
+      # One CycloneDX 1.5 SBOM per release target, generated from the pinned dependency graph and
+      # validated by scripts/generate_sbom.py (non-empty, every component carries a licence, no
+      # builder paths, reproducible bytes). scripts/test_generate_sbom.py covers that contract.
+      - name: Generate one SBOM per supported target
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          for target in x86_64-unknown-linux-gnu aarch64-apple-darwin x86_64-pc-windows-msvc; do
+            python scripts/generate_sbom.py --tag "$TAG" --target "$target" --output dist
+          done
+          shopt -s nullglob
+          boms=( dist/*.cdx.json )
+          [[ ${#boms[@]} == 3 ]]
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom
+          path: dist/*.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
   publish:
-    needs: [preflight, build]
+    needs: [preflight, build, sbom]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -99,6 +134,11 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: release-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sbom
           path: dist
           merge-multiple: true
       - name: Verify archives and create private prerelease
@@ -126,14 +166,15 @@ jobs:
           shopt -s nullglob
           archives=( *.tar.gz *.zip )
           sums=( *.sha256 )
-          [[ ${#archives[@]} == 3 && ${#sums[@]} == 3 ]]
+          boms=( *.cdx.json )
+          [[ ${#archives[@]} == 3 && ${#sums[@]} == 3 && ${#boms[@]} == 3 ]]
           for checksum in "${sums[@]}"; do sha256sum --check "$checksum"; done
           cat -- "${sums[@]}" > SHA256SUMS
-          notes=$(printf 'Private beta; not a public launch. Unsigned native binaries. Synthetic tests are not proof of upstream-client conformance.\n\nVerify before use:\n- macOS/Linux: sha256sum -c SHA256SUMS\n- Windows: certutil -hashfile <file> SHA256 (compare with SHA256SUMS)\n\nNo automatic update or installation; nothing here contacts the network.')
-          gh release create "$TAG" "${archives[@]}" SHA256SUMS \
+          notes=$(printf 'Private beta; not a public launch. Unsigned native binaries. Synthetic tests are not proof of upstream-client conformance.\n\nEach archive is accompanied by a CycloneDX 1.5 SBOM (configlens-<tag>-<target>.cdx.json) generated from the pinned dependency graph; the SBOM is a dependency inventory, not a signature.\n\nVerify before use:\n- macOS/Linux: sha256sum -c SHA256SUMS\n- Windows: certutil -hashfile <file> SHA256 (compare with SHA256SUMS)\n- SBOM: any CycloneDX viewer, or read it as JSON\n\nNo automatic update or installation; nothing here contacts the network.')
+          gh release create "$TAG" "${archives[@]}" "${boms[@]}" SHA256SUMS \
             --verify-tag --prerelease --latest=false --title "ConfigLens $TAG (private beta)" \
             --notes "$notes"
           gh release view "$TAG" --json tagName,isPrerelease,isDraft,assets > release.json
           jq --exit-status --arg tag "$TAG" \
-            '.tagName == $tag and .isPrerelease == true and .isDraft == false and (.assets | length) == 4' release.json
+            '.tagName == $tag and .isPrerelease == true and .isDraft == false and (.assets | length) == 7' release.json
           jq '{tag: .tagName, prerelease: .isPrerelease, assets: [.assets[].name]}' release.json

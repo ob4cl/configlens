@@ -1,0 +1,1 @@
+{"model":"anthropic/claude-3-5-sonnet","theme":"dark","permissions":{"allow":["Bash(gid status)"]}}{"model":"gpt-4o","permissions":{"allow":["¾Œ(ls)","Bash(git status)"]}}{"model":"claude-sonnet-4-5","env":{"TO":{"allow":["Bash"}}

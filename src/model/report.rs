@@ -10,7 +10,7 @@ use crate::error::ErrorDto;
 use crate::model::event::Event;
 use crate::model::source::Source;
 use crate::resolve::{CoverageGap, Diagnostic, Resolution};
-use crate::security::{PathMode, PathPolicy, Pseudonymizer, PublicValue};
+use crate::security::{display_pointer, PathMode, PathPolicy, Pseudonymizer, PublicValue};
 use crate::{REPORT_SCHEMA_VERSION, TOOL_VERSION};
 
 /// The bundled JSON Schema for `schema --kind report` (no network access).
@@ -247,7 +247,16 @@ fn project_resolutions(
     paths: &PathPolicy,
 ) -> Vec<Resolution> {
     if mode == PathMode::Local {
-        return resolutions.to_vec();
+        // Local mode keeps key names for diagnosis, but a key name is still untrusted input: the
+        // pointer is a display string, so it is sanitized before it can reach a channel.
+        return resolutions
+            .iter()
+            .map(|resolution| {
+                let mut projected = resolution.clone();
+                projected.pointer = display_pointer(&resolution.pointer);
+                projected
+            })
+            .collect();
     }
     let known = known_key_segments(client);
     let mut opaque: Vec<String> = Vec::new();
@@ -269,7 +278,11 @@ fn project_resolutions(
         .iter()
         .map(|resolution| {
             let mut projected = resolution.clone();
-            projected.pointer = pseudonymize_pointer(&resolution.pointer, &known, &pseudonymizer);
+            projected.pointer = display_pointer(&pseudonymize_pointer(
+                &resolution.pointer,
+                &known,
+                &pseudonymizer,
+            ));
             projected.observed_value =
                 share_project_value(&resolution.observed_value, &pseudonymizer, paths);
             projected.effective_value = resolution

@@ -34,7 +34,11 @@ done. Every status is checked against the actual repository, the technical speci
 | `launch-drafts.md` | Draft posts for relevant communities. **Drafts only — nothing is posted.** |
 | `user-actions.md` | Terse list of the exact decisions and actions only the maintainer can make. |
 
-## Truth baseline at 2026-10-10 (what actually exists)
+## Truth baseline at 2026-10-10 (historical snapshot)
+
+This section is a **dated snapshot** of what existed on 2026-10-10. It is preserved as history — the
+repository has moved on (see the current-state note immediately after the list). For the authoritative
+current state, use `docs/implementation-status.md` and `docs/verification-log.md`.
 
 - One Cargo package: library + single binary `configlens` 0.1.0, edition 2021.
 - Local verification (WSL2/Linux, `cargo`/`rustc` 1.99.0): `cargo fmt --check` clean,
@@ -52,3 +56,12 @@ done. Every status is checked against the actual repository, the technical speci
   OpenCode loader commit not re-pinned; Windows snapshot ACLs not implemented; MSRV 1.85 declared but never built.
 - Git: one local commit (`b2684c7`); remote `github.com/ob4cl/configlens.git`. Visibility and
   remote parity were not verified from this checkout.
+
+**Current state (2026-10-11), superseding the snapshot above.** CI workflows now exist and run:
+`ci.yml`'s test matrix, `quality` and `msrv` jobs are green ([run 38099457727](https://github.com/ob4cl/configlens/actions/runs/38099457727)),
+with `dependencies` and `fuzz` jobs added since that run and **not yet exercised in CI**;
+`prerelease.yml` is manual (`workflow_dispatch`) and has **never run**. `LICENSE-MIT`/`LICENSE-APACHE`,
+`CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, issue/PR templates, the
+`benches/resolution.rs` benchmark, three `cargo-fuzz` targets (`fuzz/`) and both compatibility
+registries now exist, and MSRV 1.85 is verified. `HEAD` is `35ad132`, not `b2684c7`, and the current
+test census is **315 passed / 0 failed** (`docs/verification-log.md` §3), not the 270 in the snapshot.

@@ -20,8 +20,9 @@ approve it (`user-actions.md`).
 cd configlens
 git switch main && git pull --ff-only
 cargo fmt --all -- --check
-cargo clippy --locked --all-targets -- -D warnings
+cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --no-fail-fast
+python -m unittest discover -s scripts -p "test_*.py"
 cargo build --locked --release
 ./demo/demo.sh          # must exit 0
 ./target/release/configlens --version
@@ -32,24 +33,39 @@ cargo build --locked --release
 - [ ] Write the `CHANGELOG.md` entry (Added / Changed / Fixed / Known limitations).
 - [ ] Update `README.md` support matrix and any "not verified" statements to match this release.
 
-## 2. Tag the source
+## 2. Tag the source and run the manual prerelease workflow
+
+There is **no tag-triggered release workflow** — `release.yml` does not exist (an earlier draft of
+this runbook described one). The only release workflow is `.github/workflows/prerelease.yml`, and it
+is **manual**: `workflow_dispatch` against an **existing reviewed tag** on `main`.
 
 ```sh
-git tag -a vX.Y.Z -m "ConfigLens vX.Y.Z"
-git push origin vX.Y.Z
+# 1. Create and push the annotated tag yourself.
+git tag -a vX.Y.Z-beta.N -m "ConfigLens vX.Y.Z-beta.N"
+git push origin vX.Y.Z-beta.N
+
+# 2. Dispatch the workflow on main, naming that tag.
+gh workflow run prerelease.yml -f tag=vX.Y.Z-beta.N
 ```
 
-- [ ] Tag matches `Cargo.toml`.
-- [ ] The tag-triggered `release.yml` builds the matrix. Promote **only tested** targets:
-      x86_64/aarch64 linux, x86_64/aarch64 macos, x86_64 windows.
-- [ ] Each built binary is smoke-tested (`--version`, `clients`, `schema --kind report`) inside
-      the workflow before upload.
+- [ ] Tag matches the `Cargo.toml` version and the `vMAJOR.MINOR.PATCH-beta.N` shape the workflow
+      enforces.
+- [ ] `prerelease.yml` resolves the tag's commit, re-runs the reused `ci.yml` on exactly that commit,
+      builds the supported targets (`x86_64-unknown-linux-gnu`, `aarch64-apple-darwin`,
+      `x86_64-pc-windows-msvc`), verifies every checksum and creates the prerelease. Write permission
+      lives only in the `publish` job.
+- [ ] **There is no smoke-test step.** The build job builds and packages only; it never runs the binary.
+      If you want a smoke test (`--version`, `clients`, `schema --kind report`) it must be added to the
+      workflow first — do not claim one in the release notes until it exists.
+- [ ] This workflow has **never run**. The first dispatch is an untested procedure: watch it and be
+      ready to fix it forward.
 
 ## 3. Artifacts, checksums and integrity
 
 ```sh
-# in the release job, per artifact:
-sha256sum configlens-<target>.tar.gz > SHA256SUMS   # append per target
+# in the release job: scripts/package_release.py writes a per-asset "*.sha256" next to each archive;
+# the publish job then re-verifies each and concatenates them:
+cat -- "${sums[@]}" > SHA256SUMS      # 3 archives + 3 SBOMs + SHA256SUMS = 7 assets
 ```
 
 - [ ] Publish, alongside the binaries: source archive, `SHA256SUMS`, and release notes.
@@ -68,7 +84,8 @@ sha256sum configlens-<target>.tar.gz > SHA256SUMS   # append per target
 ConfigLens vX.Y.Z
 
 What it does: <one sentence, unchanged>
-Works with: Claude Code <v>, OpenCode <v>  (supported keys in docs/compatibility.md)
+Works with: Claude Code <v>, OpenCode <v>  (supported keys in compatibility/opencode/registry.md and
+                                           compatibility/claude/registry.md; summary in README.md)
 Does not support yet: Codex, Gemini, ... (see `configlens clients`)
 
 Highlights

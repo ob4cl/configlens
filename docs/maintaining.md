@@ -83,17 +83,21 @@ this checkout does not have (`docs/semantics.md`, `docs/compatibility.md`, `docs
 - [ ] **Publish target and URL.** `Cargo.toml` still carries the placeholder
       `repository = "https://github.com/example/configlens"`; set the real repository URL. Confirm
       crate/crate-name availability before claiming a package.
-- [ ] **CI green.** The workflows under `.github/workflows/` cover formatting, clippy, locked tests on
-      three OSes and a declared-MSRV check, but none of that has been confirmed passing yet. Confirm
-      every job is green on the release commit, and that the locked test job includes the
-      secret-leak suite. Actions must stay pinned.
-- [ ] **MSRV actually built.** `rust-version = "1.85"` is declared and an MSRV job exists, but only
-      `1.99.0` has actually been run.
+- [x] **CI (partly).** `.github/workflows/ci.yml`'s test matrix, `quality` and `msrv` jobs are green
+      ([run 38099457727](https://github.com/ob4cl/configlens/actions/runs/38099457727)); the
+      `dependencies` and `fuzz` jobs have **not** run yet, no `fuzz-scheduled.yml` run has happened,
+      and `prerelease.yml` has never run. Confirm every job is green on the release commit, and that
+      the locked test job includes the secret-leak suite. Actions must stay pinned.
+- [x] **MSRV actually built.** `cargo +1.85.0 check --locked --all-targets --all-features` exits `0`
+      (§8.1 of `verification-log.md`) and the CI `msrv` job runs the same check; local development used
+      1.99.0.
 - [ ] **Conformance, or an honest label.** Either build a pinned loader harness, or keep every rule at
       `fixture_verified`/`documented` and say so.
-- [ ] **Benchmarks.** `benches/` is empty and no numbers are published; do not add speed claims.
+- [x] **Benchmarks.** `benches/resolution.rs` runs (`cargo bench`); its medians and quadratic scaling
+      are recorded in `docs/implementation-status.md`. Publish no speed claim beyond those numbers.
 - [ ] **Fixtures tree.** `fixtures/` and `examples/` are empty; fixtures are inline in tests.
-- [ ] **Known gaps closed or accepted.** Share-mode URL-host pseudonymization; Windows snapshot ACLs.
+- [ ] **Known gaps closed or accepted.** Windows snapshot ACLs. (Share-mode URL-host pseudonymization
+      is now implemented and tested.)
 - [ ] **Artifacts.** Tagged source, binaries and checksums; no mandatory curl-to-shell installer.
 
 Until all of that is true, keep the honest status wording in the README and changelog.
