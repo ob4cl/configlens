@@ -12,9 +12,10 @@ It never executes your configuration, never runs a client binary, opens no socke
 credential. Values are redacted unless an adapter explicitly allowlists them.
 
 > **Private beta — version 0.1.0.** This checkout is a working prototype, not a finished product.
-> There is **no published crate or binary, and no benchmarks yet**, and nothing here claims upstream
-> conformance. Exactly what is implemented and verified is tracked item by item in
-> [`docs/implementation-status.md`](docs/implementation-status.md).
+> There is **no published crate or binary**, and nothing here claims upstream conformance.
+> Benchmarks exist and are documented, with the measured scaling, in
+> [`docs/implementation-status.md`](docs/implementation-status.md). Exactly what is implemented and
+> verified is tracked item by item there.
 
 ## The question this answers
 
@@ -27,8 +28,9 @@ tool just says "using the other one". ConfigLens answers the four questions that
   order, including the definitions that were replaced or skipped.
 - **Which file should I edit?** The winning source is named, so you edit the right one.
 - **Can I paste this into an issue?** Reports redact protected values, and `--paths share`
-  reduces identifying details. Review the output and the privacy limitations below before sharing;
-  a redacted report is not a guarantee of anonymity.
+  reduces identifying details; `configlens support-report --preview`
+  builds a share-mode report for exactly this. Review the output and the privacy limitations below
+  before sharing; a redacted report is not a guarantee of anonymity.
 
 ## Quick start (from source)
 
@@ -98,6 +100,8 @@ configlens <command> [options]
 | `snapshot` | `configlens snapshot --client claude --output before.json` | Write the redacted report JSON to an explicit path. Create-new by default; `--overwrite` to replace. |
 | `diff` | `configlens diff before.json after.json` | Compare two reports from the same client and schema; protected values compare as `unknown_redacted`. |
 | `schema` | `configlens schema --kind report` | Print the bundled report JSON Schema. No network. |
+| `support-report` | `configlens support-report --preview` | Build a share-mode report for pasting into an issue. Always share mode (regardless of `--paths`). `--preview` prints it to stdout and writes nothing; `--output <PATH>` writes it (`0600` on Unix). There is no upload. |
+| `completions` | `configlens completions --shell bash` | Print a shell completion script for `bash`, `zsh` or `fish`, generated from the live command tree. Nothing is written to disk. |
 
 Run `configlens --help` (and `configlens <command> --help`) for the current, authoritative list — the
 table above covers the core commands.
@@ -109,7 +113,8 @@ table above covers the core commands.
 reads a client binary), `--format text|json`, `--strict`, `--no-env`, `--input-context <PATH>`,
 `--color auto|always|never`, `--paths local|share`, `--allow-read-root <PATH>` (repeatable),
 `--project-root <PATH>`. `snapshot` adds `--output`/`--overwrite`; `doctor` adds
-`--fail-on warning|error`.
+`--fail-on warning|error`; `support-report` takes `--preview` **or** `--output <PATH>` (neither is a
+usage error); `completions` takes `--shell bash|zsh|fish`.
 
 ### Exit codes
 
@@ -181,9 +186,10 @@ CLI, Cline, Roo and Hermes (not investigated). Run `configlens clients` for the 
 
 ## Requirements
 
-Rust, edition 2021. `rust-version = "1.85"` is declared in `Cargo.toml`, but the only toolchain the
-tests and demo have actually been run with is `1.99.0`; the declared MSRV is not yet verified. See
-[`docs/verification-log.md`](docs/verification-log.md) for the exact commands and results.
+Rust, edition 2021. `rust-version = "1.85"` is declared in `Cargo.toml` and **verified**:
+`cargo +1.85.0 check --locked --all-targets --all-features` exits `0` (§8.1 of
+[`docs/verification-log.md`](docs/verification-log.md)), and the CI `msrv` job runs the same check.
+Local development used `1.99.0`. See the verification log for the exact commands and results.
 
 ## Contributing
 
@@ -194,8 +200,9 @@ checks are:
 
 ```sh
 cargo fmt --all -- --check
-cargo clippy --locked --all-targets -- -D warnings
+cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --no-fail-fast
+python -m unittest discover -s scripts -p "test_*.py"
 ```
 
 Run these locally before opening a pull request. See

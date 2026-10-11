@@ -5,7 +5,9 @@
 # to a primary upstream source in compatibility-audit.md. This is fixture-level
 # evidence only (see compatibility-audit.md "evidence classes").
 set -u
-ROOT="/home/user/configlens"
+# Derive the repository root from this script's own location so the runner is not tied to one
+# machine's directory layout.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BIN="$ROOT/target/release/configlens"
 FIX="$ROOT/docs/research/fixtures"
 

@@ -13,7 +13,58 @@ account of what is implemented and verified, see
 
 ## Unreleased
 
-Nothing yet.
+Not yet published; these changes are unreleased and require a **new beta build** (behaviour changed
+for one input class, and new checks were added):
+
+### Added
+
+- **Dependency policy** — `deny.toml` plus a CI job (`dependencies`) that fails on a RustSec
+  advisory, a yanked release, a licence outside the four present in the graph, a wildcard or git
+  dependency, or a registry other than crates.io.
+- **Fuzz targets** — `fuzz/parse_documents`, `fuzz/resolve_precedence` and `fuzz/hostile_inputs`
+  with a committed, coverage-minimised seed corpus, a short CI smoke job (`fuzz`) that fails on a
+  crash or a violated invariant, and a separate longer scheduled pass (`fuzz-scheduled.yml`) that
+  runs weekly (and on dispatch) per target under bounded wall-clock and memory limits.
+- **SBOM** — `scripts/generate_sbom.py` produces a validated, reproducible CycloneDX 1.5 document
+  per release target; the `sbom` job in the prerelease workflow attaches all three to the release.
+- **Recorded demo** — `demo/record.sh` (plus `demo/record_pty.py`) produces
+  `docs/demo/configlens-demo.cast`, a real asciinema recording of precedence resolution across three
+  layers.
+
+### Fixed
+
+- **Security: terminal control characters in report pointers.** A configuration file could put an
+  ESC sequence (or a bidi/zero-width character) in an object key name, and the local JSON report
+  printed it verbatim as part of the resolution `pointer`, so the report could repaint the terminal
+  of whoever read it. Pointers are now sanitized at every rendering boundary
+  (`security::display_pointer`), with a regression test covering scan, explain, doctor, snapshot and
+  diff in both path modes.
+- **OpenCode `$OPENCODE_CONFIG_DIR` was read as a file.** Upstream treats the value as a *directory*
+  and loads `opencode.json`/`opencode.jsonc` from inside it (pinned loader: `config/paths.ts`,
+  `config/config.ts`). The adapter previously refused a directory value with `not_a_regular_file`
+  and accepted a file value as a source — the opposite of upstream in both cases. The layer now
+  reads the two files inside the directory, `.jsonc` overriding `.json`, and its placement
+  (rank 45, above the project layer and below `$OPENCODE_CONFIG_CONTENT`) is source-verified, so the
+  former `custom_dir_placement_unverified` coverage gap is gone. Found through real Windows beta
+  testing; evidence in `docs/research/evidence/opencode-config-dir-20261011.txt`.
+- **OpenCode project config read only one file — a wrong winner.** Project discovery used
+  `--project-root` (or the cwd) as the *search start* and read only the first directory containing an
+  `opencode.json`/`opencode.jsonc`, so a working directory nested below the repository root could be
+  resolved from the wrong (ancestor) file and every intermediate ancestor was dropped — a wrong
+  `observed_winner` with no coverage gap for the unread file. Upstream (`config/paths.ts::files` →
+  `packages/core/src/fs-util.ts::up`, pinned `53d1eabb61e21162157817bf677da0a4ad3332e3`) collects a
+  match at *every* level from the working directory up to the worktree and merges them outermost-first,
+  so the nearest file wins and every ancestor contributes. Discovery now walks `ctx.cwd` up to the
+  boundary (`--project-root`, else the nearest Git directory), inclusive, and emits each level's
+  `opencode.json` then `opencode.jsonc` as `oc.project` candidates outermost-first, so the engine's
+  last-definition-wins tie-break selects the nearest file; with no boundary only the working directory
+  is read and the boundary-uncertain signal is kept. Evidence `OC-PROJECT-SOURCE-20261011`; six
+  regression tests in `tests/rules_opencode.rs`; independent-audit finding A3 closed.
+
+### Verified (no code change)
+
+- The declared MSRV (`rust-version = "1.85"`) is now genuinely verified:
+  `cargo +1.85.0 check --locked --all-targets --all-features` exits `0`.
 
 ## 0.1.0 — 2026-10-10 (private beta prototype, not published)
 
@@ -57,7 +108,9 @@ keys for two clients.
   `docs/getting-started.md`, `docs/maintaining.md` and a title graphic.
 - **Share-mode privacy** — `--paths share` pseudonymizes URL hosts as well as paths, user info, query
   strings and fragments (`https://host_1/mcp?[redacted]`), in every output channel.
-- **Tests** — 296 passing (191 library unit tests plus 105 integration tests) per the recorded run.
+- **Tests** — 315 passing (194 library unit tests plus 121 integration tests) per the current
+  recorded run of `cargo test --locked` (see `docs/verification-log.md` §3). Older totals quoted in
+  earlier drafts (270, 286, 296) were intermediate snapshots and are superseded.
 
 ### Known limitations
 
@@ -67,5 +120,9 @@ keys for two clients.
   pretending.
 - **MSRV verified in CI.** `rust-version = "1.85"` is declared and the MSRV job builds the crate with
   1.85.0; local development used 1.99.0.
-- **No benchmarks and no published artifacts.** `fixtures/`, `examples/` and `benches/` are empty
-  directories; fixtures are inline in the test files.
+- **Release workflow not yet exercised.** `prerelease.yml` is manual (`workflow_dispatch` on an
+  existing reviewed tag) and has **never run in CI**; no release has been published, so its
+  seven-asset layout (3 archives + 3 SBOMs + `SHA256SUMS`) is source-level only.
+- **No published artifacts.** `fixtures/` and `examples/` are empty directories; fixtures are inline
+  in the test files. Benchmarks **are** present: `benches/resolution.rs` runs under `cargo bench` and
+  its recorded medians and quadratic scaling are in `docs/implementation-status.md`.

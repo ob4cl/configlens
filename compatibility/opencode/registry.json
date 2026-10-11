@@ -21,7 +21,21 @@
       "kind": "repository-metadata",
       "url": "https://api.github.com/repos/sst/opencode/git/refs/tags/v1.18.35",
       "retrieved": "2026-10-10",
-      "note": "v1 line pinned: tag v1.18.35 -> commit 53d1eabb61e21162157817bf677da0a4ad3332e3; loader packages/opencode/src/config/config.ts. The v2 dev line (HEAD 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937, shipped as @opencode/cli 2.0.26) is out of scope for this adapter."
+      "note": "v1 line pinned: tag v1.18.35 -> commit 53d1eabb61e21162157817bf677da0a4ad3332e3; loader packages/opencode/src/config/config.ts. The v2 dev line (HEAD 7b3d4ce3a7dbd2a6d3637722a0d5f22a7d086937, shipped as @opencode/cli 2.0.26) is out of scope for this adapter. Note (2026-10-11): the sst/opencode org was renamed and now redirects to anomalyco/opencode; the same tag -> commit still resolves."
+    },
+    {
+      "id": "OC-CONFIGDIR-SOURCE-20261011",
+      "kind": "source-code",
+      "url": "https://raw.githubusercontent.com/sst/opencode/53d1eabb61e21162157817bf677da0a4ad3332e3/packages/opencode/src/config/paths.ts",
+      "retrieved": "2026-10-11",
+      "note": "Read at the pinned commit 53d1eabb61e21162157817bf677da0a4ad3332e3. paths.ts `directories()` returns `unique([Global.Path.config, ...project .opencode dirs, ...home .opencode, ...(Flag.OPENCODE_CONFIG_DIR ? [Flag.OPENCODE_CONFIG_DIR] : [])])` — the env value is a DIRECTORY appended last. config/config.ts then, inside its directories loop, loads `opencode.json` followed by `opencode.jsonc` from every directory that `endsWith(\".opencode\")` or `=== Flag.OPENCODE_CONFIG_DIR`; the loop runs after the project files are merged and before `$OPENCODE_CONFIG_CONTENT`, and the layer is skipped entirely when `Flag.OPENCODE_CONFIG_DIR` is unset. Consequences encoded in this registry: the sources are the two files inside the directory (jsonc wins as it is merged second), a file-valued env var contributes nothing, and the placement rank 45 between `oc.opencode_dirs` (40) and `oc.inline` (50) is source-verified. Raw transcript: docs/research/evidence/opencode-config-dir-20261011.txt"
+    },
+    {
+      "id": "OC-PROJECT-SOURCE-20261011",
+      "kind": "source-code",
+      "url": "https://raw.githubusercontent.com/sst/opencode/53d1eabb61e21162157817bf677da0a4ad3332e3/packages/opencode/src/config/paths.ts",
+      "retrieved": "2026-10-11",
+      "note": "Read at the pinned commit 53d1eabb61e21162157817bf677da0a4ad3332e3. paths.ts `ConfigPaths.files(name, directory, worktree?)` calls `FSUtil.up({ targets: [`${name}.jsonc`, `${name}.json`], start: directory (= the working directory), stop: worktree (= the repository root) })` and returns its result `.toReversed()`. The callee is `packages/core/src/fs-util.ts`: `up()` pushes a match at EVERY level from `start` upward while `options.stop !== current` (and stops at the filesystem root when no stop is reached), so `files()` yields every ancestor `opencode.json`/`opencode.jsonc` from the working directory up to the worktree, outermost first and working directory last; `config/config.ts` merges them in that order, so the NEAREST file wins and every ancestor contributes. configlens therefore walks `ctx.cwd` -> boundary inclusive and emits each level's `opencode.json` then `opencode.jsonc` as `oc.project` candidates outermost-first, so the engine's last-definition-wins tie-break selects the nearest file. Boundary = `--project-root` when supplied, otherwise the nearest git root; with no boundary only `ctx.cwd` is read and the boundary-uncertain signal is kept. (Kills audit finding A3.)"
     }
   ],
   "tested_client_versions": ["1.18.35"],
@@ -53,7 +67,8 @@
       "id": "oc.project",
       "rank": 30,
       "observable": true,
-      "location": "opencode.json in cwd, traversing up to the nearest git directory"
+      "location": "opencode.json / opencode.jsonc at every level from the working directory up to the project boundary (--project-root, else the nearest Git directory), merged outermost-first so the nearest file wins",
+      "evidence": ["OC-PROJECT-SOURCE-20261011"]
     },
     {
       "id": "oc.opencode_dirs",
@@ -66,8 +81,9 @@
       "id": "oc.custom_dir",
       "rank": 45,
       "observable": true,
-      "location": "$OPENCODE_CONFIG_DIR",
-      "placement_verified": false
+      "location": "opencode.json / opencode.jsonc inside $OPENCODE_CONFIG_DIR",
+      "placement_verified": true,
+      "evidence": ["OC-CONFIGDIR-SOURCE-20261011"]
     },
     {
       "id": "oc.inline",

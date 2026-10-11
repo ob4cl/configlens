@@ -1,0 +1,75 @@
+name: Scheduled fuzz (long)
+
+# The pull-request workflow (`ci.yml`) runs a 60-second smoke per fuzz target so that a crash or a
+# broken invariant fails fast. That budget is deliberately small. This workflow is the longer pass:
+# it is scheduled (and manually dispatchable) so it never adds to PR latency, and each target runs
+# for a bounded wall-clock budget under an explicit memory cap.
+#
+# A run that finds a crash fails the job and uploads the reproducer; nothing here publishes,
+# comments on, or opens anything.
+on:
+  schedule:
+    # Weekly, Sunday 03:17 UTC (off the hour to avoid the busiest scheduler window).
+    - cron: "17 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds per fuzz target
+        required: true
+        default: "600"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-long
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }} (long)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [parse_documents, resolve_precedence, hostile_inputs]
+    env:
+      # Bounded wall-clock per target. Scheduled runs use the default; a manual dispatch can raise it.
+      FUZZ_SECONDS: ${{ github.event.inputs.seconds || '600' }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Install nightly Rust
+        run: rustup toolchain install nightly --profile minimal
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked --version 0.13.2
+      - name: Build the target
+        env:
+          TARGET: ${{ matrix.target }}
+        run: cargo +nightly fuzz build "$TARGET"
+      # Limits: -max_total_time is the wall-clock budget, -rss_limit_mb is a hard resident-memory
+      # cap so a single pathological input cannot exhaust the runner, and -timeout aborts a single
+      # input that hangs. The committed corpus under fuzz/corpus/ seeds the run, so this extends
+      # existing coverage instead of starting cold.
+      - name: Fuzz
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          cargo +nightly fuzz run "$TARGET" -- \
+            -max_total_time="$FUZZ_SECONDS" \
+            -rss_limit_mb=4096 \
+            -timeout=25 \
+            -print_final_stats=1
+      - name: Preserve crash artifacts and the evolved corpus
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-${{ matrix.target }}-${{ github.run_id }}
+          path: |
+            fuzz/artifacts/${{ matrix.target }}/
+            fuzz/corpus/${{ matrix.target }}/
+          if-no-files-found: ignore
+          retention-days: 14

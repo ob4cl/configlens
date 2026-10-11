@@ -1,0 +1,470 @@
+=== 2026-10-11T11:33:42+01:00 fuzz run parse_documents (90s) ===
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.12s
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.20s
+     Running `fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents -artifact_prefix=$REPO/fuzz/artifacts/parse_documents/ -max_total_time=90 -rss_limit_mb=4096 -print_final_stats=1 $REPO/fuzz/corpus/parse_documents`
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 1941699297
+INFO: Loaded 1 modules   (9659 inline 8-bit counters): 9659 [0x64915697b370, 0x64915697d92b), 
+INFO: Loaded 1 PC tables (9659 PCs): 9659 [0x64915697d930,0x6491569a34e0), 
+INFO:        6 files found in $REPO/fuzz/corpus/parse_documents
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: seed corpus: files: 6 min: 13b max: 81b total: 312b rss: 33Mb
+#7	INITED cov: 1113 ft: 2462 corp: 6/312b exec/s: 0 rss: 45Mb
+	NEW_FUNC[1/8]: 0x64915687c590  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1a7590) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+	NEW_FUNC[2/8]: 0x6491568ad570  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1d8570) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+#8	NEW    cov: 1154 ft: 2599 corp: 7/325b lim: 81 exec/s: 0 rss: 46Mb L: 13/81 MS: 1 ChangeBinInt-
+#9	NEW    cov: 1157 ft: 2619 corp: 8/378b lim: 81 exec/s: 0 rss: 46Mb L: 53/81 MS: 1 InsertByte-
+#10	NEW    cov: 1162 ft: 2673 corp: 9/436b lim: 81 exec/s: 0 rss: 46Mb L: 58/81 MS: 1 EraseBytes-
+#13	NEW    cov: 1163 ft: 2697 corp: 10/517b lim: 81 exec/s: 0 rss: 46Mb L: 81/81 MS: 3 InsertRepeatedBytes-InsertByte-InsertRepeatedBytes-
+
+thread '<unnamed>' (251500) panicked at fuzz_targets/parse_documents.rs:96:35:
+end byte index 32 is not a char boundary; it is inside '�' (bytes 30..33 of string)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+==251500== ERROR: libFuzzer: deadly signal
+    #0 0x64915682d5b1  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1585b1) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #1 0x6491568e02fb  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x20b2fb) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #2 0x649156904d89  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x22fd89) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #3 0x725ef3045caf  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x45caf) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #4 0x725ef30a61ab  (/usr/lib/x86_64-linux-gnu/libc.so.6+0xa61ab) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #5 0x725ef3045b7d  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x45b7d) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #6 0x725ef30288eb  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x288eb) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #7 0x649156947519  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x272519) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #8 0x6491569461e8  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x2711e8) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #9 0x6491568c5b44  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1f0b44) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #10 0x649156946471  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x271471) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #11 0x649156934341  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x25f341) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #12 0x64915692e928  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x259928) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #13 0x649156934a2c  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x25fa2c) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #14 0x64915695ae8b  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x285e8b) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #15 0x64915695aa82  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x285a82) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #16 0x64915695a799  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x285799) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #17 0x649156867c22  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x192c22) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #18 0x649156870faa  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x19bfaa) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #19 0x649156875505  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1a0505) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #20 0x6491568c56d4  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1f06d4) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #21 0x6491568c6318  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1f1318) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #22 0x6491568c4dcd  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1efdcd) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #23 0x64915690533c  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x23033c) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #24 0x649156909cb5  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x234cb5) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #25 0x64915690c202  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x237202) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #26 0x64915690db97  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x238b97) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #27 0x6491568d9751  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x204751) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #28 0x6491568c6346  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0x1f1346) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+    #29 0x725ef302a600  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x2a600) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #30 0x725ef302a717  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x2a717) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #31 0x64915678e524  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/parse_documents+0xb9524) (BuildId: cb8d98083f23018037f370a7a72351b1334f3e65)
+
+NOTE: libFuzzer has rudimentary signal handlers.
+      Combine libFuzzer with AddressSanitizer or similar for better crash reports.
+SUMMARY: libFuzzer: deadly signal
+MS: 1 InsertByte-; base unit: 6aec5280da021fa7bae63fbe511414d92bd9daa3
+0x7b,0x22,0x61,0x22,0x3a,0x93,0x20,0x5b,0x31,0x2c,0x20,0x32,0x2c,0x20,0x7b,0x22,0x62,0x22,0x3a,0x20,
+{\"a\":\223 [1, 2, {\"b\": 
+artifact_prefix='$REPO/fuzz/artifacts/parse_documents/'; Test unit written to $REPO/fuzz/artifacts/parse_documents/crash-bf816cb168fc4f59a426cc566448cabe07e7f7bb
+Base64: eyJhIjqTIFsxLCAyLCB7ImIiOiA=
+stat::number_of_executed_units: 14
+stat::average_exec_per_sec:     0
+stat::new_units_added:          4
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              46
+
+────────────────────────────────────────────────────────────────────────────────
+
+Failing input:
+
+	fuzz/artifacts/parse_documents/crash-bf816cb168fc4f59a426cc566448cabe07e7f7bb
+
+Output of `std::fmt::Debug`:
+
+	[123, 34, 97, 34, 58, 147, 32, 91, 49, 44, 32, 50, 44, 32, 123, 34, 98, 34, 58, 32]
+
+Reproduce with:
+
+	cargo fuzz run parse_documents fuzz/artifacts/parse_documents/crash-bf816cb168fc4f59a426cc566448cabe07e7f7bb
+
+Minimize test case with:
+
+	cargo fuzz tmin parse_documents fuzz/artifacts/parse_documents/crash-bf816cb168fc4f59a426cc566448cabe07e7f7bb
+
+────────────────────────────────────────────────────────────────────────────────
+
+Error: Fuzz target exited with exit status: 77
+exit_status=1
+--- crash artifacts ---
+total 12
+drwxr-xr-x 2 user user 4096 Oct 11 11:33 .
+drwxr-xr-x 3 user user 4096 Oct 11 11:33 ..
+-rw-r--r-- 1 user user   20 Oct 11 11:33 crash-bf816cb168fc4f59a426cc566448cabe07e7f7bb
+=== 2026-10-11T11:33:43+01:00 fuzz run resolve_precedence (90s) ===
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.04s
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.05s
+     Running `fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence -artifact_prefix=$REPO/fuzz/artifacts/resolve_precedence/ -max_total_time=90 -rss_limit_mb=4096 -print_final_stats=1 $REPO/fuzz/corpus/resolve_precedence`
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2464147157
+INFO: Loaded 1 modules   (33917 inline 8-bit counters): 33917 [0x5cd12b0db170, 0x5cd12b0e35ed), 
+INFO: Loaded 1 PC tables (33917 PCs): 33917 [0x5cd12b0e35f0,0x5cd12b167dc0), 
+INFO:        4 files found in $REPO/fuzz/corpus/resolve_precedence
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: seed corpus: files: 4 min: 48b max: 234b total: 525b rss: 48Mb
+#5	INITED cov: 4538 ft: 6396 corp: 4/525b exec/s: 0 rss: 80Mb
+#7	NEW    cov: 4545 ft: 6406 corp: 5/679b lim: 234 exec/s: 0 rss: 88Mb L: 154/234 MS: 2 CopyPart-EraseBytes-
+	NEW_FUNC[1/1]: 0x5cd12af71130  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x35b130) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+#8	NEW    cov: 4562 ft: 6435 corp: 6/758b lim: 234 exec/s: 0 rss: 91Mb L: 79/234 MS: 1 ChangeBit-
+#9	NEW    cov: 4566 ft: 6452 corp: 7/837b lim: 234 exec/s: 0 rss: 94Mb L: 79/234 MS: 1 CopyPart-
+#10	NEW    cov: 4566 ft: 6793 corp: 8/885b lim: 234 exec/s: 0 rss: 100Mb L: 48/234 MS: 1 ChangeBit-
+#12	NEW    cov: 4581 ft: 6819 corp: 9/933b lim: 234 exec/s: 0 rss: 109Mb L: 48/234 MS: 2 CopyPart-ChangeBit-
+#16	NEW    cov: 4581 ft: 6820 corp: 10/1089b lim: 234 exec/s: 16 rss: 123Mb L: 156/234 MS: 4 ChangeBit-CopyPart-CopyPart-EraseBytes-
+#17	NEW    cov: 4588 ft: 6877 corp: 11/1132b lim: 234 exec/s: 17 rss: 126Mb L: 43/234 MS: 1 EraseBytes-
+#22	NEW    cov: 4589 ft: 6879 corp: 12/1330b lim: 234 exec/s: 22 rss: 143Mb L: 198/234 MS: 5 InsertByte-CopyPart-InsertByte-ChangeASCIIInt-InsertByte-
+#23	NEW    cov: 4592 ft: 6893 corp: 13/1410b lim: 234 exec/s: 23 rss: 146Mb L: 80/234 MS: 1 InsertByte-
+#24	NEW    cov: 4592 ft: 6899 corp: 14/1489b lim: 234 exec/s: 24 rss: 150Mb L: 79/234 MS: 1 ChangeByte-
+#26	NEW    cov: 4592 ft: 6900 corp: 15/1580b lim: 234 exec/s: 26 rss: 156Mb L: 91/234 MS: 2 CrossOver-InsertByte-
+#31	NEW    cov: 4592 ft: 6902 corp: 16/1661b lim: 234 exec/s: 15 rss: 173Mb L: 81/234 MS: 5 ChangeByte-ChangeBinInt-CMP-EraseBytes-InsertRepeatedBytes- DE: "\377\377\377\377\377\377\377\377"-
+#32	pulse  cov: 4592 ft: 6918 corp: 16/1661b lim: 234 exec/s: 16 rss: 176Mb
+#32	NEW    cov: 4595 ft: 6918 corp: 17/1821b lim: 234 exec/s: 16 rss: 176Mb L: 160/234 MS: 1 CrossOver-
+#33	NEW    cov: 4602 ft: 6925 corp: 18/1900b lim: 234 exec/s: 16 rss: 179Mb L: 79/234 MS: 1 ShuffleBytes-
+#34	NEW    cov: 4602 ft: 6981 corp: 19/2034b lim: 234 exec/s: 17 rss: 183Mb L: 134/234 MS: 1 InsertRepeatedBytes-
+#35	NEW    cov: 4602 ft: 6986 corp: 20/2188b lim: 234 exec/s: 17 rss: 186Mb L: 154/234 MS: 1 ChangeByte-
+#36	NEW    cov: 4603 ft: 6995 corp: 21/2370b lim: 234 exec/s: 18 rss: 190Mb L: 182/234 MS: 1 CrossOver-
+#47	NEW    cov: 4606 ft: 7222 corp: 22/2604b lim: 234 exec/s: 23 rss: 232Mb L: 234/234 MS: 1 CrossOver-
+#48	NEW    cov: 4607 ft: 7225 corp: 23/2794b lim: 234 exec/s: 16 rss: 235Mb L: 190/234 MS: 1 CMP- DE: "\002\000\000\000\000\000\000\000"-
+#49	NEW    cov: 4607 ft: 7253 corp: 24/3028b lim: 234 exec/s: 16 rss: 246Mb L: 234/234 MS: 1 ChangeBit-
+#52	NEW    cov: 4607 ft: 7257 corp: 25/3123b lim: 234 exec/s: 17 rss: 256Mb L: 95/234 MS: 3 PersAutoDict-ChangeByte-PersAutoDict- DE: "\002\000\000\000\000\000\000\000"-"\377\377\377\377\377\377\377\377"-
+#53	NEW    cov: 4607 ft: 7258 corp: 26/3313b lim: 234 exec/s: 17 rss: 260Mb L: 190/234 MS: 1 ChangeByte-
+#54	NEW    cov: 4609 ft: 7563 corp: 27/3361b lim: 234 exec/s: 18 rss: 264Mb L: 48/234 MS: 1 ChangeBit-
+#61	NEW    cov: 4610 ft: 7566 corp: 28/3513b lim: 234 exec/s: 20 rss: 288Mb L: 152/234 MS: 2 EraseBytes-CrossOver-
+#64	pulse  cov: 4610 ft: 7567 corp: 28/3513b lim: 234 exec/s: 21 rss: 297Mb
+#64	NEW    cov: 4610 ft: 7567 corp: 29/3666b lim: 234 exec/s: 21 rss: 297Mb L: 153/234 MS: 3 ChangeBit-ChangeBinInt-InsertByte-
+#67	NEW    cov: 4610 ft: 7575 corp: 30/3800b lim: 234 exec/s: 16 rss: 308Mb L: 134/234 MS: 3 PersAutoDict-EraseBytes-InsertByte- DE: "\377\377\377\377\377\377\377\377"-
+#70	NEW    cov: 4611 ft: 7577 corp: 31/3863b lim: 234 exec/s: 17 rss: 322Mb L: 63/234 MS: 3 ChangeASCIIInt-ChangeBit-InsertRepeatedBytes-
+#75	NEW    cov: 4611 ft: 7578 corp: 32/4084b lim: 234 exec/s: 18 rss: 339Mb L: 221/234 MS: 5 CopyPart-ChangeBit-ChangeByte-InsertRepeatedBytes-CrossOver-
+#84	NEW    cov: 4618 ft: 7733 corp: 33/4318b lim: 234 exec/s: 16 rss: 395Mb L: 234/234 MS: 4 ChangeBinInt-ShuffleBytes-ChangeASCIIInt-CrossOver-
+#85	NEW    cov: 4620 ft: 7735 corp: 34/4474b lim: 234 exec/s: 17 rss: 398Mb L: 156/234 MS: 1 ChangeBit-
+#86	NEW    cov: 4620 ft: 7736 corp: 35/4553b lim: 234 exec/s: 17 rss: 401Mb L: 79/234 MS: 1 CopyPart-
+#95	NEW    cov: 4620 ft: 7738 corp: 36/4693b lim: 234 exec/s: 19 rss: 430Mb L: 140/234 MS: 4 CopyPart-ChangeBit-ChangeBit-CrossOver-
+#107	NEW    cov: 4620 ft: 7739 corp: 37/4883b lim: 234 exec/s: 17 rss: 437Mb L: 190/234 MS: 2 ChangeByte-ChangeByte-
+#110	NEW    cov: 4620 ft: 7757 corp: 38/5071b lim: 234 exec/s: 18 rss: 437Mb L: 188/234 MS: 3 EraseBytes-CrossOver-CrossOver-
+#111	NEW    cov: 4620 ft: 7758 corp: 39/5261b lim: 234 exec/s: 18 rss: 437Mb L: 190/234 MS: 1 ChangeBinInt-
+#123	NEW    cov: 4621 ft: 7768 corp: 40/5495b lim: 234 exec/s: 20 rss: 439Mb L: 234/234 MS: 2 ChangeByte-ChangeBit-
+#128	pulse  cov: 4621 ft: 7768 corp: 40/5495b lim: 234 exec/s: 18 rss: 439Mb
+#130	NEW    cov: 4621 ft: 7774 corp: 41/5712b lim: 234 exec/s: 18 rss: 440Mb L: 217/234 MS: 2 ChangeByte-CopyPart-
+#137	NEW    cov: 4621 ft: 8180 corp: 42/5946b lim: 234 exec/s: 19 rss: 440Mb L: 234/234 MS: 2 ChangeByte-CopyPart-
+#141	NEW    cov: 4621 ft: 8181 corp: 43/6179b lim: 234 exec/s: 20 rss: 440Mb L: 233/234 MS: 4 CMP-ChangeBit-PersAutoDict-PersAutoDict- DE: "\001\000\000\000"-"\377\377\377\377\377\377\377\377"-"\377\377\377\377\377\377\377\377"-
+#142	NEW    cov: 4621 ft: 8182 corp: 44/6400b lim: 234 exec/s: 20 rss: 440Mb L: 221/234 MS: 1 ChangeByte-
+#143	NEW    cov: 4621 ft: 8184 corp: 45/6482b lim: 234 exec/s: 20 rss: 440Mb L: 82/234 MS: 1 InsertByte-
+#147	NEW    cov: 4622 ft: 8186 corp: 46/6682b lim: 234 exec/s: 21 rss: 440Mb L: 200/234 MS: 4 PersAutoDict-CopyPart-CopyPart-PersAutoDict- DE: "\377\377\377\377\377\377\377\377"-"\001\000\000\000"-
+#149	NEW    cov: 4622 ft: 8191 corp: 47/6846b lim: 234 exec/s: 18 rss: 441Mb L: 164/234 MS: 2 ChangeByte-ShuffleBytes-
+#150	NEW    cov: 4631 ft: 8200 corp: 48/6894b lim: 234 exec/s: 18 rss: 441Mb L: 48/234 MS: 1 ChangeBinInt-
+#152	NEW    cov: 4632 ft: 8209 corp: 49/6931b lim: 234 exec/s: 19 rss: 441Mb L: 37/234 MS: 2 ChangeBinInt-EraseBytes-
+#163	NEW    cov: 4632 ft: 8214 corp: 50/7024b lim: 234 exec/s: 20 rss: 442Mb L: 93/234 MS: 1 CrossOver-
+#169	NEW    cov: 4632 ft: 8235 corp: 51/7212b lim: 234 exec/s: 21 rss: 442Mb L: 188/234 MS: 1 CrossOver-
+#170	NEW    cov: 4633 ft: 8238 corp: 52/7243b lim: 234 exec/s: 21 rss: 443Mb L: 31/234 MS: 1 EraseBytes-
+	NEW_FUNC[1/4]: 0x5cd12af15070  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x2ff070) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+	NEW_FUNC[2/4]: 0x5cd12af8b120  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x375120) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+#173	NEW    cov: 4660 ft: 8267 corp: 53/7275b lim: 234 exec/s: 19 rss: 444Mb L: 32/234 MS: 3 ChangeBit-ChangeASCIIInt-EraseBytes-
+#179	NEW    cov: 4660 ft: 8300 corp: 54/7409b lim: 234 exec/s: 19 rss: 444Mb L: 134/234 MS: 1 InsertRepeatedBytes-
+#186	NEW    cov: 4660 ft: 8301 corp: 55/7441b lim: 234 exec/s: 20 rss: 444Mb L: 32/234 MS: 2 ChangeBinInt-PersAutoDict- DE: "\002\000\000\000\000\000\000\000"-
+#187	NEW    cov: 4660 ft: 8303 corp: 56/7517b lim: 234 exec/s: 20 rss: 445Mb L: 76/234 MS: 1 CrossOver-
+#188	NEW    cov: 4660 ft: 8304 corp: 57/7705b lim: 234 exec/s: 20 rss: 446Mb L: 188/234 MS: 1 EraseBytes-
+#196	NEW    cov: 4660 ft: 8305 corp: 58/7774b lim: 234 exec/s: 19 rss: 454Mb L: 69/234 MS: 3 ChangeBit-EraseBytes-EraseBytes-
+#252	NEW    cov: 4660 ft: 8307 corp: 59/7916b lim: 234 exec/s: 21 rss: 454Mb L: 142/234 MS: 1 InsertRepeatedBytes-
+#253	NEW    cov: 4660 ft: 8320 corp: 60/8035b lim: 234 exec/s: 21 rss: 454Mb L: 119/234 MS: 1 CopyPart-
+#256	pulse  cov: 4660 ft: 8320 corp: 60/8035b lim: 234 exec/s: 21 rss: 454Mb
+#262	NEW    cov: 4660 ft: 8323 corp: 61/8269b lim: 234 exec/s: 20 rss: 454Mb L: 234/234 MS: 4 ChangeASCIIInt-ShuffleBytes-ShuffleBytes-CopyPart-
+#267	NEW    cov: 4665 ft: 8338 corp: 62/8503b lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 5 ChangeASCIIInt-ChangeByte-ChangeASCIIInt-ShuffleBytes-CopyPart-
+#268	NEW    cov: 4670 ft: 8372 corp: 63/8559b lim: 234 exec/s: 19 rss: 454Mb L: 56/234 MS: 1 PersAutoDict- DE: "\377\377\377\377\377\377\377\377"-
+#270	NEW    cov: 4671 ft: 8373 corp: 64/8719b lim: 234 exec/s: 19 rss: 454Mb L: 160/234 MS: 2 ChangeASCIIInt-ChangeBinInt-
+#273	NEW    cov: 4671 ft: 8374 corp: 65/8796b lim: 234 exec/s: 19 rss: 454Mb L: 77/234 MS: 3 PersAutoDict-ShuffleBytes-InsertRepeatedBytes- DE: "\377\377\377\377\377\377\377\377"-
+#287	NEW    cov: 4687 ft: 8453 corp: 66/9023b lim: 234 exec/s: 20 rss: 454Mb L: 227/234 MS: 4 EraseBytes-ShuffleBytes-InsertByte-CrossOver-
+#289	NEW    cov: 4687 ft: 8457 corp: 67/9071b lim: 234 exec/s: 19 rss: 454Mb L: 48/234 MS: 2 ShuffleBytes-ChangeByte-
+#312	NEW    cov: 4687 ft: 8459 corp: 68/9299b lim: 234 exec/s: 19 rss: 454Mb L: 228/234 MS: 3 InsertByte-ShuffleBytes-ShuffleBytes-
+#313	REDUCE cov: 4687 ft: 8459 corp: 68/9294b lim: 234 exec/s: 19 rss: 454Mb L: 88/234 MS: 1 EraseBytes-
+#314	NEW    cov: 4687 ft: 8468 corp: 69/9322b lim: 234 exec/s: 19 rss: 454Mb L: 28/234 MS: 1 EraseBytes-
+#332	NEW    cov: 4691 ft: 8490 corp: 70/9447b lim: 234 exec/s: 19 rss: 454Mb L: 125/234 MS: 3 ChangeBinInt-EraseBytes-ChangeBinInt-
+#333	NEW    cov: 4691 ft: 8515 corp: 71/9480b lim: 234 exec/s: 19 rss: 454Mb L: 33/234 MS: 1 InsertByte-
+#335	NEW    cov: 4691 ft: 8520 corp: 72/9522b lim: 234 exec/s: 19 rss: 454Mb L: 42/234 MS: 2 EraseBytes-InsertByte-
+#339	REDUCE cov: 4691 ft: 8520 corp: 72/9521b lim: 234 exec/s: 19 rss: 454Mb L: 153/234 MS: 4 ChangeByte-ChangeBinInt-ChangeBinInt-EraseBytes-
+#340	REDUCE cov: 4691 ft: 8520 corp: 72/9502b lim: 234 exec/s: 20 rss: 454Mb L: 115/234 MS: 1 EraseBytes-
+#348	REDUCE cov: 4691 ft: 8520 corp: 72/9478b lim: 234 exec/s: 19 rss: 454Mb L: 164/234 MS: 3 ChangeByte-ShuffleBytes-EraseBytes-
+#349	NEW    cov: 4691 ft: 8527 corp: 73/9712b lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 1 ChangeByte-
+#350	NEW    cov: 4691 ft: 8534 corp: 74/9896b lim: 234 exec/s: 19 rss: 454Mb L: 184/234 MS: 1 EraseBytes-
+#361	NEW    cov: 4697 ft: 8541 corp: 75/9975b lim: 234 exec/s: 19 rss: 454Mb L: 79/234 MS: 1 CrossOver-
+#372	NEW    cov: 4697 ft: 8585 corp: 76/10209b lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 1 PersAutoDict- DE: "\001\000\000\000"-
+#388	NEW    cov: 4697 ft: 8592 corp: 77/10395b lim: 234 exec/s: 19 rss: 454Mb L: 186/234 MS: 1 CrossOver-
+#389	REDUCE cov: 4697 ft: 8592 corp: 77/10370b lim: 234 exec/s: 19 rss: 454Mb L: 165/234 MS: 1 EraseBytes-
+#400	REDUCE cov: 4697 ft: 8592 corp: 77/10368b lim: 234 exec/s: 18 rss: 454Mb L: 132/234 MS: 1 EraseBytes-
+#413	NEW    cov: 4697 ft: 8594 corp: 78/10490b lim: 234 exec/s: 17 rss: 454Mb L: 122/234 MS: 3 ChangeBinInt-CrossOver-InsertByte-
+	NEW_FUNC[1/1]: 0x5cd12af6eff0  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x358ff0) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+#414	NEW    cov: 4705 ft: 8602 corp: 79/10519b lim: 234 exec/s: 18 rss: 454Mb L: 29/234 MS: 1 EraseBytes-
+#423	NEW    cov: 4705 ft: 8605 corp: 80/10696b lim: 234 exec/s: 18 rss: 454Mb L: 177/234 MS: 4 ShuffleBytes-ChangeByte-CrossOver-EraseBytes-
+#425	NEW    cov: 4707 ft: 8627 corp: 81/10834b lim: 234 exec/s: 18 rss: 454Mb L: 138/234 MS: 2 ChangeByte-InsertRepeatedBytes-
+#428	NEW    cov: 4713 ft: 8633 corp: 82/11053b lim: 234 exec/s: 18 rss: 454Mb L: 219/234 MS: 3 PersAutoDict-EraseBytes-CrossOver- DE: "\001\000\000\000"-
+#430	NEW    cov: 4713 ft: 8652 corp: 83/11287b lim: 234 exec/s: 17 rss: 454Mb L: 234/234 MS: 2 ChangeASCIIInt-PersAutoDict- DE: "\001\000\000\000"-
+#442	NEW    cov: 4713 ft: 8654 corp: 84/11410b lim: 234 exec/s: 18 rss: 454Mb L: 123/234 MS: 2 ChangeByte-InsertByte-
+#444	NEW    cov: 4713 ft: 8657 corp: 85/11636b lim: 234 exec/s: 18 rss: 454Mb L: 226/234 MS: 2 CopyPart-CrossOver-
+#450	NEW    cov: 4713 ft: 8677 corp: 86/11743b lim: 234 exec/s: 18 rss: 454Mb L: 107/234 MS: 1 EraseBytes-
+#474	REDUCE cov: 4713 ft: 8677 corp: 86/11734b lim: 234 exec/s: 18 rss: 454Mb L: 106/234 MS: 4 ChangeBit-ShuffleBytes-PersAutoDict-EraseBytes- DE: "\377\377\377\377\377\377\377\377"-
+#486	REDUCE cov: 4713 ft: 8677 corp: 86/11671b lim: 234 exec/s: 18 rss: 454Mb L: 79/234 MS: 2 PersAutoDict-EraseBytes- DE: "\002\000\000\000\000\000\000\000"-
+#495	NEW    cov: 4716 ft: 8680 corp: 87/11854b lim: 234 exec/s: 18 rss: 454Mb L: 183/234 MS: 4 ChangeASCIIInt-CrossOver-ChangeBit-InsertRepeatedBytes-
+#505	NEW    cov: 4717 ft: 8682 corp: 88/11952b lim: 234 exec/s: 18 rss: 454Mb L: 98/234 MS: 5 ChangeBinInt-ChangeBinInt-CMP-InsertByte-PersAutoDict- DE: "schema_versi"-"\377\377\377\377\377\377\377\377"-
+#507	NEW    cov: 4717 ft: 8689 corp: 89/12151b lim: 234 exec/s: 18 rss: 454Mb L: 199/234 MS: 2 InsertRepeatedBytes-CrossOver-
+#511	NEW    cov: 4717 ft: 8691 corp: 90/12289b lim: 234 exec/s: 18 rss: 454Mb L: 138/234 MS: 4 CopyPart-ChangeASCIIInt-InsertByte-CMP- DE: "resolutio"-
+#512	pulse  cov: 4717 ft: 8691 corp: 90/12289b lim: 234 exec/s: 18 rss: 454Mb
+#519	NEW    cov: 4717 ft: 8692 corp: 91/12517b lim: 234 exec/s: 18 rss: 454Mb L: 228/234 MS: 3 ShuffleBytes-ShuffleBytes-CrossOver-
+#526	NEW    cov: 4717 ft: 8695 corp: 92/12723b lim: 234 exec/s: 18 rss: 454Mb L: 206/234 MS: 2 ChangeBit-CrossOver-
+#532	NEW    cov: 4717 ft: 8737 corp: 93/12819b lim: 234 exec/s: 18 rss: 454Mb L: 96/234 MS: 1 CrossOver-
+#534	NEW    cov: 4717 ft: 8740 corp: 94/12962b lim: 234 exec/s: 18 rss: 454Mb L: 143/234 MS: 2 ChangeASCIIInt-CopyPart-
+#535	NEW    cov: 4717 ft: 8742 corp: 95/13022b lim: 234 exec/s: 18 rss: 454Mb L: 60/234 MS: 1 EraseBytes-
+#537	NEW    cov: 4718 ft: 8743 corp: 96/13221b lim: 234 exec/s: 18 rss: 454Mb L: 199/234 MS: 2 ChangeBit-EraseBytes-
+#544	NEW    cov: 4718 ft: 8744 corp: 97/13354b lim: 234 exec/s: 18 rss: 454Mb L: 133/234 MS: 2 ChangeBit-CrossOver-
+#567	NEW    cov: 4718 ft: 8750 corp: 98/13517b lim: 234 exec/s: 18 rss: 454Mb L: 163/234 MS: 3 ChangeByte-InsertRepeatedBytes-CMP- DE: "tool_version"-
+#574	NEW    cov: 4718 ft: 8751 corp: 99/13545b lim: 234 exec/s: 18 rss: 454Mb L: 28/234 MS: 2 CrossOver-ShuffleBytes-
+#575	NEW    cov: 4718 ft: 8753 corp: 100/13779b lim: 234 exec/s: 18 rss: 454Mb L: 234/234 MS: 1 PersAutoDict- DE: "\377\377\377\377\377\377\377\377"-
+#576	REDUCE cov: 4718 ft: 8753 corp: 100/13752b lim: 234 exec/s: 18 rss: 454Mb L: 36/234 MS: 1 EraseBytes-
+#585	NEW    cov: 4718 ft: 8776 corp: 101/13983b lim: 234 exec/s: 18 rss: 454Mb L: 231/234 MS: 4 ChangeBit-ChangeByte-ChangeBit-CrossOver-
+#588	NEW    cov: 4719 ft: 8777 corp: 102/14067b lim: 234 exec/s: 18 rss: 454Mb L: 84/234 MS: 3 CrossOver-ChangeByte-ChangeBit-
+#594	NEW    cov: 4720 ft: 8801 corp: 103/14301b lim: 234 exec/s: 18 rss: 454Mb L: 234/234 MS: 1 CopyPart-
+#621	NEW    cov: 4720 ft: 8803 corp: 104/14316b lim: 234 exec/s: 18 rss: 454Mb L: 15/234 MS: 2 EraseBytes-CrossOver-
+#627	REDUCE cov: 4720 ft: 8803 corp: 104/14304b lim: 234 exec/s: 19 rss: 454Mb L: 174/234 MS: 1 EraseBytes-
+#653	NEW    cov: 4720 ft: 8804 corp: 105/14332b lim: 234 exec/s: 19 rss: 454Mb L: 28/234 MS: 1 ChangeBinInt-
+#676	NEW    cov: 4720 ft: 8809 corp: 106/14566b lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 3 ChangeASCIIInt-ChangeASCIIInt-CopyPart-
+#691	NEW    cov: 4721 ft: 8810 corp: 107/14646b lim: 234 exec/s: 19 rss: 454Mb L: 80/234 MS: 5 ChangeByte-ChangeBit-CopyPart-InsertByte-ChangeBit-
+#693	NEW    cov: 4721 ft: 8811 corp: 108/14713b lim: 234 exec/s: 19 rss: 454Mb L: 67/234 MS: 2 CMP-CopyPart- DE: "\000\004"-
+#694	NEW    cov: 4721 ft: 8814 corp: 109/14891b lim: 234 exec/s: 19 rss: 454Mb L: 178/234 MS: 1 CopyPart-
+#695	NEW    cov: 4721 ft: 8815 corp: 110/14923b lim: 234 exec/s: 19 rss: 454Mb L: 32/234 MS: 1 ChangeByte-
+#701	REDUCE cov: 4721 ft: 8815 corp: 110/14820b lim: 234 exec/s: 19 rss: 454Mb L: 125/234 MS: 1 EraseBytes-
+#702	NEW    cov: 4721 ft: 8841 corp: 111/15054b lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 1 ChangeBinInt-
+	NEW_FUNC[1/2]: 0x5cd12ae82420  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x26c420) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+	NEW_FUNC[2/2]: 0x5cd12ae87690  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x271690) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+#703	NEW    cov: 4736 ft: 8889 corp: 112/15197b lim: 234 exec/s: 19 rss: 454Mb L: 143/234 MS: 1 CrossOver-
+#729	NEW    cov: 4738 ft: 8891 corp: 113/15317b lim: 234 exec/s: 19 rss: 454Mb L: 120/234 MS: 1 CrossOver-
+#732	REDUCE cov: 4738 ft: 8891 corp: 113/15270b lim: 234 exec/s: 19 rss: 454Mb L: 106/234 MS: 3 ChangeASCIIInt-PersAutoDict-EraseBytes- DE: "resolutio"-
+#740	NEW    cov: 4741 ft: 8894 corp: 114/15340b lim: 234 exec/s: 19 rss: 454Mb L: 70/234 MS: 3 EraseBytes-PersAutoDict-CrossOver- DE: "\001\000\000\000"-
+#743	REDUCE cov: 4741 ft: 8894 corp: 114/15322b lim: 234 exec/s: 19 rss: 454Mb L: 88/234 MS: 3 ShuffleBytes-CrossOver-EraseBytes-
+#759	NEW    cov: 4741 ft: 8903 corp: 115/15556b lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 1 CMP- DE: "\005\000\000\000\000\000\000\000"-
+#760	REDUCE cov: 4741 ft: 8906 corp: 116/15738b lim: 234 exec/s: 20 rss: 454Mb L: 182/234 MS: 1 CMP- DE: "\001\000\000\000\000\000\000 "-
+#763	NEW    cov: 4741 ft: 8907 corp: 117/15930b lim: 234 exec/s: 19 rss: 454Mb L: 192/234 MS: 3 InsertByte-CMP-PersAutoDict- DE: "\000\000\000\372"-"\001\000\000\000\000\000\000 "-
+#766	NEW    cov: 4741 ft: 8911 corp: 118/16158b lim: 234 exec/s: 19 rss: 454Mb L: 228/234 MS: 3 ChangeBinInt-CopyPart-CMP- DE: "\001\036"-
+#770	REDUCE cov: 4741 ft: 8911 corp: 118/16103b lim: 234 exec/s: 19 rss: 454Mb L: 108/234 MS: 4 ChangeBit-ChangeBinInt-CrossOver-EraseBytes-
+#776	NEW    cov: 4741 ft: 8942 corp: 119/16337b lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 1 ShuffleBytes-
+#782	REDUCE cov: 4741 ft: 8942 corp: 119/16284b lim: 234 exec/s: 19 rss: 454Mb L: 173/234 MS: 1 EraseBytes-
+#788	NEW    cov: 4742 ft: 8943 corp: 120/16300b lim: 234 exec/s: 19 rss: 454Mb L: 16/234 MS: 1 EraseBytes-
+#789	NEW    cov: 4743 ft: 8944 corp: 121/16326b lim: 234 exec/s: 19 rss: 454Mb L: 26/234 MS: 1 EraseBytes-
+#792	NEW    cov: 4745 ft: 8946 corp: 122/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 145/234 MS: 3 CrossOver-InsertByte-InsertRepeatedBytes-
+#794	NEW    cov: 4761 ft: 8962 corp: 123/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 210/234 MS: 2 CrossOver-ChangeBit-
+#810	REDUCE cov: 4761 ft: 8962 corp: 123/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 157/234 MS: 1 EraseBytes-
+#836	NEW    cov: 4765 ft: 9127 corp: 124/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 234/234 MS: 1 ChangeBit-
+#837	NEW    cov: 4765 ft: 9137 corp: 125/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 133/234 MS: 1 CMP- DE: "\000;"-
+#839	NEW    cov: 4765 ft: 9138 corp: 126/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 24/234 MS: 2 ShuffleBytes-EraseBytes-
+#850	NEW    cov: 4765 ft: 9178 corp: 127/16Kb lim: 234 exec/s: 20 rss: 454Mb L: 166/234 MS: 1 EraseBytes-
+#855	REDUCE cov: 4765 ft: 9178 corp: 127/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 72/234 MS: 5 ChangeBit-ChangeBit-ChangeBinInt-ChangeASCIIInt-EraseBytes-
+#856	NEW    cov: 4765 ft: 9193 corp: 128/16Kb lim: 234 exec/s: 19 rss: 454Mb L: 186/234 MS: 1 EraseBytes-
+#864	NEW    cov: 4765 ft: 9195 corp: 129/17Kb lim: 234 exec/s: 20 rss: 454Mb L: 162/234 MS: 3 ChangeBit-ShuffleBytes-CopyPart-
+#877	NEW    cov: 4765 ft: 9196 corp: 130/17Kb lim: 234 exec/s: 20 rss: 454Mb L: 47/234 MS: 3 InsertByte-CrossOver-EraseBytes-
+#883	NEW    cov: 4765 ft: 9204 corp: 131/17Kb lim: 234 exec/s: 20 rss: 454Mb L: 234/234 MS: 1 ChangeBinInt-
+#885	NEW    cov: 4767 ft: 9213 corp: 132/17Kb lim: 234 exec/s: 20 rss: 454Mb L: 43/234 MS: 2 InsertByte-CopyPart-
+#886	NEW    cov: 4772 ft: 9258 corp: 133/17Kb lim: 234 exec/s: 20 rss: 454Mb L: 234/234 MS: 1 CMP- DE: "resolutions"-
+#890	NEW    cov: 4772 ft: 9259 corp: 134/17Kb lim: 234 exec/s: 20 rss: 454Mb L: 135/234 MS: 4 ShuffleBytes-PersAutoDict-PersAutoDict-ChangeByte- DE: "resolutio"-"\000\000\000\372"-
+#896	NEW    cov: 4773 ft: 9276 corp: 135/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 234/234 MS: 1 ChangeBinInt-
+#922	REDUCE cov: 4773 ft: 9276 corp: 135/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 149/234 MS: 1 EraseBytes-
+#929	NEW    cov: 4775 ft: 9284 corp: 136/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 29/234 MS: 2 ChangeByte-EraseBytes-
+#932	NEW    cov: 4776 ft: 9293 corp: 137/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 27/234 MS: 3 CopyPart-PersAutoDict-CrossOver- DE: "\002\000\000\000\000\000\000\000"-
+#946	NEW    cov: 4776 ft: 9297 corp: 138/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 199/234 MS: 4 CrossOver-ChangeASCIIInt-ChangeBit-ChangeByte-
+#994	NEW    cov: 4776 ft: 9345 corp: 139/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 234/234 MS: 3 ChangeByte-ChangeBinInt-PersAutoDict- DE: "resolutions"-
+#1001	NEW    cov: 4776 ft: 9346 corp: 140/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 60/234 MS: 2 CMP-ChangeBinInt- DE: "errors"-
+#1007	REDUCE cov: 4776 ft: 9346 corp: 140/18Kb lim: 234 exec/s: 20 rss: 454Mb L: 58/234 MS: 1 EraseBytes-
+	NEW_FUNC[1/3]: 0x5cd12afffed0  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x3e9ed0) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+	NEW_FUNC[2/3]: 0x5cd12b000880  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x3ea880) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+#1009	NEW    cov: 4825 ft: 9420 corp: 141/18Kb lim: 234 exec/s: 20 rss: 457Mb L: 234/234 MS: 2 ChangeByte-PersAutoDict- DE: "resolutio"-
+#1016	NEW    cov: 4825 ft: 9425 corp: 142/18Kb lim: 234 exec/s: 20 rss: 458Mb L: 108/234 MS: 2 ChangeByte-InsertByte-
+#1024	pulse  cov: 4825 ft: 9425 corp: 142/18Kb lim: 234 exec/s: 20 rss: 458Mb
+#1025	NEW    cov: 4826 ft: 9426 corp: 143/18Kb lim: 234 exec/s: 20 rss: 458Mb L: 79/234 MS: 4 CMP-ShuffleBytes-ChangeBit-ChangeBinInt- DE: "\012\252\252\252\252\252\252\252"-
+#1037	NEW    cov: 4826 ft: 9430 corp: 144/19Kb lim: 234 exec/s: 20 rss: 458Mb L: 204/234 MS: 2 PersAutoDict-EraseBytes- DE: "\000\000\000\372"-
+#1038	REDUCE cov: 4826 ft: 9430 corp: 144/19Kb lim: 234 exec/s: 20 rss: 458Mb L: 74/234 MS: 1 EraseBytes-
+#1095	REDUCE cov: 4826 ft: 9430 corp: 144/19Kb lim: 234 exec/s: 20 rss: 461Mb L: 53/234 MS: 2 ChangeASCIIInt-EraseBytes-
+#1096	NEW    cov: 4827 ft: 9433 corp: 145/19Kb lim: 234 exec/s: 20 rss: 462Mb L: 219/234 MS: 1 InsertRepeatedBytes-
+#1107	NEW    cov: 4827 ft: 9434 corp: 146/19Kb lim: 234 exec/s: 20 rss: 464Mb L: 122/234 MS: 1 CrossOver-
+#1133	NEW    cov: 4827 ft: 9435 corp: 147/19Kb lim: 234 exec/s: 20 rss: 466Mb L: 9/234 MS: 1 EraseBytes-
+#1134	NEW    cov: 4827 ft: 9447 corp: 148/19Kb lim: 234 exec/s: 20 rss: 466Mb L: 195/234 MS: 1 EraseBytes-
+#1143	NEW    cov: 4837 ft: 9458 corp: 149/19Kb lim: 234 exec/s: 20 rss: 466Mb L: 156/234 MS: 4 ChangeByte-InsertRepeatedBytes-ShuffleBytes-CMP- DE: "\000\000\000\000"-
+#1145	NEW    cov: 4837 ft: 9459 corp: 150/19Kb lim: 234 exec/s: 20 rss: 466Mb L: 149/234 MS: 2 ChangeBinInt-CrossOver-
+#1162	REDUCE cov: 4837 ft: 9459 corp: 150/19Kb lim: 234 exec/s: 20 rss: 466Mb L: 182/234 MS: 2 CrossOver-EraseBytes-
+#1170	NEW    cov: 4838 ft: 9463 corp: 151/20Kb lim: 234 exec/s: 20 rss: 466Mb L: 216/234 MS: 3 ChangeBinInt-CMP-CopyPart- DE: "\377\377\377\377"-
+#1177	NEW    cov: 4838 ft: 9464 corp: 152/20Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 2 CrossOver-PersAutoDict- DE: "\000\000\000\372"-
+#1179	REDUCE cov: 4838 ft: 9464 corp: 152/20Kb lim: 234 exec/s: 20 rss: 466Mb L: 149/234 MS: 2 ChangeBinInt-EraseBytes-
+#1180	NEW    cov: 4844 ft: 9470 corp: 153/20Kb lim: 234 exec/s: 20 rss: 466Mb L: 153/234 MS: 1 InsertRepeatedBytes-
+#1191	NEW    cov: 4845 ft: 9481 corp: 154/20Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 1 ChangeByte-
+#1192	NEW    cov: 4845 ft: 9486 corp: 155/20Kb lim: 234 exec/s: 20 rss: 466Mb L: 160/234 MS: 1 PersAutoDict- DE: "resolutio"-
+#1195	NEW    cov: 4845 ft: 9492 corp: 156/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 194/234 MS: 3 ChangeBinInt-CrossOver-ChangeBit-
+#1201	REDUCE cov: 4845 ft: 9492 corp: 156/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 77/234 MS: 1 EraseBytes-
+#1212	NEW    cov: 4851 ft: 9500 corp: 157/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 160/234 MS: 1 CMP- DE: "\012\252\252\252\252\252\252\252"-
+#1213	NEW    cov: 4851 ft: 9507 corp: 158/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 6/234 MS: 1 CrossOver-
+#1222	NEW    cov: 4854 ft: 9510 corp: 159/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 148/234 MS: 4 CopyPart-ChangeASCIIInt-ChangeASCIIInt-InsertRepeatedBytes-
+#1229	NEW    cov: 4854 ft: 9537 corp: 160/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 115/234 MS: 2 CrossOver-EraseBytes-
+#1230	REDUCE cov: 4856 ft: 9539 corp: 161/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 77/234 MS: 1 ShuffleBytes-
+#1241	NEW    cov: 4857 ft: 9544 corp: 162/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 1 ShuffleBytes-
+#1278	REDUCE cov: 4857 ft: 9544 corp: 162/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 140/234 MS: 2 CrossOver-EraseBytes-
+#1310	NEW    cov: 4857 ft: 9545 corp: 163/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 69/234 MS: 2 CrossOver-ChangeByte-
+#1311	NEW    cov: 4861 ft: 9549 corp: 164/21Kb lim: 234 exec/s: 20 rss: 466Mb L: 5/234 MS: 1 CrossOver-
+#1332	NEW    cov: 4861 ft: 9554 corp: 165/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 195/234 MS: 1 PersAutoDict- DE: "\377\377\377\377\377\377\377\377"-
+#1333	NEW    cov: 4861 ft: 9558 corp: 166/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 1 PersAutoDict- DE: "resolutions"-
+#1334	NEW    cov: 4861 ft: 9605 corp: 167/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 204/234 MS: 1 ChangeBinInt-
+#1365	REDUCE cov: 4861 ft: 9605 corp: 167/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 101/234 MS: 1 EraseBytes-
+#1387	REDUCE cov: 4861 ft: 9605 corp: 167/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 172/234 MS: 2 ShuffleBytes-EraseBytes-
+#1403	NEW    cov: 4862 ft: 9607 corp: 168/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 17/234 MS: 1 InsertByte-
+#1406	REDUCE cov: 4862 ft: 9609 corp: 169/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 212/234 MS: 3 InsertRepeatedBytes-ChangeBinInt-ShuffleBytes-
+#1418	NEW    cov: 4862 ft: 9611 corp: 170/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 17/234 MS: 2 ChangeASCIIInt-CopyPart-
+#1419	REDUCE cov: 4863 ft: 9612 corp: 171/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 58/234 MS: 1 ShuffleBytes-
+#1435	REDUCE cov: 4865 ft: 9646 corp: 172/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 101/234 MS: 1 CrossOver-
+#1436	NEW    cov: 4865 ft: 9647 corp: 173/22Kb lim: 234 exec/s: 20 rss: 466Mb L: 56/234 MS: 1 ChangeBinInt-
+#1444	NEW    cov: 4865 ft: 9648 corp: 174/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 3 ChangeBit-ChangeBinInt-ChangeBit-
+#1466	NEW    cov: 4865 ft: 9689 corp: 175/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 2 ChangeASCIIInt-PersAutoDict- DE: "errors"-
+#1487	NEW    cov: 4865 ft: 9697 corp: 176/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 44/234 MS: 1 CopyPart-
+#1500	NEW    cov: 4865 ft: 9701 corp: 177/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 29/234 MS: 3 ChangeBinInt-EraseBytes-EraseBytes-
+#1536	NEW    cov: 4866 ft: 9702 corp: 178/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 18/234 MS: 1 CrossOver-
+#1558	NEW    cov: 4866 ft: 9713 corp: 179/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 227/234 MS: 2 CrossOver-PersAutoDict- DE: "\001\036"-
+#1569	NEW    cov: 4866 ft: 9715 corp: 180/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 1 ChangeBit-
+#1571	REDUCE cov: 4866 ft: 9715 corp: 180/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 19/234 MS: 2 ChangeByte-EraseBytes-
+#1583	NEW    cov: 4866 ft: 9719 corp: 181/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 231/234 MS: 2 ShuffleBytes-InsertRepeatedBytes-
+#1604	NEW    cov: 4866 ft: 9720 corp: 182/24Kb lim: 234 exec/s: 20 rss: 466Mb L: 18/234 MS: 1 ChangeBinInt-
+#1612	REDUCE cov: 4866 ft: 9720 corp: 182/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 108/234 MS: 3 PersAutoDict-InsertByte-EraseBytes- DE: "\000\000\000\372"-
+#1625	REDUCE cov: 4866 ft: 9720 corp: 182/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 105/234 MS: 3 ChangeASCIIInt-ShuffleBytes-EraseBytes-
+#1626	REDUCE cov: 4866 ft: 9720 corp: 182/23Kb lim: 234 exec/s: 20 rss: 466Mb L: 61/234 MS: 1 EraseBytes-
+#1642	NEW    cov: 4866 ft: 9722 corp: 183/24Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 1 CopyPart-
+#1648	REDUCE cov: 4869 ft: 9725 corp: 184/24Kb lim: 234 exec/s: 20 rss: 466Mb L: 182/234 MS: 1 PersAutoDict- DE: "\012\252\252\252\252\252\252\252"-
+#1651	NEW    cov: 4869 ft: 9728 corp: 185/24Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 3 ShuffleBytes-CrossOver-CrossOver-
+#1657	REDUCE cov: 4869 ft: 9728 corp: 185/24Kb lim: 234 exec/s: 20 rss: 466Mb L: 138/234 MS: 1 EraseBytes-
+#1671	NEW    cov: 4869 ft: 9736 corp: 186/24Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 4 ChangeByte-ChangeByte-ShuffleBytes-ShuffleBytes-
+	NEW_FUNC[1/1]: 0x5cd12aea8d20  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/resolve_precedence+0x292d20) (BuildId: 0fd48e66862770e3a559d51c8afb11884025c2de)
+#1672	NEW    cov: 4906 ft: 9809 corp: 187/24Kb lim: 234 exec/s: 20 rss: 466Mb L: 190/234 MS: 1 PersAutoDict- DE: "\001\036"-
+#1685	NEW    cov: 4917 ft: 9821 corp: 188/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 212/234 MS: 3 ChangeByte-PersAutoDict-CMP- DE: "\001\036"-"\252\252\252\252\252\252\252\012"-
+#1691	NEW    cov: 4917 ft: 9822 corp: 189/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 69/234 MS: 1 ChangeBit-
+#1701	NEW    cov: 4917 ft: 9823 corp: 190/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 126/234 MS: 5 ChangeASCIIInt-ChangeByte-InsertRepeatedBytes-InsertByte-CrossOver-
+#1709	REDUCE cov: 4917 ft: 9831 corp: 191/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 63/234 MS: 3 InsertByte-PersAutoDict-EraseBytes- DE: "\252\252\252\252\252\252\252\012"-
+#1710	NEW    cov: 4918 ft: 9832 corp: 192/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 188/234 MS: 1 ChangeByte-
+#1723	NEW    cov: 4918 ft: 9833 corp: 193/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 148/234 MS: 3 ShuffleBytes-ChangeBinInt-ChangeByte-
+#1739	NEW    cov: 4918 ft: 9834 corp: 194/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 29/234 MS: 1 CrossOver-
+#1755	NEW    cov: 4918 ft: 9835 corp: 195/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 116/234 MS: 1 InsertRepeatedBytes-
+#1775	NEW    cov: 4918 ft: 9836 corp: 196/25Kb lim: 234 exec/s: 20 rss: 466Mb L: 90/234 MS: 5 ChangeByte-InsertByte-InsertByte-PersAutoDict-ChangeBinInt- DE: "tool_version"-
+#1802	NEW    cov: 4918 ft: 9841 corp: 197/26Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 2 ChangeASCIIInt-ChangeByte-
+#1833	NEW    cov: 4918 ft: 9843 corp: 198/26Kb lim: 234 exec/s: 20 rss: 466Mb L: 188/234 MS: 1 CrossOver-
+#1834	NEW    cov: 4918 ft: 9849 corp: 199/26Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 1 ChangeBit-
+#1837	REDUCE cov: 4918 ft: 9849 corp: 199/26Kb lim: 234 exec/s: 20 rss: 466Mb L: 50/234 MS: 3 InsertRepeatedBytes-ShuffleBytes-EraseBytes-
+#1844	NEW    cov: 4918 ft: 9850 corp: 200/26Kb lim: 234 exec/s: 20 rss: 466Mb L: 36/234 MS: 2 ChangeBit-CrossOver-
+#1852	NEW    cov: 4918 ft: 9851 corp: 201/26Kb lim: 234 exec/s: 20 rss: 466Mb L: 138/234 MS: 3 ChangeByte-CopyPart-ChangeBinInt-
+#1864	NEW    cov: 4918 ft: 9865 corp: 202/27Kb lim: 234 exec/s: 20 rss: 466Mb L: 234/234 MS: 2 ShuffleBytes-CopyPart-
+#1869	DONE   cov: 4918 ft: 9865 corp: 202/27Kb lim: 234 exec/s: 20 rss: 466Mb
+###### Recommended dictionary. ######
+"\377\377\377\377\377\377\377\377" # Uses: 41
+"\002\000\000\000\000\000\000\000" # Uses: 22
+"\001\000\000\000" # Uses: 20
+"schema_versi" # Uses: 6
+"resolutio" # Uses: 12
+"tool_version" # Uses: 9
+"\000\004" # Uses: 4
+"\005\000\000\000\000\000\000\000" # Uses: 7
+"\001\000\000\000\000\000\000 " # Uses: 2
+"\000\000\000\372" # Uses: 6
+"\001\036" # Uses: 7
+"\000;" # Uses: 5
+"resolutions" # Uses: 5
+"errors" # Uses: 9
+"\012\252\252\252\252\252\252\252" # Uses: 1
+"\000\000\000\000" # Uses: 4
+"\377\377\377\377" # Uses: 7
+"\252\252\252\252\252\252\252\012" # Uses: 1
+###### End of recommended dictionary. ######
+Done 1869 runs in 91 second(s)
+stat::number_of_executed_units: 1869
+stat::average_exec_per_sec:     20
+stat::new_units_added:          231
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              466
+exit_status=0
+=== 2026-10-11T11:35:14+01:00 fuzz run hostile_inputs (90s) ===
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.07s
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.04s
+     Running `fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs -artifact_prefix=$REPO/fuzz/artifacts/hostile_inputs/ -max_total_time=90 -rss_limit_mb=4096 -print_final_stats=1 $REPO/fuzz/corpus/hostile_inputs`
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 4051695591
+INFO: Loaded 1 modules   (34377 inline 8-bit counters): 34377 [0x5ce853212d50, 0x5ce85321b399), 
+INFO: Loaded 1 PC tables (34377 PCs): 34377 [0x5ce85321b3a0,0x5ce8532a1830), 
+INFO:        4 files found in $REPO/fuzz/corpus/hostile_inputs
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+
+thread '<unnamed>' (252218) panicked at fuzz_targets/hostile_inputs.rs:273:13:
+an unsanitized ESC reached the Local JSON report
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+==252218== ERROR: libFuzzer: deadly signal
+    #0 0x5ce852f7e6b1  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x22b6b1) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #1 0x5ce853167efb  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x414efb) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #2 0x5ce85318c989  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x439989) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #3 0x768881045caf  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x45caf) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #4 0x7688810a61ab  (/usr/lib/x86_64-linux-gnu/libc.so.6+0xa61ab) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #5 0x768881045b7d  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x45b7d) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #6 0x7688810288eb  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x288eb) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #7 0x5ce8531cfdf9  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x47cdf9) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #8 0x5ce8531ceac8  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x47bac8) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #9 0x5ce85314d764  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x3fa764) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #10 0x5ce8531ced51  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x47bd51) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #11 0x5ce8531bc491  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x469491) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #12 0x5ce8531b68e8  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x4638e8) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #13 0x5ce8531bcb7c  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x469b7c) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #14 0x5ce8531e47ab  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x4917ab) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #15 0x5ce852fc6a77  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x273a77) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #16 0x5ce852fd2646  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x27f646) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #17 0x5ce852fdb515  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x288515) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #18 0x5ce85314d2f4  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x3fa2f4) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #19 0x5ce85314df38  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x3faf38) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #20 0x5ce85314c9ed  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x3f99ed) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #21 0x5ce85318cf3c  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x439f3c) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #22 0x5ce853194f68  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x441f68) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #23 0x5ce853195607  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x442607) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #24 0x5ce853161351  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x40e351) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #25 0x5ce85314df66  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x3faf66) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+    #26 0x76888102a600  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x2a600) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #27 0x76888102a717  (/usr/lib/x86_64-linux-gnu/libc.so.6+0x2a717) (BuildId: 066527e430a32768d82741e00b81eebb1a872294)
+    #28 0x5ce852edf624  ($REPO/fuzz/target/x86_64-unknown-linux-gnu/release/hostile_inputs+0x18c624) (BuildId: 1baffd57073d5e770af9dfe38087a7fac852d4f2)
+
+NOTE: libFuzzer has rudimentary signal handlers.
+      Combine libFuzzer with AddressSanitizer or similar for better crash reports.
+SUMMARY: libFuzzer: deadly signal
+MS: 0 ; base unit: 0000000000000000000000000000000000000000
+
+
+artifact_prefix='$REPO/fuzz/artifacts/hostile_inputs/'; Test unit written to $REPO/fuzz/artifacts/hostile_inputs/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+Base64: 
+stat::number_of_executed_units: 1
+stat::average_exec_per_sec:     0
+stat::new_units_added:          0
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              44
+
+────────────────────────────────────────────────────────────────────────────────
+
+Failing input:
+
+	fuzz/artifacts/hostile_inputs/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+
+Output of `std::fmt::Debug`:
+
+	[]
+
+Reproduce with:
+
+	cargo fuzz run hostile_inputs fuzz/artifacts/hostile_inputs/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+
+Minimize test case with:
+
+	cargo fuzz tmin hostile_inputs fuzz/artifacts/hostile_inputs/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+
+────────────────────────────────────────────────────────────────────────────────
+
+Error: Fuzz target exited with exit status: 77
+exit_status=1
+--- crash artifacts ---
+total 8
+drwxr-xr-x 2 user user 4096 Oct 11 11:35 .
+drwxr-xr-x 5 user user 4096 Oct 11 11:35 ..
+-rw-r--r-- 1 user user    0 Oct 11 11:35 crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+=== 2026-10-11T11:35:15+01:00 session complete ===

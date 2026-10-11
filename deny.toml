@@ -1,0 +1,56 @@
+# cargo-deny configuration — dependency advisories, licences, bans and sources.
+#
+# Run locally:  cargo deny check          # or: cargo deny --all-features --deny warnings check
+# In CI:        the `deny` job in .github/workflows/ci.yml
+#
+# Every allow-list below is deliberately explicit: a new dependency with a new licence, a new
+# registry or a wildcard requirement fails the check until a maintainer reviews it. That is the
+# point — this crate ships to users who may vendor it, so the dependency surface is a product
+# property, not an implementation detail.
+#
+# Policy decisions (all fail the build, not warn):
+#   advisories  a known vulnerability or a yanked release in the graph is a release blocker;
+#               the ignore list is empty and every future entry must carry a reason.
+#   licences    only the licences already in this graph plus MIT/Apache-2.0 (what we ship) are
+#               allowed; anything else needs a deliberate review.
+#   bans        wildcard requirements and git dependencies are denied: every dependency must
+#               resolve from crates.io with a checksum.
+#   sources     only crates.io is a trusted source.
+
+[graph]
+# Check the union of all feature sets, so a future optional dependency cannot hide behind a
+# disabled feature.
+all-features = true
+
+[advisories]
+# The RustSec advisory database; fetched over the network when cargo-deny runs. ConfigLens
+# itself never contacts the network.
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# The ignore list is intentionally empty: a known advisory in the graph must break the build.
+# Format for a future entry: { id = "RUSTSEC-YYYY-NNNN", reason = "<why>, tracked in <issue>" }
+ignore = []
+
+[licenses]
+# Exactly the licences present in the current dependency graph (verified with `cargo deny list`):
+#   Apache-2.0, MIT, Unicode-3.0, Unlicense  — plus MIT/Apache-2.0, which this crate itself ships.
+# Anything else must be reviewed and added here on purpose.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+]
+# Require a confident SPDX match before trusting a licence file.
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# No git dependencies: every dependency must come from a registry with a checksum.
+allow = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

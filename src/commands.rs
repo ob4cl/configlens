@@ -7,6 +7,7 @@ use serde_json::Value;
 
 use crate::error::CliError;
 use crate::resolve::RunOutput;
+use crate::security::display_pointer;
 
 /// Result of writing a snapshot.
 #[derive(Debug, Clone, PartialEq)]
@@ -480,7 +481,7 @@ pub fn render_diff(result: &DiffResult) -> String {
         for entry in &result.entries {
             out.push_str(&format!(
                 "  {}  {}  {} -> {}\n",
-                entry.pointer,
+                display_pointer(&entry.pointer),
                 entry.kind.name(),
                 entry.before,
                 entry.after
@@ -490,7 +491,9 @@ pub fn render_diff(result: &DiffResult) -> String {
     for entry in &result.uncompared {
         out.push_str(&format!(
             "  {}  unknown_redacted  {} -> {}  (not compared: protected value)\n",
-            entry.pointer, entry.before, entry.after
+            display_pointer(&entry.pointer),
+            entry.before,
+            entry.after
         ));
     }
     out
@@ -500,7 +503,7 @@ pub fn render_diff(result: &DiffResult) -> String {
 pub fn render_diff_json(result: &DiffResult) -> Result<String, CliError> {
     let project = |entry: &DiffEntry| {
         serde_json::json!({
-            "pointer": entry.pointer,
+            "pointer": display_pointer(&entry.pointer),
             "kind": entry.kind.name(),
             "before": entry.before,
             "after": entry.after,

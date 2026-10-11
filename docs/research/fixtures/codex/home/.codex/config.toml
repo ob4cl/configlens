@@ -7,5 +7,5 @@ model_reasoning_effort = "medium"
 [shell_environment_policy]
 inherit = "core"
 
-[projects."/home/user/configlens/docs/research/fixtures/codex/project"]
+[projects."$REPO/docs/research/fixtures/codex/project"]
 trust_level = "trusted"

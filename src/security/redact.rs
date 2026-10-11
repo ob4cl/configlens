@@ -174,7 +174,52 @@ pub fn is_plain_string(value: &str) -> bool {
         && !value.contains('}')
 }
 
-/// Strip URL userinfo, query and fragment. Returns `None` when the value is not a URL.
+/// The publishable `host[:port]` of a URL authority, or `None` when the authority is not an
+/// unambiguous host with an optional numeric port.
+///
+/// A URL value is attacker-controlled text, so the authority is only publishable when it parses
+/// without ambiguity: userinfo is everything before the **last** `@` (RFC 3986), and what follows
+/// must be a plain host name with, at most, a numeric port. Anything else is refused, because the
+/// value's own delimiters can otherwise move text that was written as userinfo into the position
+/// the sanitizer would publish.
+fn authority_host(authority: &str) -> Option<&str> {
+    if authority.is_empty() {
+        return None;
+    }
+    let host = match authority.rsplit_once('@') {
+        Some((_, host)) => host,
+        None => authority,
+    };
+    match host.rsplit_once(':') {
+        Some((name, port))
+            if !port.is_empty() && port.len() <= 5 && port.chars().all(|c| c.is_ascii_digit()) =>
+        {
+            if is_host_shape(name) {
+                Some(host)
+            } else {
+                None
+            }
+        }
+        // A colon that is not a numeric port means this is not a host: it is either userinfo that
+        // no `@` marked as such, or an authority the value itself malformed.
+        Some(_) => None,
+        None => {
+            if is_host_shape(host) {
+                Some(host)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// Strip URL userinfo, query and fragment. Returns `None` when the value is not a publishable URL.
+///
+/// Publishing a URL is the one place a configuration value reaches a report verbatim, so the parse
+/// must not be steerable by the value itself. A hostile value can put `/`, `?` or `#` inside what
+/// it writes as userinfo (`https://MARKER/rest:pw@host.example/mcp`), which ends the authority
+/// early and leaves the credentials to be republished as host or path text. Any `@` remaining after
+/// the authority means exactly that, so the value is refused and redacted instead of published.
 pub fn sanitize_url(value: &str) -> Option<String> {
     let (scheme, rest) = value.split_once("://")?;
     if !matches!(scheme, "http" | "https" | "ws" | "wss") {
@@ -184,10 +229,10 @@ pub fn sanitize_url(value: &str) -> Option<String> {
         Some(idx) => (&rest[..idx], &rest[idx..]),
         None => (rest, ""),
     };
-    let host = match authority.rsplit_once('@') {
-        Some((_, host)) => host,
-        None => authority,
-    };
+    let host = authority_host(authority)?;
+    if tail.contains('@') {
+        return None;
+    }
     let path = match tail.find(['?', '#']) {
         Some(idx) => &tail[..idx],
         None => tail,
@@ -199,25 +244,28 @@ pub fn sanitize_url(value: &str) -> Option<String> {
     Some(out)
 }
 
-/// The host (authority without userinfo) of an absolute `http`/`https`/`ws`/`wss` URL.
+/// The host (authority without userinfo or port) of an absolute `http`/`https`/`ws`/`wss` URL.
 ///
 /// Used by the share-mode projection to collect the private hosts that must be pseudonymized
-/// (spec §7 "In share mode pseudonymize private hosts").
+/// (spec §7 "In share mode pseudonymize private hosts"). It applies the same ambiguity refusal as
+/// [`sanitize_url`], so a value whose authority is not a plain host yields no host to pseudonymize.
 pub fn url_host(value: &str) -> Option<String> {
     let (scheme, rest) = value.split_once("://")?;
     if !matches!(scheme, "http" | "https" | "ws" | "wss") {
         return None;
     }
-    let authority = match rest.find(['/', '?', '#']) {
-        Some(idx) => &rest[..idx],
-        None => rest,
+    let (authority, tail) = match rest.find(['/', '?', '#']) {
+        Some(idx) => (&rest[..idx], &rest[idx..]),
+        None => (rest, ""),
     };
-    if authority.is_empty() {
+    if tail.contains('@') {
         return None;
     }
-    Some(match authority.rsplit_once('@') {
-        Some((_, host)) => host.to_string(),
-        None => authority.to_string(),
+    let host = authority_host(authority)?;
+    // The pseudonymizer rewrites the host *name*; a port stays as it is in the sanitized URL.
+    Some(match host.rsplit_once(':') {
+        Some((name, _port)) => name.to_string(),
+        None => host.to_string(),
     })
 }
 
@@ -643,6 +691,48 @@ mod tests {
         assert_eq!(shown, "https://jira.internal.example/mcp?[redacted]");
         assert!(!shown.contains("SEEDED"));
         assert!(!shown.contains("pass"));
+    }
+
+    #[test]
+    fn a_url_whose_delimiters_hide_userinfo_is_not_published() {
+        // Regression (fuzz target `hostile_inputs`): a value can put `/`, `?` or `#` inside what it
+        // writes as userinfo. The authority then ends early, the real `@host` part lands in the
+        // path, and a delimiter-only parse republished the credential material as host/path text.
+        let p = policy();
+        for hostile in [
+            "https://ZUINFOuser:passtool_version.ex{/b:pw@host.example/mcp?token=ZUINFO#ZUINFO",
+            "https://ZUINFO/:pw@host.example/mcp?token=ZUINFO/#ZUINFO",
+            "https://ZUINFO?x:pw@host.example/mcp?token=ZUINFO?x#ZUINFO?x",
+            "https://ZUINFO#x:pw@host.example/mcp?token=ZUINFO#x",
+        ] {
+            assert_eq!(
+                sanitize_url(hostile),
+                None,
+                "{hostile} must not be publishable"
+            );
+            let out = redact_value("/mcp/jira/url", &json!(hostile), &p, PathMode::Local);
+            assert!(out.is_redacted(), "{hostile} must be redacted");
+            let rendered = serde_json::to_string(&out).expect("serialize");
+            assert!(!rendered.contains("ZUINFO"), "userinfo leaked: {rendered}");
+        }
+    }
+
+    #[test]
+    fn url_hosts_with_ports_are_published_and_malformed_authorities_are_not() {
+        assert_eq!(
+            sanitize_url("https://host.example:8443/mcp?token=x").as_deref(),
+            Some("https://host.example:8443/mcp?[redacted]")
+        );
+        assert_eq!(
+            url_host("https://host.example:8443/mcp"),
+            Some("host.example".to_string())
+        );
+        // A colon that is not a numeric port is not an authority we will publish.
+        assert_eq!(sanitize_url("https://host.example:notaport/mcp"), None);
+        assert_eq!(url_host("https://host.example:notaport/mcp"), None);
+        // An authority with no host at all is not a URL.
+        assert_eq!(sanitize_url("https:///mcp"), None);
+        assert_eq!(url_host("https://user:pass@"), None);
     }
 
     #[test]

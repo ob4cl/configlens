@@ -250,6 +250,81 @@ fn terminal_control_payloads_are_neutralised_in_every_channel() {
 }
 
 #[test]
+fn control_characters_in_key_names_never_reach_a_channel() {
+    // A key name is attacker-controlled text that becomes part of a JSON Pointer. The pointer is a
+    // display string in every channel (report, text, diff), so a control character in a key must be
+    // neutralised before it can reach a terminal (spec §7 "pointer displays").
+    let key = "evil\\u001b[31mkey\\u202e\\u200b";
+    let sandbox = Sandbox::new(
+        &[(
+            ".claude/settings.json",
+            &format!("{{\"model\": \"m\", \"{key}\": 1}}"),
+        )],
+        &[(
+            ".config/opencode/opencode.json",
+            &format!("{{\"model\": \"m\", \"{key}\": 1}}"),
+        )],
+    );
+    let commands: Vec<Vec<&str>> = vec![
+        vec!["scan", "--client", "opencode"],
+        vec!["scan", "--client", "opencode", "--format", "json"],
+        vec!["scan", "--client", "claude"],
+        vec!["scan", "--client", "claude", "--format", "json"],
+        vec![
+            "scan", "--client", "claude", "--paths", "share", "--format", "json",
+        ],
+        vec![
+            "explain", "/model", "--client", "claude", "--format", "json",
+        ],
+        vec!["doctor", "--client", "opencode"],
+        vec!["doctor", "--client", "opencode", "--format", "json"],
+    ];
+    for args in commands {
+        let output = sandbox.command().args(&args).output().expect("run");
+        let text = channels(&output);
+        assert!(
+            !text.contains('\u{1b}') && !text.to_lowercase().contains("\\u001b"),
+            "escape sequence survived {args:?}: {text:?}"
+        );
+        assert!(
+            !text.contains('\u{202e}') && !text.contains('\u{200b}'),
+            "invisible control survived {args:?}"
+        );
+    }
+
+    // The diff channel renders pointers from snapshot files too.
+    let before = sandbox.path("before.json");
+    let after = sandbox.path("after.json");
+    for (path, client) in [(&before, "claude"), (&after, "claude")] {
+        sandbox
+            .command()
+            .args([
+                "snapshot",
+                "--client",
+                client,
+                "--output",
+                path.to_str().expect("utf-8 path"),
+            ])
+            .output()
+            .expect("snapshot");
+    }
+    for format in [None, Some("json")] {
+        let mut args = vec!["diff", before.to_str().unwrap(), after.to_str().unwrap()];
+        if let Some(format) = format {
+            args.push("--format");
+            args.push(format);
+        }
+        let output = sandbox.command().args(&args).output().expect("diff");
+        let text = channels(&output);
+        assert!(
+            !text.contains('\u{1b}') && !text.to_lowercase().contains("\\u001b"),
+            "escape sequence survived in diff {format:?}: {text:?}"
+        );
+        assert!(!text.contains('\u{202e}'), "bidi control survived in diff");
+    }
+}
+
+#[test]
 fn files_outside_authorised_roots_are_never_read() {
     let sandbox = Sandbox::new(&[], &[]);
     let outside = sandbox.dir.path().join("outside.json");
@@ -422,6 +497,103 @@ fn an_unrecognised_session_argument_is_never_echoed() {
                 text.contains("unrecognised_session_flag"),
                 "the gap must still be reported: {text}"
             );
+        }
+    }
+}
+
+#[test]
+fn a_url_value_cannot_smuggle_credentials_past_the_sanitizer() {
+    // Regression (fuzz target `hostile_inputs`): the value's own `/` ends the authority early, so
+    // the `:pw@host` tail lands in the path and a delimiter-only parse republished it. No channel
+    // may carry the userinfo marker, in local or share mode.
+    let body = serde_json::json!({
+        "model": "m",
+        "mcp": {
+            "srv": {
+                "type": "remote",
+                "url": "https://ZUINFOuser:passtool_version.ex{/b:pw@host.example/mcp?token=ZUINFO#ZUINFO"
+            }
+        }
+    })
+    .to_string();
+    let sandbox = Sandbox::new(&[], &[(".config/opencode/opencode.json", &body)]);
+    for mode in [Vec::<&str>::new(), vec!["--paths", "share"]] {
+        for format in [Vec::<&str>::new(), vec!["--format", "json"]] {
+            for command in ["scan", "explain"] {
+                let mut args = vec![command];
+                if command == "explain" {
+                    args.push("/mcp/srv/url");
+                }
+                args.push("--client");
+                args.push("opencode");
+                let output = sandbox
+                    .command()
+                    .args(&args)
+                    .args(&mode)
+                    .args(&format)
+                    .output()
+                    .expect("run");
+                let text = channels(&output);
+                assert!(
+                    !text.contains("ZUINFO") && !text.contains("user:pass"),
+                    "URL userinfo leaked for {command} {mode:?} {format:?}: {text}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn the_saved_hostile_inputs_crash_artifact_is_neutralised() {
+    // Regression (fuzz target `hostile_inputs`, session 2): this exact fuzz unit tripped
+    // `hostile_inputs.rs` with "URL userinfo/query/fragment leaked into the Local JSON report".
+    // The value's own `/` ended the URL authority early, so `user:pw@host` landed in the path and a
+    // delimiter-only parse republished it. The unit is kept as committed evidence under
+    // `fuzz/results/` (crash artifacts in `fuzz/artifacts/` are gitignored) and replayed here
+    // through the real CLI for both clients, both path modes and both formats, so it stays covered
+    // after the corpus is pruned.
+    let artifact = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("fuzz/results/hostile_inputs-crash-6ac24e86f9105163905201b031b3bc1ae4ddb070");
+    let bytes =
+        std::fs::read(&artifact).unwrap_or_else(|e| panic!("read {}: {e}", artifact.display()));
+    let payload = String::from_utf8_lossy(&bytes);
+    // Mirrors the template in `fuzz/fuzz_targets/hostile_inputs.rs`: the marker sits in the userinfo,
+    // the query and the fragment, wrapping the arbitrary value.
+    let url = format!(
+        "https://ZUINFO{payload}:pw@host.example/mcp?token=ZUINFO{payload}#ZUINFO{payload}"
+    );
+    let opencode = serde_json::json!({
+        "model": "m",
+        "mcp": { "srv": { "type": "remote", "url": url } }
+    })
+    .to_string();
+    let claude = serde_json::json!({
+        "model": "m",
+        "mcpServers": { "srv": { "url": url } }
+    })
+    .to_string();
+    let sandbox = Sandbox::new(
+        &[(".claude/settings.json", &claude)],
+        &[(".config/opencode/opencode.json", &opencode)],
+    );
+    for client in ["claude", "opencode"] {
+        for mode in [Vec::<&str>::new(), vec!["--paths", "share"]] {
+            for format in [Vec::<&str>::new(), vec!["--format", "json"]] {
+                let output = sandbox
+                    .command()
+                    .args(["scan", "--client", client])
+                    .args(&mode)
+                    .args(&format)
+                    .output()
+                    .expect("run");
+                let report = channels(&output);
+                for needle in ["ZUINFO", "user:pass", "passtool_version"] {
+                    assert!(
+                        !report.contains(needle),
+                        "the saved crash artifact leaked {needle:?} for {client} {mode:?} {format:?}: {report}"
+                    );
+                }
+            }
         }
     }
 }

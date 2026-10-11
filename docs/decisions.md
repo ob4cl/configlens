@@ -4,9 +4,8 @@ Each decision records the concrete tradeoff. Rejected alternatives are listed so
 disagree with the reasoning rather than guess at it.
 
 > **Status note:** a few decisions below reference artifacts that are planned but **not present** in
-> this checkout (for example `docs/security.md`, `tests/security/no_raw_dto.rs`, and a benchmark
-> harness). They record rationale, not a file index. See `docs/implementation-status.md` for what
-> actually exists.
+> this checkout (for example `docs/security.md` and `tests/security/no_raw_dto.rs`). They record
+> rationale, not a file index. See `docs/implementation-status.md` for what actually exists.
 
 ## D1 — One crate, library + binary (spec §6 offers this as the default)
 

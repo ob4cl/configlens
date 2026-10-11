@@ -7,6 +7,20 @@
 __pycache__/
 *.pyc
 
+# Fuzzing: the corpus is committed (it seeds the CI smoke run), the build output and any crash
+# artifacts are not. Crash artifacts are recorded deliberately in fuzz/results/ when they are
+# evidence for a change.
+/fuzz/target
+/fuzz/coverage
+/fuzz/artifacts
+fuzz/Cargo.lock
+
+# Generated release material: SBOMs and archives are produced by CI (scripts/generate_sbom.py,
+# scripts/package_release.py) and attached to a release, never committed.
+/dist
+/sbom
+*.cdx.json
+
 # Tester records are personal data and must never be committed (see docs/beta/pilot-guide.md)
 pilot-log.md
 **/pilot-log.md

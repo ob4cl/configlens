@@ -1,9 +1,10 @@
 //! OpenCode adapter — bounded 0.1 local scope (spec §3, §12 step 5).
 //!
 //! Implemented: local scalar settings, nested object merges, verified `{env:}`/`{file:}`
-//! interpolation, JSON/JSONC sources, managed file layer.
+//! interpolation, JSON/JSONC sources, `$OPENCODE_CONFIG` (a file), `$OPENCODE_CONFIG_DIR` (a
+//! directory holding `opencode.json`/`opencode.jsonc`), managed file layer.
 //! Always reported as gaps: remote `.well-known` defaults, `.opencode` directory contents, macOS
-//! managed preferences, and `$OPENCODE_CONFIG_DIR` placement (whose position upstream does not pin).
+//! managed preferences.
 
 use std::path::{Path, PathBuf};
 
@@ -101,40 +102,72 @@ impl ClientAdapter for OpenCodeAdapter {
             );
         }
 
-        // 5b. Custom directory: position relative to project/inline is not documented upstream.
+        // 5b. Custom directory (`$OPENCODE_CONFIG_DIR`).
+        //
+        // Upstream treats this value as a *directory*, never as a configuration file: the pinned
+        // loader appends it to the list of directories it scans (`config/paths.ts`:
+        // `directories()` returns `unique([... , ...(Flag.OPENCODE_CONFIG_DIR ? [Flag.OPENCODE_CONFIG_DIR] : [])])`)
+        // and then loads `opencode.json` followed by `opencode.jsonc` from every directory that
+        // ends with `.opencode` **or equals `OPENCODE_CONFIG_DIR`** (`config/config.ts`). So the
+        // sources here are `<dir>/opencode.json` and `<dir>/opencode.jsonc`, and a value that
+        // points at a file yields nothing (upstream would look for `<file>/opencode.json`, which
+        // does not exist). Placement is fixed by the same file: the directories loop runs after the
+        // project files and before `$OPENCODE_CONFIG_CONTENT`, and `OPENCODE_CONFIG_DIR` is
+        // appended last inside the loop.
         if let Some(dir) = ctx.environment_value("OPENCODE_CONFIG_DIR") {
+            let dir = PathBuf::from(dir);
+            for path in Self::files_in(&dir) {
+                if access.exists_regular(&path) {
+                    push(
+                        &mut plan,
+                        Candidate {
+                            layer_id: "oc.custom_dir".to_string(),
+                            class: SourceClass::CustomDir,
+                            path: Some(path),
+                            inline: None,
+                            note: None,
+                        },
+                    );
+                }
+            }
+        }
+
+        // 4. Project config: every `opencode.json(c)` from `ctx.cwd` up to the boundary, outermost
+        // first.
+        //
+        // Upstream (`config/paths.ts::files` → `FSUtil.up({targets: [opencode.jsonc,
+        // opencode.json], start: cwd, stop: worktree})`) pushes a match at EVERY level from the
+        // working directory up to the repository root, then `config.ts` merges that list outermost
+        // first, so the nearest file wins and every ancestor contributes (pinned
+        // `53d1eabb61e21162157817bf677da0a4ad3332e3`, evidence `OC-PROJECT-SOURCE-20261011`).
+        // ConfigLens emits the same ordered list — boundary first, `ctx.cwd` last — so the engine's
+        // last-definition-wins tie-break (`resolve`) selects the nearest file. The boundary is the
+        // explicit `--project-root`, otherwise the nearest git directory; with no boundary the
+        // working directory is the only level and the run records that the boundary is uncertain.
+        let project_files = project_config_files(ctx, access);
+        let boundary_uncertain = project_boundary(ctx, access).is_none();
+        for (index, path) in project_files.into_iter().enumerate() {
+            let mut signals: Vec<&str> = Vec::new();
+            // The boundary-uncertain signal is a run-level fact; emit it once so the coverage gap is
+            // not duplicated across a directory's two dialect files.
+            if boundary_uncertain && index == 0 {
+                signals.push("project_root_uncertain");
+            }
+            // A directory holding both dialects has an unverified preference between them; the note
+            // follows the file.
+            if sibling_config(&path, access) {
+                signals.push("jsonc_coexistence_unverified");
+            }
             push(
                 &mut plan,
                 Candidate {
-                    layer_id: "oc.custom_dir".to_string(),
-                    class: SourceClass::CustomDir,
-                    path: Some(PathBuf::from(dir)),
+                    layer_id: "oc.project".to_string(),
+                    class: SourceClass::ProjectShared,
+                    path: Some(path),
                     inline: None,
-                    note: Some("custom_dir_placement_unverified".to_string()),
+                    note: (!signals.is_empty()).then(|| signals.join(";")),
                 },
             );
-        }
-
-        // 4. Project config: cwd, then upward to the nearest git directory.
-        let search_start = ctx.project_root.clone().unwrap_or_else(|| ctx.cwd.clone());
-        if let Some(dir) = project_config_dir(ctx, &search_start, access) {
-            let found = Self::files_in(&dir)
-                .into_iter()
-                .filter(|p| access.exists_regular(p))
-                .collect::<Vec<_>>();
-            let ambiguous = found.len() > 1;
-            for path in found {
-                push(
-                    &mut plan,
-                    Candidate {
-                        layer_id: "oc.project".to_string(),
-                        class: SourceClass::ProjectShared,
-                        path: Some(path),
-                        inline: None,
-                        note: ambiguous.then(|| "jsonc_coexistence_unverified".to_string()),
-                    },
-                );
-            }
         }
 
         // 6. Inline content from the allowlisted environment.
@@ -190,41 +223,67 @@ impl ClientAdapter for OpenCodeAdapter {
     }
 }
 
-/// Directory that holds the project config.
+/// The project boundary: the explicit `--project-root`, otherwise the nearest git directory.
 ///
 /// Boundary rule (spec §6): upward discovery ends at the verified root or adapter boundary and never
-/// recurses through unrelated repositories. The boundary is the explicitly supplied `--project-root`,
-/// otherwise the nearest git directory. With no boundary we look at the working directory only and
-/// the caller records that the boundary is uncertain.
-fn project_config_dir(
-    ctx: &ResolutionContext,
-    start: &Path,
-    access: &dyn FileAccess,
-) -> Option<PathBuf> {
-    let boundary = match &ctx.project_root {
-        Some(root) => Some(root.clone()),
-        None => find_git_root(access, start, 64),
+/// recurses through unrelated repositories.
+fn project_boundary(ctx: &ResolutionContext, access: &dyn FileAccess) -> Option<PathBuf> {
+    ctx.project_root
+        .clone()
+        .or_else(|| find_git_root(access, &ctx.cwd, 64))
+}
+
+/// Every project config file from `ctx.cwd` up to the boundary, outermost first.
+///
+/// Upstream collects a match at every level from the working directory up to the repository root and
+/// merges them outermost-first, so the nearest file wins. This returns the same order (boundary
+/// first, `ctx.cwd` last), with `opencode.json` before `opencode.jsonc` at each level, so the
+/// nearest file is last in definition order. The walk **starts at `ctx.cwd`** — the boundary is
+/// never the search start — includes the boundary itself, and stops at the filesystem root when the
+/// boundary is not an ancestor of `ctx.cwd`. With no boundary, only `ctx.cwd` is inspected and the
+/// caller keeps the boundary-uncertain signal.
+fn project_config_files(ctx: &ResolutionContext, access: &dyn FileAccess) -> Vec<PathBuf> {
+    let Some(boundary) = project_boundary(ctx, access) else {
+        return present_config_files(&ctx.cwd, access);
     };
-    if boundary.is_none() {
-        return CONFIG_FILES
-            .iter()
-            .any(|name| access.exists_regular(&start.join(name)))
-            .then(|| start.to_path_buf());
-    }
-    let mut current = Some(start.to_path_buf());
+    // Collect every level from cwd up to (and including) the boundary, then reverse to
+    // outermost-first order.
+    let mut levels: Vec<PathBuf> = Vec::new();
+    let mut current = Some(ctx.cwd.clone());
     while let Some(dir) = current {
-        if CONFIG_FILES
-            .iter()
-            .any(|name| access.exists_regular(&dir.join(name)))
-        {
-            return Some(dir);
+        let at_boundary = dir == boundary;
+        let parent = dir.parent().map(|p| p.to_path_buf());
+        levels.push(dir);
+        if at_boundary {
+            break;
         }
-        if boundary.as_deref() == Some(dir.as_path()) {
-            return None;
-        }
-        current = dir.parent().map(|p| p.to_path_buf());
+        current = parent;
     }
-    None
+    levels
+        .iter()
+        .rev()
+        .flat_map(|dir| present_config_files(dir, access))
+        .collect()
+}
+
+/// The config files present as regular files inside one directory, in documented name order
+/// (`opencode.json` then `opencode.jsonc`).
+fn present_config_files(dir: &Path, access: &dyn FileAccess) -> Vec<PathBuf> {
+    CONFIG_FILES
+        .iter()
+        .map(|name| dir.join(name))
+        .filter(|path| access.exists_regular(path))
+        .collect()
+}
+
+/// Does `path`'s directory also hold the other documented dialect?
+fn sibling_config(path: &Path, access: &dyn FileAccess) -> bool {
+    let Some(dir) = path.parent() else {
+        return false;
+    };
+    CONFIG_FILES
+        .iter()
+        .any(|name| access.exists_regular(&dir.join(name)) && dir.join(name) != path)
 }
 
 /// Nearest ancestor containing a `.git` directory or a worktree `.git` file.
@@ -411,8 +470,10 @@ mod tests {
                 "/srv/team/ocdir".to_string(),
             ),
         ]));
-        let plan =
-            OpenCodeAdapter::new().discover(&ctx, &MemoryFileAccess::new(), &policy(&ctx, None));
+        let access = MemoryFileAccess::new()
+            .with_file(host_path(&["/srv/team/ocdir", "opencode.json"]), "{}")
+            .with_file(host_path(&["/srv/team/ocdir", "opencode.jsonc"]), "{}");
+        let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
         assert!(paths(&plan).contains(&"/srv/team/oc.json".to_string()));
         let inline = plan
             .candidates
@@ -427,13 +488,46 @@ mod tests {
         let custom_dir = plan
             .candidates
             .iter()
-            .find(|c| c.layer_id == "oc.custom_dir")
-            .expect("custom dir candidate");
-        assert!(custom_dir
-            .note
-            .as_deref()
-            .unwrap_or("")
-            .contains("custom_dir_placement_unverified"));
+            .filter(|c| c.layer_id == "oc.custom_dir")
+            .collect::<Vec<_>>();
+        assert_eq!(
+            custom_dir.len(),
+            2,
+            "both documented file names inside the directory are candidates"
+        );
+        assert_eq!(
+            custom_dir
+                .iter()
+                .map(|c| c.path.clone().expect("path"))
+                .collect::<Vec<_>>(),
+            vec![
+                PathBuf::from(host_path(&["/srv/team/ocdir", "opencode.json"])),
+                PathBuf::from(host_path(&["/srv/team/ocdir", "opencode.jsonc"])),
+            ],
+            "the directory's config files are the sources, in upstream merge order"
+        );
+        assert!(custom_dir.iter().all(|c| c.note.is_none()));
+    }
+
+    #[test]
+    fn custom_dir_never_treats_the_environment_value_as_a_config_file() {
+        // `$OPENCODE_CONFIG_DIR` names a directory; a file-valued variable contributes nothing
+        // because upstream looks for `<value>/opencode.json`. Regression for a real Windows beta
+        // observation (a file value was read, a directory value was refused).
+        let mut ctx = ctx("/home/dev/work/p", "/home/dev/.config", "/home/dev");
+        ctx.env = Some(std::collections::BTreeMap::from([(
+            "OPENCODE_CONFIG_DIR".to_string(),
+            "/srv/team/ocdir/opencode.json".to_string(),
+        )]));
+        let access = MemoryFileAccess::new()
+            .with_file(host_path(&["/srv/team/ocdir", "opencode.json"]), "{}");
+        let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
+        assert!(
+            plan.candidates
+                .iter()
+                .all(|c| c.layer_id != "oc.custom_dir"),
+            "a file-valued variable must not become an oc.custom_dir source"
+        );
     }
 
     #[test]
