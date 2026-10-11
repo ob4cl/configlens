@@ -24,9 +24,8 @@ Two audiences live in this directory. Start with the first list.
 - [`../compatibility/`](../compatibility/) — per-client compatibility registries with source URLs,
   retrieval dates, pinned-commit status and rule→test IDs.
 
-## Maintainer and planning notes
+## Launch preparation
 
-- [`beta/`](beta/) — private-beta planning: pilot guide, tester instructions, launch drafts, success
-  metrics, release runbook and the milestone checklist. Historical context for how the beta was run.
 - [`launch/`](launch/) — the public-launch audit and the publication checklist.
-- [`../.github/AUTOMATION.md`](../.github/AUTOMATION.md) — CI, release mechanics and action pinning.
+- [`../.github/workflows/`](../.github/workflows/) — CI and release workflows; `.github/AUTOMATION.md`,
+  which documented them, is now maintained in the private archive.

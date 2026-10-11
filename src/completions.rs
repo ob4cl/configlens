@@ -1,4 +1,4 @@
-//! Shell completion scripts generated from the live clap command definition (spec §10 packaging).
+//! Shell completion scripts generated from the live clap command definition.
 //!
 //! No `clap_complete` dependency: the generator walks the same `clap::Command` tree the parser
 //! uses, so the completions cannot drift from the actual CLI surface. Generation is offline,

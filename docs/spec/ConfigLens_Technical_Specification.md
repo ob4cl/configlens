@@ -302,37 +302,7 @@ Performance target, not benchmark claim: under 150 ms warm run for 20 small file
 9. No config files: valid empty inventory, clearly distinguished from unobservable enterprise/runtime state.
 10. Runtime arguments supplied via context: recognized flags affect verified keys; unknown flags introduce coverage gaps.
 
-## 10. Milestones and 30-day roadmap
-
-Assumption: solo developer working roughly 4–6 focused hours/day with agent assistance. These are planning estimates, not commitments. A production-grade multi-client release may need 6–10 weeks.
-
-| Days | Deliverable | Exit gate |
-|---|---|---|
-| 1–3 | Validate pain with users; name/package check; pin initial client versions; rule/evidence registry; synthetic demo fixtures | Two reproducible real-use problems and explicit adapter boundaries |
-| 4–7 | Rust crate, context, safe file reader, span-preserving parser, typed provenance model, redaction projection | Parser/security tests pass; no renderer sees raw values |
-| 8–11 | OpenCode bounded local adapter; scan/explain and coverage | Scalar/nested rules verified against pinned evidence; remote/MDM gaps shown |
-| 12–15 | Claude bounded settings adapter and per-key rules | Positive/negative fixtures; special lists excluded unless proven |
-| 16–19 | doctor, JSON schema, snapshot/diff, strict mode, exit codes | Acceptance examples pass end to end |
-| 20–23 | Cross-platform discovery, property/fuzz smoke, dependency review, benchmarks | Three-OS CI green; zero leaks in seeded-secret suite |
-| 24–26 | README, support matrix, security/contribution docs, completion generation, binary packaging | Fresh machine/fixture quick start works |
-| 27–28 | Private beta with five testers; fix confusing explanations | Users diagnose at least three actual incidents; all serious correctness/security findings closed |
-| 29–30 | Publish 0.1 if gates pass; terminal demo and launch write-up | Honest support labels, tested assets, release notes and rollback procedure |
-
-If behind: cut snapshot/diff before cutting redaction, source provenance or coverage honesty. Move Claude to experimental if its semantics remain uncertain. No invented compatibility to hit the calendar.
-
-### After 0.1
-
-0.2: Codex trust/profile/requirements inventory, Gemini settings and validated env rules; instructions inventory behind a separate namespace. 0.3: validated instructions selection/assembly, safely supplied enterprise snapshots and maintainers' integration needs. Permission-policy evaluation is a separate substantial feature with its own threat model.
-
-### Release and distribution
-
-Dual MIT/Apache-2.0 proposed. Verify bundled schema/fixture licensing; retain attribution. Commit Cargo.lock for the executable. Release tagged source, binaries, checksums, SBOM where practical and provenance attestations. Proposed targets: x86_64/aarch64 Linux, x86_64/aarch64 macOS, x86_64 Windows; promote only targets actually tested. Reproducible builds are an aspiration until independently reproduced.
-
-Start with GitHub Releases and `cargo install` once published and name confirmed; add Homebrew/Scoop through maintained recipes later. Avoid mandatory curl-to-shell installation. Verify downloads and document manual installation.
-
-Launch with a technical explanation of one reproducible precedence bug, not vague AI hype. Seek permission before posting to others' communities. Offer complementary workflows to Ruler/Rulesync maintainers without implying endorsement. First 100 users: five beta users, one strong demo, relevant community posts and searchable troubleshooting docs. First 1,000 requires repeat utility and integrations; cannot be guaranteed. Do not mass-solicit stars.
-
-## 11. Proposed README (adapt after implementation)
+## 10. Proposed README (adapt after implementation)
 
 The following is a complete starting draft. Replace planned capabilities with actual support before release; do not present it as a working repository today.
 
@@ -402,38 +372,7 @@ Report vulnerabilities through the private channel specified in `SECURITY.md` on
 
 ---
 
-## 12. Detailed implementation prompt for a coding agent
-
-Copy this section with the specification into your coding agent. It instructs implementation, not further idea generation.
-
-> You are the lead Rust engineer implementing ConfigLens, a professional open-source CLI for explaining AI coding-tool configuration precedence. Read the complete ConfigLens specification supplied with this prompt and treat its safety, compatibility and output requirements as acceptance criteria. Prioritise correctness, source provenance and developer trust over feature count or visual polish.
->
-> Work autonomously inside the authorised local repository. Inspect existing files and repository instructions first; preserve unrelated changes. If this is a new project, scaffold one Cargo package with a reusable library and executable. Do not publish packages, push commits, create public posts or invoke external agents/services unless separately authorised. Local builds, tests, docs and synthetic examples are in scope.
->
-> First create `docs/implementation-status.md` containing a checklist of the specification requirements and `docs/decisions.md` recording concrete tradeoffs. Identify unsupported or uncertain behaviours before coding. Do not guess precedence, defaults, profile formats, environment handling or array merging. Research official docs and the exact upstream loader version for each advertised rule. Store URLs, retrieved date, pinned commit where available, exact supported client versions and rule test IDs in `compatibility/`. If browsing is unavailable, implement only rules backed by supplied evidence and label their limits.
->
-> Implement in this order:
-> 1. Clap command contracts, report model/schema, sanitized error boundary and exit-code priority. Add fixture-only `clients` output, not claims of finished adapters.
-> 2. Injected resolution context and file-access abstraction. Bounded regular-file reads, approved-root checks, platform path handling, symlink loop/escape handling and no subprocess/network execution.
-> 3. Span-preserving JSON and JSONC parser with duplicate-key handling, plus native source/definition/event IDs. No regex comment stripping. Keep raw values behind a non-serializable sensitive type; renderers may only receive redacted public DTOs.
-> 4. Pure client-neutral replacement/object/list operators with provenance. Do not attach a generic merge rule to unsupported keys. Model null, missing and empty separately.
-> 5. OpenCode adapter for the explicit bounded 0.1 local scope. Include expected remote/MDM/runtime gaps and per-key completeness. Verify exact local discovery and json/jsonc priority from the pinned loader rather than guessing.
-> 6. Claude adapter for bounded, verified settings keys. Keep file settings, actual environment, supplied session flags and managed settings distinct. Do not claim permissions are executable-policy decisions. Do not implement special list merging until it has evidence and tests.
-> 7. `scan`, `explain`, `doctor`, strict mode, stable JSON and evidence references. Unknown versions/keys get inventory or partial results, never invented winners.
-> 8. Safe snapshot and diff: create-new output by default, explicit overwrite, sanitized share paths, redacted values and unknown comparison for secret fields. No secret hashes.
-> 9. Security tests, property tests, short fuzz targets, cross-platform CI, benchmarks, docs and release configuration. Choose a current Rust stable toolchain and explicit tested MSRV; pin dependencies only after checking APIs/licences. No fake benchmark numbers.
->
-> Mandatory test fixtures: scalar replacement, nested objects, supported list behaviour, unknown setting, unknown version, missing managed context, unknown trust, supplied arguments, malformed highest layer, duplicate keys, JSONC strings containing comment markers, env/file interpolation with secret taint, symlink escape/loop, worktree root, resource limit, Windows path display, redacted snapshot diff and terminal-control payloads. Seed synthetic secrets into keys, values, paths, URLs, parser errors and context. Assert they appear nowhere in stdout, stderr, JSON, logs, snapshots or diffs. Tests must use isolated synthetic homes and captured env; never read the developer's real credentials.
->
-> Normal ConfigLens execution must never spawn a process or make a network call. Maintainer conformance harnesses, if feasible, run only pinned loader code on synthetic inputs in a separate restricted environment. Do not use complete AI clients as automated test oracles where they could load hooks/plugins, connect MCP servers or spend tokens. When runtime parity cannot be proved, preserve documented or fixture-verified support labels.
->
-> Acceptance: every advertised rule has primary evidence and positive/negative tests; every result retains provenance; unknown higher-priority context prevents an unjustified effective value; renderers cannot serialize raw input; all specified exit codes work; fmt/clippy/locked tests pass; platform-specific limitations are visible; README examples execute against bundled synthetic fixtures.
->
-> Work in small reviewable increments. After each milestone, record code changed, verification performed and unresolved semantics in the status document. Continue through all locally achievable work; do not stop at scaffolding or planning. If a rule is blocked, explicitly downgrade its support and continue independent tasks. Do not ask for routine implementation choices already settled by the specification.
->
-> Finish with the implemented scope, tests actually run, measured benchmarks if any, unsupported behaviours, exact local demo commands and next milestone. Do not claim any publication, version parity, cross-platform validation or security property you have not verified.
-
-## 13. Research sources and evidence boundaries
+## 11. Research sources and evidence boundaries
 
 [S1] Ruler primary repository: https://github.com/intellectronica/ruler
 

@@ -1,4 +1,4 @@
-//! OpenCode adapter — bounded 0.1 local scope (spec §3, §12 step 5).
+//! OpenCode adapter — bounded 0.1 local scope (spec §3).
 //!
 //! Implemented: local scalar settings, nested object merges, verified `{env:}`/`{file:}`
 //! interpolation, JSON/JSONC sources, `$OPENCODE_CONFIG` (a file), `$OPENCODE_CONFIG_DIR` (a

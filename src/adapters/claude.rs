@@ -1,4 +1,4 @@
-//! Claude Code adapter — bounded, verified settings keys (spec §3, §12 step 6).
+//! Claude Code adapter — bounded, verified settings keys (spec §3).
 //!
 //! File settings, actual environment, supplied session flags and managed settings stay distinct:
 //! environment variables are *not* a precedence level, they are decided per key/pair.

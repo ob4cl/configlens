@@ -45,7 +45,7 @@ runtime-conformance claim.
 
 ---
 
-## 0. Repository contents (spec §6 layout, §12 first steps)
+## 0. Repository contents (spec §6 layout)
 
 | Item | Status | Evidence / reality |
 |---|---|---|
