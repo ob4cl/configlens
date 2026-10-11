@@ -48,9 +48,9 @@ reasons for moderation decisions when appropriate.
 ## Scope
 
 This Code of Conduct applies within all project spaces, and also applies when an individual is
-officially representing the project in public spaces. Because this is a private beta, "project
-spaces" means the repository itself — issues, pull requests, discussions and review threads — and any
-direct messages between members related to the project.
+officially representing the project in public spaces. "Project spaces" means the repository itself —
+issues, pull requests, discussions and review threads — and any direct messages between members
+related to the project.
 
 ## Reporting
 
@@ -65,8 +65,9 @@ inside the repository:
   another maintainer through a private channel available in the repository.
 
 All complaints will be reviewed and investigated promptly and fairly. Maintainers are obligated to
-respect the privacy and security of the reporter of any incident. A dedicated reporting channel will
-be published here when the project stops being a private beta.
+respect the privacy and security of the reporter of any incident. Report an incident privately, using
+the repository's **Security → Report a vulnerability** channel or by contacting the maintainer through
+GitHub; reports are handled confidentially.
 
 ## Enforcement guidelines
 
