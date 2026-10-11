@@ -28,6 +28,17 @@ pub fn ctx(client: &str, cwd: &str) -> ResolutionContext {
     ctx
 }
 
+/// A path that is absolute on the host platform. `Path::is_absolute` is platform specific:
+/// `/etc/secret` is rooted but NOT absolute on Windows, so a synthetic reference written that
+/// way would take a different (though still refusing) code path there.
+pub fn host_abs(posix: &str) -> String {
+    if cfg!(windows) {
+        format!("C:{posix}")
+    } else {
+        posix.to_string()
+    }
+}
+
 pub fn with_trust(mut ctx: ResolutionContext, trust: Trust) -> ResolutionContext {
     ctx.trust = trust;
     ctx

@@ -39,7 +39,7 @@ jobs:
       - name: Install stable Rust
         run: rustup toolchain install stable --profile minimal
       - name: Test locked dependencies (including doctests)
-        run: cargo +stable test --locked --all-features
+        run: cargo +stable test --locked --all-features --no-fail-fast
       - name: Test release tooling with synthetic fixtures
         run: python -m unittest discover -s scripts -p 'test_*.py' -v
 

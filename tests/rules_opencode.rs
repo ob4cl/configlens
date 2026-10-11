@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{ctx, mem, policy_for, run, run_with, with_env};
+use common::{ctx, host_abs, mem, policy_for, run, run_with, with_env};
 use configlens::adapters::Client;
 use configlens::context::Trust;
 use configlens::model::event::EventKind;
@@ -306,10 +306,12 @@ fn oc_env_interpolation_unresolved_without_context() {
 
 #[test]
 fn oc_file_interpolation_requires_allow_read_root() {
+    let outside = host_abs("/etc/secret-model");
+    let blocked_spec = format!(r#"{{"model": "{{file:{outside}}}"}}"#);
     let blocked = run(
         Client::OpenCode,
         &oc_ctx(),
-        &[(PROJECT, r#"{"model": "{file:/etc/secret-model}"}"#)],
+        &[(PROJECT, blocked_spec.as_str())],
     );
     let r = blocked.explain("/model");
     assert!(r
@@ -318,13 +320,13 @@ fn oc_file_interpolation_requires_allow_read_root() {
         .any(|e| e.reason_code.as_deref() == Some("file_reference_blocked")));
 
     let mut allowed = oc_ctx();
-    allowed.approved_roots = vec!["/home/synthetic/work".into()];
+    let root = host_abs("/home/synthetic/work");
+    let readable = format!("{root}/model.txt");
+    let allowed_spec = format!(r#"{{"model": "{{file:{readable}}}"}}"#);
+    allowed.approved_roots = vec![root.into()];
     let files = mem(&[
-        (
-            PROJECT,
-            r#"{"model": "{file:/home/synthetic/work/model.txt}"}"#,
-        ),
-        ("/home/synthetic/work/model.txt", "SEEDED-FILE-MODEL"),
+        (PROJECT, allowed_spec.as_str()),
+        (readable.as_str(), "SEEDED-FILE-MODEL"),
     ]);
     let output = run_with(Client::OpenCode, &allowed, &files);
     let r = output.explain("/model");
