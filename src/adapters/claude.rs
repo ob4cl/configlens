@@ -241,6 +241,16 @@ mod tests {
             .collect()
     }
 
+    /// A host-native path built from `parts`, mirroring how the adapters push components.
+    /// Windows joins with `\`, so a `/`-separated literal would never compare equal there.
+    fn host_path(parts: &[&str]) -> String {
+        let mut path = PathBuf::new();
+        for part in parts {
+            path.push(part);
+        }
+        path.display().to_string()
+    }
+
     fn layer<'a>(plan: &'a DiscoveryPlan, id: &str) -> Vec<&'a Candidate> {
         plan.candidates
             .iter()
@@ -251,9 +261,10 @@ mod tests {
     #[test]
     fn finds_user_settings_in_the_claude_home() {
         let ctx = ctx("/home/dev/work/p", "/home/dev");
-        let access = MemoryFileAccess::new().with_file("/home/dev/.claude/settings.json", "{}");
+        let user = host_path(&["/home/dev", ".claude", "settings.json"]);
+        let access = MemoryFileAccess::new().with_file(user.clone(), "{}");
         let plan = ClaudeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
-        assert!(paths(&plan).contains(&"/home/dev/.claude/settings.json".to_string()));
+        assert!(paths(&plan).contains(&user));
         assert_eq!(layer(&plan, "cc.user").len(), 1);
     }
 
@@ -264,10 +275,12 @@ mod tests {
             "CLAUDE_CONFIG_DIR".to_string(),
             "/srv/claudehome".to_string(),
         )]));
-        let access = MemoryFileAccess::new().with_file("/srv/claudehome/settings.json", "{}");
+        let configured = host_path(&["/srv/claudehome", "settings.json"]);
+        let default_home = host_path(&["/home/dev", ".claude", "settings.json"]);
+        let access = MemoryFileAccess::new().with_file(configured.clone(), "{}");
         let plan = ClaudeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
-        assert!(paths(&plan).contains(&"/srv/claudehome/settings.json".to_string()));
-        assert!(!paths(&plan).contains(&"/home/dev/.claude/settings.json".to_string()));
+        assert!(paths(&plan).contains(&configured));
+        assert!(!paths(&plan).contains(&default_home));
     }
 
     #[test]
@@ -398,7 +411,7 @@ mod tests {
         let mut ctx = ctx("/home/dev/work/p", "/home/dev");
         let adapter = ClaudeAdapter::new();
         let plan = adapter.discover(&ctx, &MemoryFileAccess::new(), &policy(&ctx, None));
-        assert!(paths(&plan).contains(&"/etc/claude-code/managed-settings.json".to_string()));
+        assert!(paths(&plan).contains(&host_path(&["/etc/claude-code", MANAGED_FILE])));
 
         ctx.os = Os::Windows;
         let plan = adapter.discover(&ctx, &MemoryFileAccess::new(), &policy(&ctx, None));
