@@ -11,14 +11,82 @@ winner — with the file, line and reason for each contribution, including the o
 It never executes your configuration, never runs a client binary, opens no socket and reads no
 credential. Values are redacted unless an adapter explicitly allowlists them.
 
-> **Private beta — version 0.1.0-beta.3.** This checkout is a working prototype, not a finished
-> product. There is **no published crate or binary**, and nothing here claims upstream conformance.
-> The tool version is unified: `configlens --version`, the report's `tool_version` field, the SBOM
-> root component and the `v0.1.0-beta.3` tag all read `0.1.0-beta.3` (`schema_version` stays the
-> report-schema `1.0` and the adapter `adapter_revision` stays `0.1.0` — they are independent).
-> Benchmarks exist and are documented, with the measured scaling, in
-> [`docs/implementation-status.md`](docs/implementation-status.md). Exactly what is implemented and
-> verified is tracked item by item there.
+> **Pre-release, `0.1.0-beta.3`.** A working prototype, not a finished product: both adapters are
+> fixture-verified rather than runtime-conformant, and unreadable layers are reported as gaps instead
+> of guessed. [Status](#status) says exactly what that means.
+
+## Install
+
+Prebuilt binaries are attached to every release. Three targets ship today:
+
+| Platform | Release archive |
+|---|---|
+| Windows (x86-64) | `configlens-<tag>-x86_64-pc-windows-msvc.zip` |
+| macOS (Apple Silicon) | `configlens-<tag>-aarch64-apple-darwin.tar.gz` |
+| Linux (x86-64, glibc) | `configlens-<tag>-x86_64-unknown-linux-gnu.tar.gz` |
+
+Each release also carries a `SHA256SUMS` file and a CycloneDX SBOM per target. The binaries are
+**unsigned** and there is no installer or package manager; replace `<tag>` below with the release you
+want (currently `v0.1.0-beta.3`).
+
+### Verify the download
+
+Linux and macOS:
+
+```sh
+tag=v0.1.0-beta.3
+target=x86_64-unknown-linux-gnu              # or aarch64-apple-darwin
+base=https://github.com/ob4cl/configlens/releases/download/$tag
+curl -LO $base/configlens-$tag-$target.tar.gz
+curl -LO $base/SHA256SUMS
+sha256sum -c --ignore-missing SHA256SUMS      # macOS: use shasum -a 256 -c
+tar xzf configlens-$tag-$target.tar.gz
+./configlens-$tag-$target/configlens --version
+```
+
+Windows (PowerShell):
+
+```powershell
+$tag  = 'v0.1.0-beta.3'
+$repo = 'ob4cl/configlens'
+# With the GitHub CLI:
+gh release download $tag --repo $repo --pattern '*windows-msvc.zip'
+gh release download $tag --repo $repo --pattern 'SHA256SUMS'
+# Without it: download both files from the release page in a browser.
+
+$zip      = Get-ChildItem *windows-msvc.zip | Select-Object -First 1
+$expected = (Get-Content .\SHA256SUMS | Select-String $zip.Name).Line.Split()[0]
+$actual   = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash.ToLower()
+if ($actual -ne $expected) { throw 'SHA256 mismatch - do not run this file' }
+Expand-Archive $zip.FullName -DestinationPath unpacked
+& .\unpacked\configlens-*\configlens.exe --version
+```
+
+Expect `configlens 0.1.0-beta.3`. On macOS the archive is not notarized, so Gatekeeper warns on first
+run: right-click → Open, or `xattr -d com.apple.quarantine <binary>`.
+
+### Install from source
+
+Any platform with Rust 1.85 or newer:
+
+```sh
+cargo install --locked --git https://github.com/ob4cl/configlens
+```
+
+Or from a checkout: `cargo build --locked --release`, which leaves the binary at
+`target/release/configlens`.
+
+**Not available yet:** macOS Intel, Linux arm64, crates.io, Homebrew, Scoop/winget. There is no
+mandatory curl-to-shell installer, and nothing here contacts the network at run time.
+
+## Your first command
+
+```sh
+configlens explain /model --client claude --client-version 2.1.296
+```
+
+That prints the observed winner for `model` with the file, line and reason for every contribution.
+[A real terminal example](#a-real-terminal-example) shows the full output and how to read it.
 
 ## The question this answers
 
@@ -120,8 +188,8 @@ reads a client binary), `--format text|json`, `--strict`, `--no-env`, `--input-c
 `wrote N bytes` line and the support-report write/`--preview` notes. Errors are always printed to
 stderr, stdout stays machine-readable (JSON), and exit codes are unchanged. `snapshot` adds
 `--output`/`--overwrite`; `doctor` adds
-`--fail-on warning|error`; `support-report` takes `--preview` **or** `--output <PATH>` (neither is a
-usage error); `completions` takes `--shell bash|zsh|fish`.
+`--fail-on warning|error`; `support-report` takes `--preview` or `--output <PATH>`; supplying neither is a usage
+error (exit `2`), and if both are given `--preview` wins and nothing is written; `completions` takes `--shell bash|zsh|fish`.
 
 ### Exit codes
 
@@ -136,6 +204,13 @@ usage error); `completions` takes `--shell bash|zsh|fish`.
 When several apply, the priority is `2 → 4 → 3 → 1 → 0`.
 
 ## What "wins" actually means
+
+Three terms carry the weight in every report:
+
+- **observed winner** — the highest-precedence definition among the sources ConfigLens could read.
+- **fixture_verified** — the rule was checked against this project's fixtures and upstream
+  documentation, **not** against a running client.
+- **coverage gap** — a source that exists but could not be read, so the effective value is withheld.
 
 ConfigLens is a static analyser of the inputs it can read. It does not inspect a running session and
 it never assumes an unreadable layer is absent. That has three visible consequences:
@@ -197,6 +272,23 @@ CLI, Cline, Roo and Hermes (not investigated). Run `configlens clients` for the 
   of scope for 0.1. Save snapshots in a **private, user-controlled directory** (for example
   `%USERPROFILE%`, not a shared or world-readable folder) so the inherited ACL is the one you mean.
 - Reports still describe your project structure. Never paste raw credential files into an issue.
+
+## Status
+
+`0.1.0-beta.3`, pre-release. The honest summary:
+
+- Two adapters ship — **Claude Code** and **OpenCode** — both at most `fixture_verified`. No rule
+  claims upstream conformance, because no upstream loader is executed in the tests.
+- Some layers are **always** reported as coverage gaps rather than guessed; they are listed per
+  client in [Compatibility](#compatibility).
+- Windows snapshot ACL restriction is not implemented, and the report says so rather than implying a
+  protection that does not exist.
+- The engine is quadratic in key count; real configurations have tens of keys, where it is
+  sub-millisecond. The measured scaling is in
+  [`docs/implementation-status.md`](docs/implementation-status.md).
+- What is implemented, verified and **not** verified is tracked item by item in
+  [`docs/implementation-status.md`](docs/implementation-status.md), with the commands actually run in
+  [`docs/verification-log.md`](docs/verification-log.md).
 
 ## Requirements
 

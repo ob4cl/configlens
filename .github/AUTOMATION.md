@@ -1,4 +1,4 @@
-# Private-beta automation
+# Repository automation
 
 ## CI
 
@@ -31,11 +31,14 @@ Only official actions are used, pinned to full commit IDs. The hosted images sup
 rustup and Python. Test results must be checked on GitHub after integration; local
 Linux results cannot establish Windows/macOS support.
 
-## Manual private prerelease
+## Manual beta prerelease
 
-Nothing publishes on a push, including a tag push. `prerelease.yml` accepts only
-`workflow_dispatch`, from `main` in private `ob4cl/configlens`, with an explicit
-existing `vMAJOR.MINOR.PATCH-beta.N` tag. It resolves the tag to a commit, requires
+Nothing publishes on a push, including a tag push. `prerelease.yml` (workflow
+name **Beta prerelease**) accepts only `workflow_dispatch`, from `main` in
+`ob4cl/configlens`, with an explicit existing `vMAJOR.MINOR.PATCH-beta.N` tag.
+Repository visibility is deliberately **not** gated: the workflow behaves the same
+whether the repository is private or public, so publishing the repository does not
+silently disable releases. It resolves the tag to a commit, requires
 that commit to be an ancestor of the dispatch commit, then runs the complete CI
 workflow against that exact SHA. All checks must pass before builds start.
 
@@ -57,9 +60,9 @@ Maintainer procedure (not performed by this implementation):
    workflow does not change the Cargo version, but it does reject a tag whose version
    does not equal the package version at that tag, so bump `Cargo.toml` `version` (and
    `Cargo.lock`) in the commit that gets tagged.
-3. In Actions, choose **Private beta prerelease**, **Run workflow**, branch `main`,
+3. In Actions, choose **Beta prerelease**, **Run workflow**, branch `main`,
    and enter the exact existing tag. No token secret configuration is required.
-4. Inspect the private prerelease and independently download/verify its assets.
+4. Inspect the pre-release and independently download/verify its assets.
    Checksums detect corruption, not publisher identity; binaries are unsigned.
 
 Archives contain only the binary, README.md, LICENSE-MIT, and LICENSE-APACHE:
@@ -81,9 +84,10 @@ Only the publishing job has `contents: write`; other jobs have `contents: read`.
 The write-enabled job does not check out or execute repository code. It rechecks
 the tag SHA before release creation. Existing releases are not overwritten; a
 partial publication requires maintainer inspection rather than blind reruns.
-Artifacts/releases in a private repository still require appropriate repository
-access and may consume private Actions billing/storage. Do not make the repository
-public without separately reviewing existing assets and release policy.
+While the repository is private, its artifacts and releases require repository
+access and may consume private Actions billing/storage; once public they are
+readable by anyone. Changing visibility is a separate, approval-gated decision —
+see `docs/launch/publication-checklist.md`.
 
 ## Local validation
 

@@ -3,29 +3,24 @@
 ConfigLens reads other tools' configuration files and prints reports that people may attach to
 issues. Its safety properties are the product, so security reports are taken seriously.
 
-> **This repository is private (private beta).** That changes how you report, not whether you should:
-> everything below assumes the report stays inside this repository until it is fixed. There is **no
-> public vulnerability intake channel yet**, and there is no bug bounty. GitHub private
-> vulnerability reporting can only be enabled on public repositories, so it will be switched on when
-> the beta is published; until then, reporting means a private issue in this repository.
+> **ConfigLens is pre-release software.** Reports are welcome and taken seriously; there is no bug
+> bounty. Use GitHub's private vulnerability reporting where it is offered, open an ordinary issue
+> otherwise, and never put real credentials or real configuration into either.
 
 ## How to report
 
-Because the repository is private, anyone with access is already in a restricted channel. Choose the
-first option that is available to you:
+Use the first option available to you:
 
-1. **GitHub private vulnerability reporting.** Open the repository's **Security** tab and use
-   **Report a vulnerability** *if that option is present*. It is a per-repository setting and is not
-   guaranteed to be enabled; if you do not see it, use option 2.
-2. **A normal issue in this repository.** Since the repository is private, issues are visible only to
-   maintainers and invited beta testers. Open an issue with a short, factual title (for example
-   `redaction: seeded token appears in --paths share URL host`) and keep the body minimal:
-   the command, the ConfigLens version, a **minimal synthetic** input that reproduces it, and
-   expected versus observed output.
+1. **GitHub private vulnerability reporting** — the preferred channel. Open the repository's
+   **Security** tab and choose **Report a vulnerability**. The maintainer enables this at
+   publication; if you do not see it, use option 2.
+2. **An ordinary issue**, with a short factual title (for example
+   `redaction: seeded token appears in --paths share URL host`) and a minimal body: the command, the
+   ConfigLens version, a **minimal synthetic** input that reproduces it, and expected versus observed
+   output.
 
-If neither option is available to you — you are outside the beta and have no repository access —
-then this project has no way to receive your report yet. Please **do not disclose it publicly**;
-an intake channel will be documented when the beta opens.
+If you believe something is exploitable, prefer a **minimal description of the class of problem**
+over a public proof of concept, so other users are not exposed before a fix exists.
 
 Do **not** put real credentials, real configuration dumps or third-party secrets in a report.
 Reduce every example to obviously fake, synthetic values. If a value in your reproduction is
@@ -73,8 +68,7 @@ section 7).
 ## What to expect
 
 - We will confirm receipt, reproduce, and agree a fix and a disclosure time with you.
-- This is a small private-beta project run by volunteers: there is no guaranteed response time and
-  no monetary reward.
-- Because the repository is private and there is no release yet, fixes ship to the checkout and are
-  recorded in [`CHANGELOG.md`](CHANGELOG.md); a public advisory process will be defined when the
-  project is published. Credit is given on request.
+- This is a small project run by one maintainer in their own time: there is no guaranteed response
+  time and no monetary reward.
+- Fixes ship in the next release and are recorded in [`CHANGELOG.md`](CHANGELOG.md). Credit is given
+  on request.

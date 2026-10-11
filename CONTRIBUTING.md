@@ -1,8 +1,8 @@
 # Contributing to ConfigLens
 
-Thanks for helping. This is a **private beta**: the repository is visible to maintainers and invited
-beta testers only, and there is no public release yet. Contributions that improve correctness,
-diagnostics and evidence are the most valuable kind.
+Thanks for helping. ConfigLens is **pre-release software** (`0.1.0-beta.3`): the interfaces and the
+adapter support levels can still change, and the project deliberately claims less than it does.
+Contributions that improve correctness, diagnostics and evidence are the most valuable kind.
 
 Before anything else, read the two things that keep this project honest:
 
@@ -25,8 +25,10 @@ Before anything else, read the two things that keep this project honest:
 
 ## Prerequisites
 
-- A Rust toolchain. `Cargo.toml` declares `rust-version = "1.85"`, but the project has only been
-  built and tested with `1.99.0` so far — see [`docs/verification-log.md`](docs/verification-log.md).
+- A Rust toolchain. `Cargo.toml` declares `rust-version = "1.85"` and the declared MSRV is
+  **verified**: `cargo +1.85.0 check --locked --all-targets --all-features` passes locally and in the
+  CI `msrv` job. Local development used `1.99.0` — see
+  [`docs/verification-log.md`](docs/verification-log.md).
 - No AI client needs to be installed, and no network access is needed at run time.
 
 ## Build and test
