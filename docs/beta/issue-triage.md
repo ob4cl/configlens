@@ -19,7 +19,7 @@ Pick exactly one primary type:
 | Type | Meaning |
 |---|---|
 | Security | Network/subprocess/traversal/redaction failure, or a secret reaching any output channel. |
-| Privacy-leak | A value that should be redacted appearing in output (incl. the known URL-host gap). |
+| Privacy-leak | A value that should be redacted appearing in output, in any channel, including `--paths share`. |
 | Correctness | Wrong winner, wrong provenance, wrong status/exit code, wrong rule. |
 | Coverage | Tool claims more certainty than the available sources justify. |
 | UX / docs | Confusing output, missing guidance, README error. |

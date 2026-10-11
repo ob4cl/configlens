@@ -55,17 +55,17 @@ keys for two clients.
 - **Licensing and docs** — dual `MIT OR Apache-2.0` license texts (`LICENSE-MIT`, `LICENSE-APACHE`),
   this changelog, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`,
   `docs/getting-started.md`, `docs/maintaining.md` and a title graphic.
-- **Tests** — 270 passing (177 library unit tests plus 93 integration tests) per the recorded run.
+- **Share-mode privacy** — `--paths share` pseudonymizes URL hosts as well as paths, user info, query
+  strings and fragments (`https://host_1/mcp?[redacted]`), in every output channel.
+- **Tests** — 296 passing (191 library unit tests plus 105 integration tests) per the recorded run.
 
 ### Known limitations
 
 - **No upstream conformance run.** No pinned loader harness exists, so every advertised rule is at
   most `fixture_verified`; none claims `upstream_conformance_verified`.
-- **`--paths share` does not pseudonymize URL hosts.** Userinfo, query and fragment are stripped, but
-  a host may still be shown in both modes.
 - **Windows ACLs on snapshot output are not implemented.** The report states this rather than
   pretending.
-- **Declared MSRV not built.** `rust-version = "1.85"` is declared; the verified toolchain is
-  `1.99.0`.
+- **MSRV verified in CI.** `rust-version = "1.85"` is declared and the MSRV job builds the crate with
+  1.85.0; local development used 1.99.0.
 - **No benchmarks and no published artifacts.** `fixtures/`, `examples/` and `benches/` are empty
   directories; fixtures are inline in the test files.
