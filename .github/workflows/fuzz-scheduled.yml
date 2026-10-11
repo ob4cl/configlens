@@ -38,7 +38,7 @@ jobs:
       # Bounded wall-clock per target. Scheduled runs use the default; a manual dispatch can raise it.
       FUZZ_SECONDS: ${{ github.event.inputs.seconds || '600' }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install nightly Rust
