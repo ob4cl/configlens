@@ -1,8 +1,9 @@
 # Publication checklist — preparing ConfigLens for a public repository
 
-Status: **prepared, nothing applied.** No setting below has been changed, no file has been moved, and
-the repository is still private. This document is the single source of truth for the switch from
-PRIVATE to PUBLIC.
+Status: **partly executed.** A2 and A3 are done (internal planning material relocated to a private
+archive, and the specification's commercial roadmap and coding-agent brief removed) and A1 and A7 are
+approved. **No GitHub setting below has been applied** and the repository is still private, so this
+document remains the single source of truth for the switch from PRIVATE to PUBLIC.
 
 Owner decisions this checklist implements:
 
@@ -38,9 +39,9 @@ maintainer planning notes and research transcripts. Three options:
 | `docs/getting-started.md`, `docs/decisions.md`, `docs/implementation-status.md`, `docs/verification-log.md`, `docs/maintaining.md`, `docs/demo/README.md` | Developer/maintainer documentation | Public | Keep |
 | `compatibility/*/registry.md`, `docs/assets`, `demo/`, `benches/`, `fuzz/README`-equivalent comments | Product evidence and assets | Public | Keep |
 | `docs/research/*` (compatibility audit, fuzz recovery, discovery finding, three launch audits) | Research transcripts and audits | Public-safe | Keep — cite as evidence |
-| `docs/spec/ConfigLens_Technical_Specification.md` | Design spec, **including §10 commercial roadmap and §12 coding-agent brief** | Needs redaction | Strip §10 and §12, or relocate the file (Option B) |
-| `docs/beta/*` (1,397 lines: pilot guide, outreach messages, launch drafts, success metrics, issue triage, tester instructions, release runbook, milestone checklist, user-actions, windows plan) | Internal planning, recruitment and business intent | Relocate or accept | Option A: keep + index. Option B: relocate |
-| `.github/AUTOMATION.md` | Maintainer release mechanics | Internal in tone | Keep (it is honest and useful) or relocate with `docs/beta/` |
+| `docs/spec/ConfigLens_Technical_Specification.md` | Design spec | **Done (A3)** | The commercial roadmap (old §10) and the coding-agent brief (old §12) are removed; the document is renumbered §1–§11 and remains the design record |
+| `docs/beta/*` (1,397 lines: pilot guide, outreach messages, launch drafts, success metrics, issue triage, tester instructions, release runbook, milestone checklist, user-actions, windows plan) | Internal planning, recruitment and business intent | **Relocated (A2)** | Moved to the private archive `~/configlens-internal-archive/docs-beta-20261011/`; removed from the public tree |
+| `.github/AUTOMATION.md` | Maintainer release mechanics | **Relocated (A2)** | Moved to `~/configlens-internal-archive/AUTOMATION.md`; the workflows themselves remain public and are self-documenting |
 
 ### Exact commands for Option B (not run)
 
@@ -185,9 +186,11 @@ All seven come from the `CI` workflow (`.github/workflows/ci.yml`) and must be r
 
 ## 6. Actions awaiting your approval
 
-- **A1** Merge this preparation PR.
-- **A2** Choose §1 Option A (keep + index) or Option B (relocate internal material).
-- **A3** Decide whether to strip `docs/spec` §10 (commercial roadmap) and §12 (coding-agent brief).
+- **A1** ✔ Approved and merged (fast-forward).
+- **A2** ✔ Executed — internal planning material relocated to the private archive.
+- **A2** ✔ Executed — `docs/beta/*` and `.github/AUTOMATION.md` relocated (see §1).
+- **A3** ✔ Executed — the specification's commercial roadmap and coding-agent brief are removed and the
+document renumbered.
 - **A4** Approve the exact §2 settings and say when to apply them (they require the repo to be public,
   or a temporary Pro upgrade).
 - **A5** Confirm the release-workflow change is acceptable (the visibility gate is removed; every

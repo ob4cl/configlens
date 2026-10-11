@@ -11,11 +11,42 @@ account of what is implemented and verified, see
 [`docs/implementation-status.md`](docs/implementation-status.md) and
 [`docs/verification-log.md`](docs/verification-log.md).
 
-## 0.1.0-beta.3 — unreleased (requires a new beta build)
+## Unreleased — public-launch preparation (documentation and workflow only)
 
-Not yet published. These changes are on the `release/0.1.0-beta.3` branch and require a **new beta
-build**: version identification changed (so the earlier beta artefacts no longer describe this tree)
-and one CLI flag was added.
+No code behaviour changes. These prepare the repository for a public launch; the repository is still
+private and no release has been cut from this state.
+
+### Changed
+
+- **Release workflow works when the repository is public.** `prerelease.yml` no longer requires a
+  private repository, so publishing the project cannot silently disable releases. Every provenance
+  safeguard is retained: tag/parentage shape, tag-version equals package-version, tag→commit
+  resolution, ancestor-of-dispatch, CI re-run on that SHA, `EXPECTED_SHA` equality at publish,
+  per-archive checksum verification, the 3-archive/3-checksum/3-SBOM assertion and the 7-asset
+  postcondition. Renamed to **Beta prerelease**.
+- **README is now a public front door**: a prominent install section with a platform table and
+  checksum verification for Linux, macOS and PowerShell, a first-command example, a glossary for
+  `observed winner` / `fixture_verified` / `coverage gap`, and a Status section.
+- **SECURITY.md, CONTRIBUTING.md and CODE_OF_CONDUCT.md** reworded for a public audience; the
+  security policy now names GitHub private vulnerability reporting as the preferred channel.
+- **Specification trimmed for publication.** The commercial roadmap and the coding-agent
+  implementation brief were removed from `docs/spec/ConfigLens_Technical_Specification.md`; the
+  document is renumbered §1–§11 and the technical design is unchanged.
+
+### Removed from the public tree
+
+- `docs/beta/*` and `.github/AUTOMATION.md` (internal planning and maintainer release mechanics).
+  Preserved privately outside the repository, not deleted.
+
+### Added
+
+- `docs/README.md` documentation index, `docs/launch/publication-checklist.md` and
+  `.github/dependabot.yml`.
+
+## 0.1.0-beta.3 — pre-release, published 2026-10-11
+
+Released as the private `v0.1.0-beta.3` pre-release (commit `e746957`, tag `v0.1.0-beta.3`).
+Version identification changed and one CLI flag was added.
 
 ### Added
 

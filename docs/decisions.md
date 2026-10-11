@@ -182,16 +182,17 @@ of scope for 0.1 — a stated scope boundary, not a silent gap.
 
 **Decision:** where the documentation (not the loader) is the only evidence, rules are labelled
 `documented` rather than `fixture_verified`; where even documentation is thin, `inventory_only`.
-**Why:** §3 "Documentation and fixture tests alone do not establish runtime equivalence" and §12
-"If a rule is blocked, explicitly downgrade its support and continue independent tasks."
+**Why:** §3 "Documentation and fixture tests alone do not establish runtime equivalence"; the
+specification's implementation brief (held privately) adds "if a rule is blocked, explicitly
+downgrade its support and continue independent tasks."
 
 ## D19 — Test isolation
 
 **Decision:** every test that touches the filesystem builds its own synthetic home with `tempfile`
 and a `MemoryEnv` map; the real `$HOME` is never read by tests. `tests/cli/*` pass `--cwd` and
 `HOME`/`XDG_CONFIG_HOME`/`CLAUDE_CONFIG_DIR` explicitly via `Command::env`.
-**Why:** §12 "Tests must use isolated synthetic homes and captured env; never read the developer's
-real credentials."
+**Why:** the specification's implementation brief (held privately): "Tests must use isolated
+synthetic homes and captured env; never read the developer's real credentials."
 
 ## D20 — MSRV
 
