@@ -78,6 +78,18 @@ async function check(page, label) {
     [],
     `${label}: accessibility`,
   );
+  // This experimental axe rule is not enabled by WCAG tag filtering alone.
+  const labelAudit = await new AxeBuilder({ page })
+    .withRules(["label-content-name-mismatch"])
+    .analyze();
+  assert.deepEqual(
+    labelAudit.violations.map((v) => ({
+      id: v.id,
+      nodes: v.nodes.map((n) => n.target),
+    })),
+    [],
+    `${label}: visible label must be included in accessible name`,
+  );
 }
 try {
   for (const width of [1440, 1024, 768, 390, 320]) {
