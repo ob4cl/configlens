@@ -1,5 +1,5 @@
 name: Bug report
-description: Report reproducible private-beta behavior with synthetic inputs.
+description: Report a public-beta bug or compatibility finding with synthetic inputs.
 body:
   - type: markdown
     attributes:
