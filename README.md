@@ -2,6 +2,8 @@
 
 # ConfigLens
 
+[Website & interactive demo](https://ob4cl.github.io/configlens/) · [Releases](https://github.com/ob4cl/configlens/releases) · [Documentation](docs/README.md)
+
 **Find out why your AI coding tool is ignoring your configuration.**
 
 ConfigLens is a small, local, read-only Rust CLI that traces a supported configuration key for
