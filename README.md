@@ -4,11 +4,15 @@
 
 [Website & interactive demo](https://ob4cl.github.io/configlens/) · [Releases](https://github.com/ob4cl/configlens/releases) · [Documentation](docs/README.md)
 
-**Find out why your AI coding tool is ignoring your configuration.**
+**See which supported Claude Code or OpenCode setting wins — and why.**
 
 ConfigLens is a small, local, read-only Rust CLI that traces a supported configuration key for
 **Claude Code** and **OpenCode** across supported configuration sources, and shows the observed
 winner — with the file, line and reason for each contribution, including the ones that lost.
+
+Try it if conflicting user and project settings leave you unsure which file to edit. Instead of
+reading each file and reconstructing precedence by hand, inspect one ordered trace, including
+overridden definitions and the layers ConfigLens could not observe.
 
 It never executes your configuration, never runs a client binary, opens no socket and accesses no
 credential store. Configuration files may contain sensitive values, which are redacted unless an
@@ -40,9 +44,10 @@ Linux and macOS:
 tag=v0.1.0-beta.3
 target=x86_64-unknown-linux-gnu              # or aarch64-apple-darwin
 base=https://github.com/ob4cl/configlens/releases/download/$tag
-curl -LO $base/configlens-$tag-$target.tar.gz
-curl -LO $base/SHA256SUMS
-sha256sum -c --ignore-missing SHA256SUMS      # macOS: use shasum -a 256 -c
+curl -fLO "$base/configlens-$tag-$target.tar.gz"
+curl -fLO "$base/SHA256SUMS"
+grep "  configlens-$tag-$target.tar.gz\$" SHA256SUMS > CHECKSUM
+sha256sum -c CHECKSUM                     # macOS: use shasum -a 256 -c CHECKSUM
 tar xzf configlens-$tag-$target.tar.gz
 ./configlens-$tag-$target/configlens --version
 ```
@@ -57,12 +62,15 @@ gh release download $tag --repo $repo --pattern '*windows-msvc.zip'
 gh release download $tag --repo $repo --pattern 'SHA256SUMS'
 # Without it: download both files from the release page in a browser.
 
-$zip      = Get-ChildItem *windows-msvc.zip | Select-Object -First 1
-$expected = (Get-Content .\SHA256SUMS | Select-String $zip.Name).Line.Split()[0]
+$name     = "configlens-$tag-x86_64-pc-windows-msvc.zip"
+$zip      = Get-Item $name
+$entries  = @(Get-Content .\SHA256SUMS | Where-Object { $_.EndsWith("  $name") })
+if ($entries.Count -ne 1) { throw 'Expected one matching checksum entry' }
+$expected = ($entries[0] -split '\s+')[0]
 $actual   = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash.ToLower()
 if ($actual -ne $expected) { throw 'SHA256 mismatch - do not run this file' }
 Expand-Archive $zip.FullName -DestinationPath unpacked
-& .\unpacked\configlens-*\configlens.exe --version
+& ".\unpacked\configlens-$tag-x86_64-pc-windows-msvc\configlens.exe" --version
 ```
 
 Expect `configlens 0.1.0-beta.3`. On macOS the archive is not notarized, so Gatekeeper warns on first
@@ -73,8 +81,11 @@ run: right-click → Open, or `xattr -d com.apple.quarantine <binary>`.
 Any platform with Rust 1.85 or newer:
 
 ```sh
-cargo install --locked --git https://github.com/ob4cl/configlens
+cargo install --locked --git https://github.com/ob4cl/configlens configlens
 ```
+
+This follows the default branch, not the release archive. To reproduce the published beta source,
+add `--tag v0.1.0-beta.3` to that command.
 
 Or from a checkout: `cargo build --locked --release`, which leaves the binary at
 `target/release/configlens`.
@@ -96,6 +107,21 @@ configlens explain /model --client claude --client-version 2.1.296
 That prints the observed winner for `model` with the file, line and reason for every contribution.
 [A real terminal example](#a-real-terminal-example) shows the full output and how to read it.
 
+## Help test the beta
+
+Run the [isolated demo](#run-the-isolated-demo) first, then try one supported setting in a project
+you control. Can you identify the winning source and understand any coverage gaps?
+
+- [Report a bug or compatibility finding](https://github.com/ob4cl/configlens/issues/new?template=bug_report.yml).
+  Include ConfigLens version, OS/architecture, client and exact client version, command, exit code,
+  expected versus observed result, and a minimal **synthetic** reproduction. Unsupported versions
+  are useful findings too; do not treat fixture verification as proof of live-client behaviour.
+- If attaching output, generate a preview with
+  `configlens support-report --client claude --client-version 2.1.296 --preview`
+  (choose `--client opencode --client-version 1.18.35` for OpenCode). Read and sanitize it yourself
+  before sharing: there is no upload, and redaction does not guarantee anonymity.
+- For security or privacy concerns, follow [`SECURITY.md`](SECURITY.md), not a public configuration dump.
+
 ## The question this answers
 
 You set a model, a permission, an MCP flag. The tool ignores it. You now have five plausible files,
@@ -107,13 +133,13 @@ tool just says "using the other one". ConfigLens answers the four questions that
   order, including the definitions that were replaced or skipped.
 - **Which file should I edit?** The winning source is named, so you edit the right one.
 - **Can I paste this into an issue?** Reports redact protected values, and `--paths share`
-  reduces identifying details; `configlens support-report --preview`
+  reduces identifying details; `configlens support-report --client claude --preview`
   builds a share-mode report for exactly this. Review the output and the privacy limitations below
   before sharing; a redacted report is not a guarantee of anonymity.
 
 ## Quick start (from source)
 
-Until a package is published, build from this checkout. No client needs to be installed, and no
+For a source checkout (prebuilt archives are also available above), build locally. No client needs to be installed, and no
 network access is needed at run time.
 
 ```sh
@@ -143,6 +169,10 @@ cargo build --locked --release
 
 Captured from the isolated demo above (synthetic values only). The long coverage line and the two
 trailing `trust_unknown` diagnostics are elided — the tool prints every gap and every diagnostic.
+
+The demo writes `{"model":"project-model"}` in `.claude/settings.json` and
+`{"model":"local-model"}` in `.claude/settings.local.json`. The local project layer has higher
+precedence for this supported scalar key, so it replaces the project definition:
 
 ```console
 $ configlens explain /model --client claude --client-version 2.1.296
@@ -179,7 +209,7 @@ configlens <command> [options]
 | `snapshot` | `configlens snapshot --client claude --output before.json` | Write the redacted report JSON to an explicit path. Create-new by default; `--overwrite` to replace. |
 | `diff` | `configlens diff before.json after.json` | Compare two reports from the same client and schema; protected values compare as `unknown_redacted`. |
 | `schema` | `configlens schema --kind report` | Print the bundled report JSON Schema. No network. |
-| `support-report` | `configlens support-report --preview` | Build a share-mode report for pasting into an issue. Always share mode (regardless of `--paths`). `--preview` prints it to stdout and writes nothing; `--output <PATH>` writes it (`0600` on Unix). There is no upload. |
+| `support-report` | `configlens support-report --client claude --preview` | Build a share-mode report for pasting into an issue. Always share mode (regardless of `--paths`). `--preview` prints it to stdout and writes nothing; `--output <PATH>` writes it (`0600` on Unix). There is no upload. |
 | `completions` | `configlens completions --shell bash` | Print a shell completion script for `bash`, `zsh` or `fish`, generated from the live command tree. Nothing is written to disk. |
 
 Run `configlens --help` (and `configlens <command> --help`) for the current, authoritative list — the

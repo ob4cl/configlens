@@ -23,7 +23,8 @@ To install the binary into your `PATH` instead:
 cargo install --locked --path .
 ```
 
-There is no published crate or prebuilt binary yet. Build from the checkout.
+Prefer a prebuilt binary? The [installation guide](../README.md#install) links to the published
+beta archives and checksum instructions. There is no published crates.io package.
 
 Check that it runs:
 
