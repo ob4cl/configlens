@@ -68,7 +68,7 @@ async function route(context) {
 }
 async function check(page, label) {
   const audit = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
   assert.deepEqual(
     audit.violations.map((v) => ({
@@ -94,6 +94,11 @@ try {
       if (msg.type() === "error") findings.consoleErrors.push(msg.text());
     });
     await page.goto(origin + base);
+    assert.ok(
+      await page
+        .getByRole("link", { name: "ConfigLens BETA home", exact: true })
+        .isVisible(),
+    );
     await page.waitForFunction(() =>
       document.querySelector('[data-row="2"]')?.classList.contains("is-winner"),
     );
