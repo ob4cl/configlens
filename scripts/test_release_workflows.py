@@ -1,10 +1,47 @@
 """Execute prerelease preflight against isolated, synthetic Git repositories."""
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import textwrap
 import unittest
+from unittest.mock import patch
+
+
+def preflight_bash(*, windows=(os.name == "nt")):
+    """Select Git Bash on Windows, never the System32 WSL launcher."""
+    if windows:
+        git = shutil.which("git")
+        if git:
+            for root in Path(git).parents:
+                for relative in ("bin/bash.exe", "usr/bin/bash.exe"):
+                    candidate = root / relative
+                    if candidate.is_file():
+                        return str(candidate)
+        raise RuntimeError("Git Bash is required for Windows preflight tests")
+    return shutil.which("bash") or "bash"
+
+
+class ShellSelectionTests(unittest.TestCase):
+    def test_windows_prefers_git_bash_over_a_wsl_path_candidate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "Git with spaces"
+            git = root / "cmd/git.exe"
+            bash = root / "bin/bash.exe"
+            git.parent.mkdir(parents=True)
+            bash.parent.mkdir(parents=True)
+            git.touch()
+            bash.touch()
+            with patch.object(shutil, "which", side_effect=lambda name:
+                              str(git) if name == "git" else "synthetic/System32/bash.exe"):
+                self.assertEqual(preflight_bash(windows=True), str(bash))
+
+    def test_windows_does_not_fall_back_to_wsl_without_git_bash(self):
+        with patch.object(shutil, "which", side_effect=lambda name:
+                          None if name == "git" else "synthetic/System32/bash.exe"):
+            with self.assertRaisesRegex(RuntimeError, "Git Bash is required"):
+                preflight_bash(windows=True)
 
 
 class PreflightTests(unittest.TestCase):
@@ -36,7 +73,7 @@ class PreflightTests(unittest.TestCase):
         self.env["GITHUB_SHA"] = self.git("rev-parse", "HEAD")
 
     def run_preflight(self):
-        return subprocess.run(["bash", "-c", self.script], cwd=self.root,
+        return subprocess.run([preflight_bash(), "--noprofile", "--norc", "-c", self.script], cwd=self.root,
                               env=self.env, capture_output=True, text=True)
 
     def test_accepts_lightweight_and_annotated_matching_tags(self):
@@ -47,11 +84,13 @@ class PreflightTests(unittest.TestCase):
                 if annotated:
                     args += ["-a", "-m", "synthetic tag"]
                 self.git(*args, self.env["TAG"])
-                result = self.run_preflight()
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("sha=" + self.env["GITHUB_SHA"],
-                              (self.root / "output").read_text(encoding="utf-8"))
-                self.git("tag", "-d", self.env["TAG"])
+                try:
+                    result = self.run_preflight()
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("sha=" + self.env["GITHUB_SHA"],
+                                  (self.root / "output").read_text(encoding="utf-8"))
+                finally:
+                    self.git("tag", "-d", self.env["TAG"])
 
     def test_rejects_mismatch_even_when_same_named_branch_matches(self):
         self.commit("0.1.0-beta.2")
