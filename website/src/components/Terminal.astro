@@ -1,0 +1,65 @@
+---
+import captures from "../data/captures.json";
+const entry = captures.commands.explain;
+---
+
+<section
+  class="section wrap terminal-section"
+  aria-labelledby="terminal-heading"
+>
+  <div class="terminal-intro">
+    <p class="eyebrow">04 / THE ACTUAL CLI</p><h2 id="terminal-heading">
+      Answers where<br />you work.
+    </h2><p>
+      No account. No dashboard to maintain.<br />A report in the terminal you
+      already have.
+    </p><a
+      class="text-link"
+      href="https://github.com/ob4cl/configlens/blob/main/docs/getting-started.md"
+      >Read the getting-started guide <span aria-hidden="true">↗</span></a
+    ><p class="small muted">
+      Captured from {captures.binaryVersion} against isolated synthetic files. No
+      command on this page executes.
+    </p>
+  </div><div class="terminal">
+    <div class="terminal-top">
+      <span class="terminal-dots" aria-hidden="true">● ● ●</span><span
+        >configlens / synthetic sandbox</span
+      ><span class="tiny-label">READ ONLY PREVIEW</span>
+    </div><div class="command-tabs" aria-label="Captured command">
+      {
+        ["explain", "clients", "scan", "doctor", "snapshot", "diff"].map(
+          (name) => (
+            <button data-command={name} aria-pressed={name === "explain"}>
+              {name}
+            </button>
+          ),
+        )
+      }
+    </div><div class="terminal-command">
+      <code id="terminal-command">$ {entry.command}</code><button
+        id="copy-command"
+        class="copy-button"
+        aria-label="Copy displayed CLI command">Copy</button
+      >
+    </div><pre
+      id="terminal-output"
+      tabindex="0"
+      aria-label="Captured command output">{entry.stdout}{entry.stderr && `
+[stderr]
+${entry.stderr}`}</pre><div
+      class="terminal-footer"
+    >
+      <span id="terminal-exit">EXIT {entry.exitCode} · FULL OUTPUT</span><span
+        id="copy-status"
+        role="status"></span>
+    </div>
+  </div><p class="section-caption terminal-caption">
+    Output is real; paths are normalized. <code>$SANDBOX</code> replaces only the
+    throwaway directory prefix. Commands retain all capture arguments; set up the
+    sandbox before using them. <a
+      href="https://github.com/ob4cl/configlens/blob/main/website/scripts/capture-fixtures.py"
+      >Reproduce the captures ↗</a
+    >
+  </p>
+</section>

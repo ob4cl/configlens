@@ -1,0 +1,79 @@
+---
+const features = [
+  [
+    "01",
+    "Trace the losing values",
+    "The winning value is only half the story. Keep the definitions it replaced, with file and line provenance.",
+    "Inspect a contribution",
+    "project-model · $PROJECT/.claude/settings.json:2:12 · replaced_by_later_layer",
+  ],
+  [
+    "02",
+    "Precedence, not folklore",
+    "Client-specific rules, not one universal merge. This demo focuses on the verified scalar /model subset.",
+    "Compare the file orders",
+    "Claude: user < shared < local. OpenCode: global < ancestor < nested (within the explicit project boundary).",
+  ],
+  [
+    "03",
+    "Reports with receipts",
+    "Text for the terminal. Structured JSON for a report. Coverage gaps travel with the conclusion.",
+    "Inspect report fields",
+    "pointer: /model · status: partial · support: fixture_verified · effective_value: omitted",
+  ],
+  [
+    "04",
+    "Redact by default",
+    "Protected values use a public projection. Unknown free text is not automatically safe to print.",
+    "See the privacy example",
+    "Only allowlisted values are reportable. Inspect the captured protected-value projection in the privacy section below.",
+  ],
+  [
+    "05",
+    "Changes without guesswork",
+    "Compare compatible snapshots by value, provenance, and coverage. Two masks never prove equality.",
+    "Inspect a protected comparison",
+    "Protected values: comparison = unknown_redacted. Snapshots write only to explicitly requested output paths.",
+  ],
+  [
+    "06",
+    "A small tool, not an agent",
+    "A local Rust CLI. No model calls, sockets, hooks, plugins, or client subprocesses at runtime.",
+    "See a first command",
+    "configlens explain /model --client claude --client-version 2.1.296",
+  ],
+];
+---
+
+<section id="features" class="section wrap">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">03 / LESS MYSTERY. MORE EVIDENCE.</p><h2>
+        Find the file.<br />Understand the result.
+      </h2>
+    </div><p>
+      A focused diagnostic tool.<br />Not a configuration manager. Not a
+      security certification.
+    </p>
+  </div><div class="feature-grid">
+    {
+      features.map(([n, title, description, action, detail]) => (
+        <article class="feature">
+          <>
+            <span class="feature-index mono">{n} /</span>
+            <h3>{title}</h3>
+            <p>{description}</p>
+            <details>
+              <>
+                <summary>
+                  {action} <span aria-hidden="true">+</span>
+                </summary>
+                <p class="feature-detail">{detail}</p>
+              </>
+            </details>
+          </>
+        </article>
+      ))
+    }
+  </div>
+</section>

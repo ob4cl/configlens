@@ -1,0 +1,82 @@
+{
+  "binaryVersion": "configlens 0.1.0-beta.3",
+  "binarySha256": "32242ca78efe9d4219a801e44558a92290bb16cafa1d53eb10b8f75119095f28",
+  "normalization": "Only the ephemeral sandbox prefix is replaced by $SANDBOX. Commands retain every argument. stdout and stderr captured separately; no output elided.",
+  "isolation": "bubblewrap: read-only host, writable synthetic sandbox, empty /etc, network namespace; cleared HOME/XDG/environment, explicit project boundary and trusted simulated input context.",
+  "checks": [
+    {
+      "fixture": "claude-local",
+      "observed": "local-model",
+      "status": "partial",
+      "support": "fixture_verified",
+      "effectiveWithheld": true
+    },
+    {
+      "fixture": "claude-shared",
+      "observed": "team-model",
+      "status": "partial",
+      "support": "fixture_verified",
+      "effectiveWithheld": true
+    },
+    {
+      "fixture": "opencode-nested",
+      "observed": "nested-model",
+      "status": "partial",
+      "support": "fixture_verified",
+      "effectiveWithheld": true
+    },
+    {
+      "fixture": "opencode-root",
+      "observed": "workspace-model",
+      "status": "partial",
+      "support": "fixture_verified",
+      "effectiveWithheld": true
+    }
+  ],
+  "commands": {
+    "clients": {
+      "command": "configlens clients",
+      "stdout": "ConfigLens clients\n\nImplemented adapters:\n  opencode  revision 0.1.0  tested 1.18.35  documented 1.18.35,1.19.0  conformance fixture_verified_max\n    always-incomplete layer: oc.remote.wellknown (remote_source_not_fetched)\n    always-incomplete layer: oc.opencode_dirs (not_a_settings_document)\n    always-incomplete layer: oc.managed_macos_prefs (platform_prefs_not_parsed)\n  claude  revision 0.1.0  tested 2.1.296  documented 2.1.296  conformance fixture_verified_max\n    always-incomplete layer: cc.managed.hkcu (registry_not_read)\n    always-incomplete layer: cc.managed.mdm (platform_policy_store_not_read)\n    always-incomplete layer: cc.managed.server (remote_source_not_fetched)\n\nExplicitly unsupported clients (no compatibility claim):\n  codex  0.2 backlog \u2014 TOML, trust gating and requirements model not implemented\n  gemini  0.2 backlog \u2014 settings/trust behaviour not verified\n  aider  backlog \u2014 loader semantics not inspected\n  cursor  not investigated for this specification\n  copilot-cli  not investigated for this specification\n  cline  not investigated for this specification\n  roo  not investigated for this specification\n  hermes  not investigated for this specification\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "scan": {
+      "command": "configlens scan --client claude --client-version 2.1.296 --cwd $SANDBOX/project --project-root $SANDBOX/project --input-context $SANDBOX/context.json --allow-read-root $SANDBOX --color never",
+      "stdout": "ConfigLens scan \u2014 client claude (adapter revision 0.1.0)\nSources (3):\n  [10] cc.user  $HOME/.claude/settings.json  observed  applicable\n  [20] cc.project_shared  $PROJECT/.claude/settings.json  observed  applicable\n  [30] cc.project_local  $PROJECT/.claude/settings.local.json  observed  applicable\nCoverage gaps (5):\n  - run \u2014 supplied_session_state_is_not_runtime_proof (session_state_simulated)\n  - cc.managed.hkcu \u2014 registry_not_read (expected_unobservable)\n  - cc.managed.mdm \u2014 platform_policy_store_not_read (expected_unobservable)\n  - cc.managed.server \u2014 remote_source_not_fetched (expected_unobservable)\n  - cc.managed.file \u2014 managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "explain": {
+      "command": "configlens explain /model --client claude --client-version 2.1.296 --cwd $SANDBOX/project --project-root $SANDBOX/project --input-context $SANDBOX/context.json --allow-read-root $SANDBOX --color never",
+      "stdout": "/model = \"local-model\" (observed)\nObserved winner: $PROJECT/.claude/settings.local.json:2:12  \"local-model\"  observed_winner\nLosers:\n  \"user-model\"  $HOME/.claude/settings.json:2:12  replaced_by_later_layer\n  \"project-model\"  $PROJECT/.claude/settings.json:2:12  replaced_by_later_layer\nRule: claude.scalar.layer-override\nCoverage: partial \u2014 cc.managed.hkcu \u2014 registry_not_read (expected_unobservable); cc.managed.mdm \u2014 platform_policy_store_not_read (expected_unobservable); cc.managed.server \u2014 remote_source_not_fetched (expected_unobservable); cc.managed.file \u2014 managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)\nSupport: fixture_verified; confidence: evidence_class:fixture_verified\nConclusion: \"local-model\" wins among the observed applicable sources; effective value withheld.\nNext inspection:\n  - supply the managed settings file with --input-context to include it\n  - remote/MDM layers are not observable here; re-run where the managed source is readable\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "doctor": {
+      "command": "configlens doctor --client claude --client-version 2.1.296 --cwd $SANDBOX/project --project-root $SANDBOX/project --input-context $SANDBOX/context.json --allow-read-root $SANDBOX --color never",
+      "stdout": "ConfigLens doctor \u2014 client claude: 0 error(s), 0 warning(s), 5 coverage gap(s)\n  [coverage] run \u2014 supplied_session_state_is_not_runtime_proof (session_state_simulated)\n  [coverage] cc.managed.hkcu \u2014 registry_not_read (expected_unobservable)\n  [coverage] cc.managed.mdm \u2014 platform_policy_store_not_read (expected_unobservable)\n  [coverage] cc.managed.server \u2014 remote_source_not_fetched (expected_unobservable)\n  [coverage] cc.managed.file \u2014 managed_file_absent_does_not_prove_policy_absent (managed_state_unknown)\nNote: ConfigLens reports what it could read. It never certifies a configuration as safe.\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "snapshot": {
+      "command": "configlens snapshot --client claude --client-version 2.1.296 --cwd $SANDBOX/project --project-root $SANDBOX/project --input-context $SANDBOX/context.json --allow-read-root $SANDBOX --color never --output $SANDBOX/before.json",
+      "stdout": "",
+      "stderr": "configlens: wrote 7114 bytes to $SANDBOX/before.json (permissions: owner_only_0600)\n",
+      "exitCode": 0
+    },
+    "diff": {
+      "command": "configlens diff $SANDBOX/before.json $SANDBOX/after.json",
+      "stdout": "ConfigLens diff \u2014 client claude (schema 1.0)\n  /model  value  \"local-model\" -> \"updated-model\"\n  /env  unknown_redacted  <redacted:inventory_only> -> <redacted:inventory_only>  (not compared: protected value)\n  /env/APP_TOKEN  unknown_redacted  <redacted:inventory_only> -> <redacted:inventory_only>  (not compared: protected value)\n",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "redaction": {
+      "pointer": "/env/APP_TOKEN",
+      "projection": {
+        "kind": "string",
+        "reason": "inventory_only",
+        "redacted": true
+      }
+    }
+  }
+}

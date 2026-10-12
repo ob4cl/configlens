@@ -1,0 +1,34 @@
+[
+  {
+    "id": "claude-local",
+    "client": "claude",
+    "label": "Local override",
+    "version": "2.1.296",
+    "values": ["user-model", "project-model", "local-model"],
+    "included": [true, true, true]
+  },
+  {
+    "id": "claude-shared",
+    "client": "claude",
+    "label": "Shared project wins",
+    "version": "2.1.296",
+    "values": ["user-model", "team-model", "local-model"],
+    "included": [true, true, false]
+  },
+  {
+    "id": "opencode-nested",
+    "client": "opencode",
+    "label": "Nested workspace",
+    "version": "1.18.35",
+    "values": ["global-model", "workspace-model", "nested-model"],
+    "included": [true, true, true]
+  },
+  {
+    "id": "opencode-root",
+    "client": "opencode",
+    "label": "Project boundary",
+    "version": "1.18.35",
+    "values": ["global-model", "workspace-model", "nested-model"],
+    "included": [true, true, false]
+  }
+]

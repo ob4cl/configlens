@@ -1,0 +1,30 @@
+{
+  "name": "configlens-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "build": "astro build",
+    "typecheck": "astro check",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:browser": "node tests/browser.mjs",
+    "test:build": "python3 scripts/audit-build.py",
+    "fixtures": "python3 scripts/capture-fixtures.py"
+  },
+  "dependencies": {
+    "astro": "7.3.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@axe-core/playwright": "4.11.1",
+    "@playwright/test": "1.64.0",
+    "@types/node": "26.6.5",
+    "prettier": "3.8.2",
+    "prettier-plugin-astro": "0.14.1",
+    "typescript": "6.0.3"
+  }
+}

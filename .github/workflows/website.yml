@@ -1,0 +1,97 @@
+name: Website
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ASTRO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  build:
+    name: Website validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.7.0'
+          package-manager-cache: false
+      - name: Install locked website dependencies without lifecycle scripts
+        working-directory: website
+        run: npm ci --ignore-scripts
+      - name: Formatting and strict TypeScript
+        working-directory: website
+        run: npm run lint && npm run typecheck
+      - name: Build actual CLI for fixture parity
+        run: cargo build --locked
+      - name: Install sandbox for isolated synthetic CLI captures
+        run: sudo apt-get update && sudo apt-get install --yes bubblewrap
+      # Root is limited to this disposable GitHub-hosted runner. bubblewrap isolates /etc,
+      # synthetic HOME/XDG and the network; it never scans maintainer configuration.
+      # sudo avoids Ubuntu's unprivileged-user-namespace AppArmor restrictions.
+      - name: Reproduce CLI captures and verify all fixture winners
+        run: sudo env CONFIGLENS_BIN="$GITHUB_WORKSPACE/target/debug/configlens" TMPDIR="$RUNNER_TEMP" python3 website/scripts/capture-fixtures.py
+      - name: Unit tests, production build and static output audit
+        working-directory: website
+        run: npm test && npm run build && npm run test:build
+      - name: Install test browser
+        working-directory: website
+        run: npx playwright install --with-deps chromium
+      - name: Responsive, keyboard, motion and accessibility checks (no server)
+        working-directory: website
+        env:
+          SCREENSHOT_DIR: ${{ runner.temp }}/website-evidence
+        run: npm run test:browser
+      - name: Dependency vulnerability audit
+        working-directory: website
+        run: npm audit --audit-level=moderate
+      - name: Upload browser evidence
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: website-browser-evidence
+          path: ${{ runner.temp }}/website-evidence
+          if-no-files-found: error
+          retention-days: 14
+      - name: Configure Pages (protected main only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Upload static site (protected main only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: website/dist
+          retention-days: 1
+
+  deploy:
+    name: Deploy website
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy validated static artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

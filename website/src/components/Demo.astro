@@ -1,0 +1,153 @@
+---
+import { sourceInfo } from "../lib/fixtures";
+---
+
+<section id="demo" class="section wrap" aria-labelledby="demo-heading">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">01 / FOLLOW THE VALUE</p><h2 id="demo-heading">
+        One setting. Competing layers.<br /><span class="muted"
+          >Follow the evidence.</span
+        >
+      </h2>
+    </div><p>
+      Change a value. Remove a definition.<br />Watch the observed result move
+      through the trace.
+    </p>
+  </div>
+  <div class="demo-shell">
+    <div class="demo-toolbar">
+      <div class="segmented" aria-label="Demo client">
+        <button data-client="claude" aria-pressed="true">Claude Code</button
+        ><button data-client="opencode" aria-pressed="false">OpenCode</button>
+      </div><label class="preset-label"
+        >Scenario <select id="preset"
+          ><option value="claude-local">Local override</option><option
+            value="claude-shared">Shared project wins</option
+          ></select
+        ></label
+      ><span class="tiny-label">BROWSER FIXTURE</span>
+    </div>
+    <div class="demo-context">
+      <code>/model</code><span id="demo-scope"
+        >Claude Code 2.1.296 · user → project shared → project local</span
+      ><span>LOW → HIGH PRECEDENCE</span>
+    </div>
+    <div class="demo-workspace">
+      <div class="source-area">
+        <div class="source-list">
+          {
+            sourceInfo.claude.map((source, i) => (
+              <div class="source-row" data-row={i}>
+                <button
+                  class="source-select"
+                  data-source={i}
+                  aria-pressed={i === 2}
+                >
+                  <>
+                    <span class="node-number">0{i + 1}</span>
+                    <span class="source-meta">
+                      <>
+                        <strong data-label={i}>{source.label}</strong>
+                        <code data-path={i}>{source.path}</code>
+                        <span class="source-value" data-value={i}>
+                          {["user-model", "project-model", "local-model"][i]}
+                        </span>
+                      </>
+                    </span>
+                    <span class="source-badge" data-badge={i}>
+                      {i === 2 ? "observed winner" : "overridden"}
+                    </span>
+                  </>
+                </button>
+              </div>
+            ))
+          }
+        </div>
+        <svg
+          class="trace-lines"
+          viewBox="0 0 40 280"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          ><path d="M8 2 L8 270 M8 90 L30 90 M8 180 L30 180 M8 268 L30 268"
+          ></path><circle id="trace-pulse" cx="8" cy="268" r="5"></circle></svg
+        >
+        <p class="trace-note">
+          <span aria-hidden="true">↳</span> Select a source to inspect its definition.
+        </p>
+      </div>
+      <aside class="inspector" aria-labelledby="inspector-heading">
+        <div class="inspector-title">
+          <h3 id="inspector-heading">Source inspector</h3><span
+            class="tiny-label">SYNTHETIC JSON</span
+          >
+        </div><p class="inspector-path" id="inspector-path">
+          $PROJECT/.claude/settings.local.json
+        </p>
+        <pre
+          class="json-code"
+          aria-label="Selected source JSON"><code><span class="line-num">1</span> {'{'}
+<span class="line-num">2</span>   <span class="json-key">"model"</span>: <span class="json-string" id="json-value">"local-model"</span>
+<span class="line-num">3</span> {'}'}</code></pre>
+        <label class="field-label" for="model-value"
+          >Model value <span class="muted">· synthetic text only</span></label
+        ><input
+          id="model-value"
+          value="local-model"
+          maxlength="80"
+          autocomplete="off"
+          spellcheck="false"
+          aria-describedby="edit-help"
+        /><p id="edit-help" class="small muted">
+          Edits stay in this tab and are treated literally; interpolation and
+          redaction are not simulated. Never paste a real secret.
+        </p>
+        <label class="check-label"
+          ><input id="include-source" type="checkbox" checked /> Include this /model
+          definition</label
+        ><p id="source-rule" class="small muted">
+          Later included file definitions replace earlier ones.
+        </p>
+      </aside>
+    </div>
+    <div class="resolution-bar">
+      <div>
+        <span class="tiny-label">OBSERVED WINNER</span><strong id="winner-value"
+          >local-model</strong
+        ><p id="resolution-explanation" aria-live="polite">
+          Project local wins among included sources; 2 earlier definitions were
+          replaced.
+        </p>
+      </div><div class="actions">
+        <button id="reset-demo" class="button quiet">Reset</button><button
+          id="resolve-demo"
+          class="button primary"
+          >Replay resolution <span aria-hidden="true">→</span></button
+        >
+      </div>
+    </div>
+    <div class="coverage-note">
+      <span class="coverage-label">PARTIAL COVERAGE</span><p>
+        <strong>Effective value withheld.</strong>{" "}
+        <span id="coverage-detail"
+          >Managed policy and server state are not observed here.</span
+        > This browser simulation covers only the fixture-verified <code
+          >/model</code
+        > scalar subset. It does not run the Rust CLI, inspect your machine, or establish
+        upstream runtime conformance.
+      </p>
+    </div>
+  </div>
+  <noscript
+    ><p class="notice">
+      JavaScript is off. The default synthetic trace remains visible: user-model
+      → project-model → local-model (observed). Interactive editing and replay
+      require JavaScript.
+    </p></noscript
+  >
+  <p class="section-caption">
+    Different clients. Different rules. Claude environment variables are per-key
+    pairs, not a universal precedence level. OpenCode uses an explicit project
+    boundary in this example; its 2.x line is not supported.
+  </p>
+</section>
