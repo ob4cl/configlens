@@ -1,0 +1,49 @@
+---
+import captures from "../data/captures.json";
+---
+
+<section class="privacy-section section">
+  <div class="wrap privacy-grid">
+    <div>
+      <p class="eyebrow">05 / LOCAL BY PRINCIPLE</p><h2>
+        Your configuration<br />is not our business.
+      </h2><p>
+        ConfigLens analyses files on your machine. It does not send
+        configuration anywhere, run a client, or execute the things it finds.
+      </p><ul class="privacy-list">
+        <li>
+          Configuration is read-only. Snapshot and explicit report outputs are
+          intentional writes; diff reads the supplied reports.
+        </li><li>
+          Share mode reduces identifying details. Redaction is not a guarantee
+          of anonymity — review before sharing.
+        </li><li>
+          Unix snapshots use owner-only permissions. Windows snapshots inherit
+          the destination folder’s ACL; use a private directory.
+        </li>
+      </ul>
+    </div><div class="redaction-panel">
+      <div class="inspector-title">
+        <h3>Protection, made visible.</h3><span class="tiny-label"
+          >SYNTHETIC ONLY</span
+        >
+      </div><label class="check-label"
+        ><input type="checkbox" id="show-projection" checked /> Show CLI redaction
+        projection</label
+      ><p class="small muted">
+        Captured for <code>{captures.commands.redaction.pointer}</code>. The
+        input below is a deliberately fake demonstration value.
+      </p><pre
+        id="redaction-output">{JSON.stringify(captures.commands.redaction.projection,null,2)}</pre><p
+        class="redaction-warning"
+      >
+        Protected values compare as <code>unknown_redacted</code>, not
+        “unchanged”.
+      </p><a
+        class="text-link"
+        href="https://github.com/ob4cl/configlens/blob/main/README.md#privacy-and-caveats"
+        >Read the privacy boundaries ↗</a
+      >
+    </div>
+  </div>
+</section>
