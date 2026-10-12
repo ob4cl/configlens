@@ -1,0 +1,5 @@
+package-lock.json
+dist
+.astro
+node_modules
+src/data/captures.json

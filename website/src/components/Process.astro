@@ -1,0 +1,74 @@
+---
+const stages = [
+  [
+    "Discover",
+    "Inventory known paths. No recursive crawl. Missing or unreadable layers remain visible.",
+    "Known paths → candidate sources",
+  ],
+  [
+    "Trace",
+    "Keep the file, line, and reason for each contribution — including the ones replaced.",
+    "Definitions → ordered provenance",
+  ],
+  [
+    "Resolve",
+    "Apply a supported, client-specific rule. Unknown semantics stay unknown.",
+    "Verified rule → observed winner",
+  ],
+  [
+    "Understand",
+    "Read the result alongside its evidence and coverage gaps. Partial is not effective.",
+    "Winner + gaps → bounded conclusion",
+  ],
+];
+---
+
+<section id="how-it-works" class="section process-section">
+  <div class="wrap">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">02 / FROM FILE TO FINDING</p><h2>
+          A trace, not a hunch.
+        </h2>
+      </div><p>
+        Four deliberate stages.<br />No client execution at any point.
+      </p>
+    </div><div class="pipeline">
+      {
+        stages.map(([name, text], i) => (
+          <article
+            data-stage={i}
+            class:list={["pipeline-stage", { active: i === 0 }]}
+          >
+            <>
+              <h3>
+                <button data-step={i} aria-pressed={i === 0}>
+                  <span class="mono">0{i + 1}</span>
+                  <span>{name}</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </h3>
+              <p>{text}</p>
+            </>
+          </article>
+        ))
+      }
+    </div><div class="pipeline-output">
+      <svg viewBox="0 0 220 28" width="220" height="28" aria-hidden="true"
+        ><path d="M8 14H212"></path><circle cx="8" cy="14" r="5"
+        ></circle><circle cx="76" cy="14" r="5"></circle><circle
+          cx="144"
+          cy="14"
+          r="5"></circle><circle cx="212" cy="14" r="5"></circle><circle
+          id="pipeline-dot"
+          cx="8"
+          cy="14"
+          r="7"></circle></svg
+      ><p id="stage-output" aria-live="polite">{stages[0]?.[2]}</p><button
+        id="play-pipeline"
+        class="text-button"
+        >Walk the pipeline <span aria-hidden="true">→</span></button
+      >
+    </div>
+  </div>
+</section>

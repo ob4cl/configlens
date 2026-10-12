@@ -1,0 +1,81 @@
+<section class="hero wrap" aria-labelledby="hero-heading">
+  <div class="hero-copy">
+    <a class="release-note" href="#install"
+      ><span class="status-dot"></span> v0.1.0-beta.3 <span class="muted"
+        >/</span
+      > A public beta, built in the open <span aria-hidden="true">↗</span></a
+    >
+    <p class="eyebrow">THE CONFIGURATION TRACE, EXPLAINED.</p>
+    <h1 id="hero-heading">
+      Know exactly<br />which config<br /><span class="accent">wins.</span><span
+        class="cursor-mark"
+        aria-hidden="true">_</span
+      >
+    </h1>
+    <p class="hero-description">
+      You changed the setting. Nothing changed.<br />Trace the observed winner
+      back to its source — and see what got overridden along the way.
+    </p>
+    <div class="actions">
+      <a class="button primary" href="#demo"
+        >Explore the trace <span aria-hidden="true">↘</span></a
+      ><a class="button" href="https://github.com/ob4cl/configlens"
+        >View on GitHub <span aria-hidden="true">↗</span></a
+      >
+    </div>
+    <p class="hero-foot">
+      Local Rust CLI. Offline. Read-only configuration analysis.<br /><span
+        class="muted">For supported Claude Code and OpenCode settings.</span
+      >
+    </p><details class="hero-command">
+      <summary>Start with one command <span aria-hidden="true">+</span></summary
+      ><code
+        >configlens explain /model --client claude --client-version 2.1.296</code
+      >
+    </details>
+  </div>
+  <div class="hero-visual">
+    <div class="visual-heading">
+      <span class="mono">TRACE /model</span><span class="tiny-label"
+        >CLAUDE CODE</span
+      >
+    </div>
+    <div class="hero-trace">
+      <button class="hero-source" data-hero="0"
+        ><span class="node-number">01</span><span
+          ><small>USER</small><code>user-model</code></span
+        ><span class="trace-tag">overridden</span></button
+      >
+      <div class="hero-connector" aria-hidden="true">│</div>
+      <button class="hero-source" data-hero="1"
+        ><span class="node-number">02</span><span
+          ><small>PROJECT</small><code>project-model</code></span
+        ><span class="trace-tag">overridden</span></button
+      >
+      <div class="hero-connector" aria-hidden="true">│</div>
+      <button class="hero-source hero-winner" data-hero="2"
+        ><span class="node-number">03</span><span
+          ><small>LOCAL</small><code>local-model</code></span
+        ><span class="trace-tag">observed winner</span></button
+      >
+    </div><div class="hero-result">
+      <span class="accent">↳</span><p id="hero-detail" aria-live="polite">
+        Project local replaces earlier file definitions.<br /><span
+          class="muted">Effective value withheld: coverage is partial.</span
+        >
+      </p>
+    </div>
+    <div class="visual-footer">
+      <span class="status-dot"></span> Synthetic fixture <span
+        >NOT A LIVE SCAN</span
+      >
+    </div>
+  </div>
+</section>
+<div class="compatibility-strip wrap">
+  <span class="eyebrow">BOUNDED BY DESIGN</span><span
+    >Claude Code <code>2.1.296</code></span
+  ><span>OpenCode <code>1.18.35</code></span><span class="muted"
+    >Fixture-verified. Not runtime-conformant.</span
+  >
+</div>
