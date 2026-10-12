@@ -99,6 +99,16 @@ pub trait FileAccess {
         Vec::new()
     }
 
+    /// Fallible listing for callers that must distinguish an absent directory from an
+    /// unobservable one. The default preserves existing injected implementations.
+    fn list_dir_checked(
+        &self,
+        dir: &Path,
+        authorized_roots: &[PathBuf],
+    ) -> Result<Vec<PathBuf>, FileKind> {
+        Ok(self.list_dir(dir, authorized_roots))
+    }
+
     /// Classify without reading (used for inventory and doctor output).
     fn classify(&self, path: &Path, authorized_roots: &[PathBuf]) -> FileKind;
 }
@@ -154,6 +164,9 @@ impl FileAccess for RealFileAccess {
     ) -> ReadOutcome {
         use std::io::Read;
 
+        if authorized_roots.is_empty() {
+            return ReadOutcome::refused(FileKind::SymlinkEscape);
+        }
         let kind = self.classify(path, authorized_roots);
         if kind != FileKind::Regular {
             return ReadOutcome::refused(kind);
@@ -184,34 +197,64 @@ impl FileAccess for RealFileAccess {
     }
 
     fn list_dir(&self, dir: &Path, authorized_roots: &[PathBuf]) -> Vec<PathBuf> {
-        let Ok(entries) = std::fs::read_dir(dir) else {
-            return Vec::new();
-        };
-        let mut out = Vec::new();
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if matches!(self.classify(&path, authorized_roots), FileKind::Regular) {
-                out.push(path);
-            }
+        self.list_dir_checked(dir, authorized_roots)
+            .unwrap_or_default()
+    }
+
+    fn list_dir_checked(
+        &self,
+        dir: &Path,
+        authorized_roots: &[PathBuf],
+    ) -> Result<Vec<PathBuf>, FileKind> {
+        if authorized_roots.is_empty() {
+            return Err(FileKind::SymlinkEscape);
         }
-        out
+        match self.classify(dir, authorized_roots) {
+            FileKind::Missing => return Ok(Vec::new()),
+            FileKind::Directory => {}
+            other => return Err(other),
+        }
+        let entries = std::fs::read_dir(dir).map_err(|_| FileKind::Unreadable)?;
+        // Keep refused entries: discovery must report them rather than silently
+        // treating an unreadable/escaping managed fragment as absent policy.
+        entries
+            .map(|entry| {
+                entry
+                    .map(|entry| entry.path())
+                    .map_err(|_| FileKind::Unreadable)
+            })
+            .collect()
     }
 
     fn classify(&self, path: &Path, authorized_roots: &[PathBuf]) -> FileKind {
+        if path
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+        {
+            return FileKind::SymlinkEscape;
+        }
         let link_meta = match std::fs::symlink_metadata(path) {
             Ok(m) => m,
-            Err(_) => return FileKind::Missing,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return FileKind::Missing,
+            Err(_) => return FileKind::Unreadable,
         };
-        if link_meta.file_type().is_symlink() {
-            // A symlink is followed only when its target stays inside an authorised root.
+        // Resolve the entire path, not just a symlink in its final component:
+        // any parent directory can redirect an otherwise ordinary file.
+        // Empty roots remain usable for metadata-only discovery of Git markers;
+        // they never authorize following a final symlink.
+        if !authorized_roots.is_empty() || link_meta.file_type().is_symlink() {
             let target = match std::fs::canonicalize(path) {
                 Ok(t) => t,
                 Err(_) => return FileKind::Unreadable,
             };
             let inside = authorized_roots.iter().any(|root| {
-                std::fs::canonicalize(root)
-                    .map(|r| target.starts_with(&r))
-                    .unwrap_or(false)
+                !root.as_os_str().is_empty()
+                    && !root
+                        .components()
+                        .any(|component| matches!(component, std::path::Component::ParentDir))
+                    && std::fs::canonicalize(root)
+                        .map(|r| target.starts_with(&r))
+                        .unwrap_or(false)
             });
             if !inside {
                 return FileKind::SymlinkEscape;
@@ -313,6 +356,19 @@ mod tests {
         assert_eq!(out.kind, FileKind::Regular);
         assert_eq!(out.content.as_deref(), Some("{\"a\": 1}"));
         assert_eq!(out.bytes, 8);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn parent_directory_symlink_escape_is_refused() {
+        let inside = temp();
+        let outside = temp();
+        std::fs::write(outside.path().join("settings.json"), "{}").expect("write");
+        std::os::unix::fs::symlink(outside.path(), inside.path().join("config")).expect("symlink");
+        let path = inside.path().join("config/settings.json");
+        let out = RealFileAccess.read_capped(&path, 1024, &[inside.path().to_path_buf()]);
+        assert_eq!(out.kind, FileKind::SymlinkEscape);
+        assert!(out.content.is_none());
     }
 
     #[test]
@@ -449,6 +505,114 @@ mod tests {
 
         assert!(RealFileAccess
             .list_dir(&dir.path().join("nope"), &[dir.path().to_path_buf()])
+            .is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn permission_denied_parent_is_unreadable_not_missing() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp();
+        let parent = dir.path().join("private");
+        std::fs::create_dir(&parent).expect("mkdir");
+        let path = parent.join("settings.json");
+        std::fs::write(&path, "{}").expect("write");
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o000)).expect("chmod");
+        let metadata = std::fs::symlink_metadata(&path);
+        let outcome = RealFileAccess.read_capped(&path, 1024, &[dir.path().to_path_buf()]);
+        // Restore traversal before any assertion (including when tests run as root).
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o700))
+            .expect("restore permissions");
+        if metadata.is_ok() {
+            return; // A privileged process cannot exercise permission denial.
+        }
+        assert_eq!(
+            metadata.expect_err("denied").kind(),
+            std::io::ErrorKind::PermissionDenied
+        );
+        assert_eq!(outcome.kind, FileKind::Unreadable);
+        assert!(outcome.content.is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn parent_symlink_inside_root_and_explicitly_approved_target_are_readable() {
+        let inside = temp();
+        let outside = temp();
+        std::fs::create_dir(inside.path().join("real")).expect("mkdir");
+        std::fs::write(inside.path().join("real/settings.json"), "{}").expect("write");
+        let link = inside.path().join("config");
+        std::os::unix::fs::symlink(inside.path().join("real"), &link).expect("symlink");
+        assert!(RealFileAccess
+            .read_capped(
+                &link.join("settings.json"),
+                1024,
+                &[inside.path().to_path_buf()],
+            )
+            .is_readable());
+        std::fs::remove_file(&link).expect("remove link");
+        std::fs::write(outside.path().join("settings.json"), "{}").expect("write");
+        std::os::unix::fs::symlink(outside.path(), &link).expect("symlink");
+        assert!(RealFileAccess
+            .read_capped(
+                &link.join("settings.json"),
+                1024,
+                &[inside.path().to_path_buf(), outside.path().to_path_buf()],
+            )
+            .is_readable());
+    }
+
+    #[test]
+    fn no_roots_do_not_authorize_reads_or_directory_enumeration() {
+        let dir = temp();
+        let path = dir.path().join("settings.json");
+        std::fs::write(&path, "{}").expect("write");
+        assert!(!RealFileAccess.read_capped(&path, 1024, &[]).is_readable());
+        assert_eq!(
+            RealFileAccess.list_dir_checked(dir.path(), &[]),
+            Err(FileKind::SymlinkEscape)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn parent_symlink_loop_is_unreadable_not_missing() {
+        let dir = temp();
+        let link = dir.path().join("loop");
+        std::os::unix::fs::symlink(&link, &link).expect("symlink");
+        let out = RealFileAccess.read_capped(
+            &link.join("settings.json"),
+            1024,
+            &[dir.path().to_path_buf()],
+        );
+        assert_eq!(out.kind, FileKind::Unreadable);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn listing_preserves_refused_fragments_for_diagnostics() {
+        let dir = temp();
+        let outside = temp();
+        let fragment = dir.path().join("10-policy.json");
+        std::fs::write(outside.path().join("policy.json"), "{}").expect("write");
+        std::os::unix::fs::symlink(outside.path().join("policy.json"), &fragment).expect("symlink");
+        let directory = dir.path().join("20-directory.json");
+        std::fs::create_dir(&directory).expect("mkdir");
+        let listed = RealFileAccess.list_dir(dir.path(), &[dir.path().to_path_buf()]);
+        assert!(listed.contains(&fragment));
+        assert!(listed.contains(&directory));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn listing_does_not_follow_an_escaping_directory_symlink() {
+        let dir = temp();
+        let outside = temp();
+        std::fs::write(outside.path().join("policy.json"), "{}").expect("write");
+        let link = dir.path().join("managed-settings.d");
+        std::os::unix::fs::symlink(outside.path(), &link).expect("symlink");
+        assert!(RealFileAccess
+            .list_dir(&link, &[dir.path().to_path_buf()])
             .is_empty());
     }
 

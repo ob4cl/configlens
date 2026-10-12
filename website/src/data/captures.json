@@ -1,6 +1,6 @@
 {
   "binaryVersion": "configlens 0.1.0-beta.3",
-  "binarySha256": "32242ca78efe9d4219a801e44558a92290bb16cafa1d53eb10b8f75119095f28",
+  "binarySha256": "6eb58e573970b9fca3e8e561b78200a3ed261369d1facef61f18a9994544a35d",
   "normalization": "Only the ephemeral sandbox prefix is replaced by $SANDBOX. Commands retain every argument. stdout and stderr captured separately; no output elided.",
   "isolation": "bubblewrap: read-only host, writable synthetic sandbox, empty /etc, network namespace; cleared HOME/XDG/environment, explicit project boundary and trusted simulated input context.",
   "checks": [
@@ -61,7 +61,7 @@
     "snapshot": {
       "command": "configlens snapshot --client claude --client-version 2.1.296 --cwd $SANDBOX/project --project-root $SANDBOX/project --input-context $SANDBOX/context.json --allow-read-root $SANDBOX --color never --output $SANDBOX/before.json",
       "stdout": "",
-      "stderr": "configlens: wrote 7114 bytes to $SANDBOX/before.json (permissions: owner_only_0600)\n",
+      "stderr": "configlens: wrote 7114 bytes to <snapshot output> (permissions: owner_only_0600)\n",
       "exitCode": 0
     },
     "diff": {

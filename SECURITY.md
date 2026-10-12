@@ -65,6 +65,15 @@ in the technical specification
 ([`docs/spec/ConfigLens_Technical_Specification.md`](docs/spec/ConfigLens_Technical_Specification.md),
 section 7).
 
+Filesystem authorization is path-based. Canonicalization includes parent symlinks, but classification,
+opening and directory enumeration are separate operations. ConfigLens does not provide a
+descriptor-relative sandbox against concurrent hostile path replacement. Use trusted, stable roots
+and a private, user-controlled snapshot destination directory. Snapshot temporary files are created
+exclusively, with owner-only mode at creation on Unix. Create-new publication uses a non-replacing
+hard link; filesystems without hard-link support fail closed. Explicit overwrite uses rename.
+Windows snapshots inherit directory ACLs; restrictive Windows ACLs are not implemented. Atomic
+publication is not a guarantee of durability across power loss.
+
 ## What to expect
 
 - We will confirm receipt, reproduce, and agree a fix and a disclosure time with you.

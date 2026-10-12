@@ -13,7 +13,7 @@ use crate::adapters::{
     SourceClass,
 };
 use crate::context::ResolutionContext;
-use crate::filesystem::FileAccess;
+use crate::filesystem::{FileAccess, FileKind};
 use crate::parse::Syntax;
 use crate::security::PathPolicy;
 
@@ -74,7 +74,7 @@ impl ClientAdapter for OpenCodeAdapter {
 
         // 2. Global config (lowest observable layer).
         for path in Self::files_in(&ctx.xdg_config.join("opencode")) {
-            if access.exists_regular(&path) {
+            if access.classify(&path, roots) != FileKind::Missing {
                 push(
                     &mut plan,
                     Candidate {
@@ -117,7 +117,7 @@ impl ClientAdapter for OpenCodeAdapter {
         if let Some(dir) = ctx.environment_value("OPENCODE_CONFIG_DIR") {
             let dir = PathBuf::from(dir);
             for path in Self::files_in(&dir) {
-                if access.exists_regular(&path) {
+                if access.classify(&path, roots) != FileKind::Missing {
                     push(
                         &mut plan,
                         Candidate {
@@ -144,7 +144,7 @@ impl ClientAdapter for OpenCodeAdapter {
         // last-definition-wins tie-break (`resolve`) selects the nearest file. The boundary is the
         // explicit `--project-root`, otherwise the nearest git directory; with no boundary the
         // working directory is the only level and the run records that the boundary is uncertain.
-        let project_files = project_config_files(ctx, access);
+        let project_files = project_config_files(ctx, access, roots);
         let boundary_uncertain = project_boundary(ctx, access).is_none();
         for (index, path) in project_files.into_iter().enumerate() {
             let mut signals: Vec<&str> = Vec::new();
@@ -187,7 +187,7 @@ impl ClientAdapter for OpenCodeAdapter {
         // 7. Managed files for this platform.
         for dir in managed_dirs(Client::OpenCode, ctx.os, ctx.program_data.as_deref()) {
             for path in Self::files_in(&dir) {
-                if access.exists_regular(&path) {
+                if access.classify(&path, roots) != FileKind::Missing {
                     push(
                         &mut plan,
                         Candidate {
@@ -202,7 +202,6 @@ impl ClientAdapter for OpenCodeAdapter {
             }
         }
 
-        let _ = roots;
         plan
     }
 
@@ -242,9 +241,13 @@ fn project_boundary(ctx: &ResolutionContext, access: &dyn FileAccess) -> Option<
 /// never the search start — includes the boundary itself, and stops at the filesystem root when the
 /// boundary is not an ancestor of `ctx.cwd`. With no boundary, only `ctx.cwd` is inspected and the
 /// caller keeps the boundary-uncertain signal.
-fn project_config_files(ctx: &ResolutionContext, access: &dyn FileAccess) -> Vec<PathBuf> {
+fn project_config_files(
+    ctx: &ResolutionContext,
+    access: &dyn FileAccess,
+    roots: &[PathBuf],
+) -> Vec<PathBuf> {
     let Some(boundary) = project_boundary(ctx, access) else {
-        return present_config_files(&ctx.cwd, access);
+        return present_config_files(&ctx.cwd, access, roots);
     };
     // Collect every level from cwd up to (and including) the boundary, then reverse to
     // outermost-first order.
@@ -262,17 +265,18 @@ fn project_config_files(ctx: &ResolutionContext, access: &dyn FileAccess) -> Vec
     levels
         .iter()
         .rev()
-        .flat_map(|dir| present_config_files(dir, access))
+        .flat_map(|dir| present_config_files(dir, access, roots))
         .collect()
 }
 
-/// The config files present as regular files inside one directory, in documented name order
+/// Non-missing config candidates inside one directory, in documented name order.
+/// Refused/unreadable paths must survive discovery for the reader's diagnostics.
 /// (`opencode.json` then `opencode.jsonc`).
-fn present_config_files(dir: &Path, access: &dyn FileAccess) -> Vec<PathBuf> {
+fn present_config_files(dir: &Path, access: &dyn FileAccess, roots: &[PathBuf]) -> Vec<PathBuf> {
     CONFIG_FILES
         .iter()
         .map(|name| dir.join(name))
-        .filter(|path| access.exists_regular(path))
+        .filter(|path| access.classify(path, roots) != FileKind::Missing)
         .collect()
 }
 
@@ -338,6 +342,26 @@ mod tests {
             max_sources: 128,
             fail_on: crate::context::FailOn::Error,
             color: false,
+        }
+    }
+
+    #[test]
+    fn unreadable_known_config_paths_are_preserved_for_diagnostics() {
+        let mut ctx = ctx("/home/dev/work/p", "/home/dev/.config", "/home/dev");
+        ctx.project_root = Some(ctx.cwd.clone());
+        let global = ctx.xdg_config.join("opencode/opencode.json");
+        let project = ctx.cwd.join("opencode.json");
+        let managed = PathBuf::from("/etc/opencode/opencode.json");
+        let access = MemoryFileAccess::new()
+            .with_kind(&global, crate::filesystem::FileKind::Unreadable)
+            .with_kind(&project, crate::filesystem::FileKind::SymlinkEscape)
+            .with_kind(&managed, crate::filesystem::FileKind::Unreadable);
+        let plan = OpenCodeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
+        for path in [global, project, managed] {
+            assert!(plan
+                .candidates
+                .iter()
+                .any(|candidate| candidate.path.as_ref() == Some(&path)));
         }
     }
 

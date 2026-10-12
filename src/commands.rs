@@ -9,6 +9,9 @@ use crate::error::CliError;
 use crate::resolve::RunOutput;
 use crate::security::display_pointer;
 
+/// Maximum serialized report size, shared by snapshot writers and report readers.
+pub const MAX_REPORT_BYTES: usize = 64 * 1024 * 1024;
+
 /// Result of writing a snapshot.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SnapshotOutcome {
@@ -20,63 +23,152 @@ pub struct SnapshotOutcome {
 
 /// Write a report to an explicit destination: create-new by default, atomic, owner-only on Unix.
 ///
-/// Refuses a symlink destination and requires `--overwrite` to replace an existing file.
+/// Refuses symlinks and special files. Publication without overwrite uses a hard link, never a
+/// replacing rename. Filesystems without hard-link support fail closed. Windows inherits ACLs;
+/// no owner-only Windows ACL guarantee is made. The caller must trust the destination directory:
+/// std's path-based operations do not pin ancestors or prevent hostile directory-entry swaps.
 pub fn write_snapshot(
     path: &Path,
     content: &str,
     overwrite: bool,
 ) -> Result<SnapshotOutcome, CliError> {
-    if let Ok(metadata) = std::fs::symlink_metadata(path) {
-        if metadata.file_type().is_symlink() {
-            return Err(CliError::usage(
-                "the output path is a symlink; ConfigLens will not write through it",
-            ));
-        }
-        if metadata.is_dir() {
-            return Err(CliError::usage("the output path is a directory"));
-        }
-        if !overwrite {
-            return Err(CliError::usage(
-                "the output file already exists; pass --overwrite to replace it",
-            ));
-        }
+    if content.len() > MAX_REPORT_BYTES {
+        return Err(snapshot_error("resource_limit_exceeded"));
     }
+    validate_snapshot_destination(path, overwrite)?;
     let directory = path.parent().unwrap_or_else(|| Path::new("."));
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let temporary = directory.join(format!(".configlens-{stamp}-{}.tmp", std::process::id()));
-    if let Err(error) = std::fs::write(&temporary, content) {
-        return Err(CliError::file_problem(
-            "snapshot_write_failed",
-            &format!("{} ({error})", temporary.display()),
-        ));
-    }
+    #[cfg(test)]
+    snapshot_test_hook(SnapshotStage::BeforeCreate, &temporary);
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        let permissions = std::fs::Permissions::from_mode(0o600);
-        if let Err(error) = std::fs::set_permissions(&temporary, permissions) {
-            return Err(CliError::file_problem(
-                "snapshot_permissions_failed",
-                &format!("{} ({error})", temporary.display()),
-            ));
-        }
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
     }
-    if let Err(error) = std::fs::rename(&temporary, path) {
-        return Err(CliError::file_problem(
-            "snapshot_rename_failed",
-            &format!("{} ({error})", path.display()),
-        ));
+    let mut file = options
+        .open(&temporary)
+        .map_err(|_| snapshot_error("snapshot_write_failed"))?;
+    // Only an entry we successfully created is ours to clean up. Close the file before cleanup
+    // (including on Windows); the guard also handles later validation/publication failures.
+    let mut cleanup = SnapshotTemporary {
+        path: temporary,
+        active: true,
+    };
+    #[cfg(test)]
+    snapshot_test_hook(SnapshotStage::AfterCreate, &cleanup.path);
+    use std::io::Write;
+    let written = file.write_all(content.as_bytes());
+    drop(file);
+    written.map_err(|_| snapshot_error("snapshot_write_failed"))?;
+    #[cfg(test)]
+    snapshot_test_hook(SnapshotStage::BeforePublish, &cleanup.path);
+    if overwrite {
+        validate_snapshot_destination(path, true)?;
+        std::fs::rename(&cleanup.path, path)
+            .map_err(|_| snapshot_error("snapshot_rename_failed"))?;
+    } else {
+        // Hard-link creation refuses *any* existing destination atomically, including a symlink.
+        std::fs::hard_link(&cleanup.path, path).map_err(|error| {
+            if error.kind() == std::io::ErrorKind::AlreadyExists {
+                CliError::usage("the output file already exists; pass --overwrite to replace it")
+            } else {
+                snapshot_error("snapshot_rename_failed")
+            }
+        })?;
+        std::fs::remove_file(&cleanup.path)
+            .map_err(|_| snapshot_error("snapshot_cleanup_failed"))?;
     }
+    cleanup.active = false;
     Ok(SnapshotOutcome {
-        location: path.display().to_string(),
+        // Output destinations are not run-context paths, so cannot be safely relativized here.
+        location: "<snapshot output>".to_string(),
         bytes: content.len() as u64,
         overwritten: overwrite,
         permissions: crate::model::report::snapshot_acl_support().to_string(),
     })
 }
+
+fn snapshot_error(code: &'static str) -> CliError {
+    // Never pass raw paths or OS error text across the public error boundary.
+    CliError::file_problem(code, "<snapshot output>")
+}
+
+fn validate_snapshot_destination(path: &Path, overwrite: bool) -> Result<(), CliError> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) => {
+            if metadata.file_type().is_symlink() {
+                return Err(CliError::usage(
+                    "the output path is a symlink; ConfigLens will not write through it",
+                ));
+            }
+            if metadata.is_dir() {
+                return Err(CliError::usage("the output path is a directory"));
+            }
+            if !metadata.is_file() {
+                return Err(CliError::usage("the output path is not a regular file"));
+            }
+            if !overwrite {
+                return Err(CliError::usage(
+                    "the output file already exists; pass --overwrite to replace it",
+                ));
+            }
+            Ok(())
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(_) => Err(snapshot_error("snapshot_write_failed")),
+    }
+}
+
+struct SnapshotTemporary {
+    path: std::path::PathBuf,
+    active: bool,
+}
+
+impl Drop for SnapshotTemporary {
+    fn drop(&mut self) {
+        // Best effort on failure: a removed/unwritable parent can make cleanup impossible.
+        if self.active {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SnapshotStage {
+    BeforeCreate,
+    AfterCreate,
+    BeforePublish,
+}
+
+#[cfg(test)]
+type SnapshotHook = Box<dyn FnMut(SnapshotStage, &Path)>;
+
+#[cfg(test)]
+std::thread_local! {
+    static SNAPSHOT_HOOK: std::cell::RefCell<Option<SnapshotHook>> = const {
+        std::cell::RefCell::new(None)
+    };
+}
+
+#[cfg(test)]
+fn snapshot_test_hook(stage: SnapshotStage, path: &Path) {
+    SNAPSHOT_HOOK.with(|hook| {
+        if let Some(callback) = hook.borrow_mut().as_mut() {
+            callback(stage, path);
+        }
+    });
+}
+
+#[cfg(test)]
+#[path = "../tests/snapshot_write/unit.rs"]
+mod snapshot_write_tests;
 
 /// One difference between two reports.
 #[derive(Debug, Clone, PartialEq)]
@@ -131,6 +223,12 @@ impl DiffResult {
 
 /// Validate a snapshot document: it must be a ConfigLens report envelope of a compatible version.
 pub fn parse_report(text: &str) -> Result<Value, CliError> {
+    if text.len() > MAX_REPORT_BYTES {
+        return Err(CliError::file_problem(
+            "resource_limit_exceeded",
+            "<report input>",
+        ));
+    }
     let value: Value = serde_json::from_str(text)
         .map_err(|_| CliError::incompatible_input("the file is not valid JSON"))?;
     let object = value

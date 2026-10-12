@@ -27,7 +27,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from package_release import TARGETS  # noqa: E402  (same directory, same target list)
+from package_release import TARGETS, package_version  # noqa: E402
 
 # The pinned SBOM tool. `cargo install --locked --version 0.5.9 cargo-cyclonedx` reproduces it.
 TOOL_VERSION = "0.5.9"
@@ -57,14 +57,8 @@ HOST_PATH_PATTERNS = (
 
 
 def crate_version(root):
-    """Read `version` from the crate manifest without a TOML dependency."""
-    manifest = Path(root) / "Cargo.toml"
-    match = re.search(
-        r'^version\s*=\s*"([^"]+)"\s*$', manifest.read_text(encoding="utf-8"), re.MULTILINE
-    )
-    if match is None:
-        raise ValueError(f"no package version found in {manifest}")
-    return match.group(1)
+    """Use the same package-scoped manifest version as release archives."""
+    return package_version(root)
 
 
 def tool_arguments(root, target):
@@ -115,7 +109,7 @@ def check_tool_version(runner, cwd, environment):
     """Fail closed when the installed tool is not the pinned version."""
     result = runner(["cargo", "cyclonedx", "--version"], cwd, environment)
     reported = f"{getattr(result, 'stdout', '')}{getattr(result, 'stderr', '')}".strip()
-    if TOOL_VERSION not in reported:
+    if reported != f"cargo-cyclonedx-cyclonedx {TOOL_VERSION}":
         raise ValueError(f"expected cargo-cyclonedx {TOOL_VERSION}, got {reported!r}")
     return reported
 
@@ -194,6 +188,10 @@ def generate(root, output, tag, target, runner=run_tool):
         raise ValueError("unsupported release target")
     root, output = Path(root).resolve(), Path(output)
     version = crate_version(root)
+    if version != tag[1:]:
+        raise ValueError(
+            f"tag {tag} requires package version {tag[1:]}, found {version}"
+        )
 
     check_tool_version(runner, root, tool_environment())
     runner(tool_arguments(root, target), root, tool_environment())

@@ -5,13 +5,35 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Until `0.1.0` is published, entries describe the in-repo prototype. Nothing here is a claim about a
-published crate, a downloadable binary or verified upstream conformance — for the honest, item-by-item
+Entries distinguish unreleased changes from the published beta binaries. No entry claims a
+published crates.io package or verified upstream runtime conformance. For the item-by-item
 account of what is implemented and verified, see
 [`docs/implementation-status.md`](docs/implementation-status.md) and
 [`docs/verification-log.md`](docs/verification-log.md).
 
-## Unreleased — public-launch preparation (documentation and workflow only)
+## Unreleased — filesystem, snapshot, CLI and release-tooling audit
+
+### Fixed
+
+- Parent-directory symlink escapes, lexical traversal and empty read-root authorization.
+- Unreadable filesystem paths and refused configuration candidates no longer disappear as missing;
+  managed-fragment enumeration failures create explicit coverage gaps.
+- Snapshot temporary creation is exclusive and private from creation on Unix. Create-new
+  publication cannot clobber a concurrently created destination; failures clean owned temporaries
+  where possible, special-file destinations are refused, and output paths are not echoed.
+- Explicit context/diff inputs use bounded regular-file reads. Context validation and argument
+  parser errors no longer echo untrusted values; broken stdout pipes no longer panic.
+- Context construction no longer captures `PROGRAMDATA` behind the `--no-env` boundary.
+- Serialized reports use a separate 64 MiB limit shared by snapshot output and diff input, rather
+  than the 2 MiB context/configuration-file limit.
+- Distributable builds remap home/checkout source paths via the release helper; CI uses that helper.
+- SBOM generation rejects tag/package mismatches before running tools, reads only the package
+  version, and requires the pinned tool version exactly.
+- Local user/group identifiers in two tracked fuzz logs are neutral placeholders. Historical
+  copies and Git identities remain unchanged; see `docs/audit-2026-10-12.md` for scope and limits.
+- Documented filesystem race boundaries, hard-link requirements and measured benchmark limits.
+
+## Earlier unreleased public-launch preparation (documentation and workflow only)
 
 No code behaviour changes. These prepare the repository for a public launch; the repository is still
 private and no release has been cut from this state.
