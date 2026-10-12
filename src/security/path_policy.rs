@@ -26,7 +26,15 @@ pub struct PathPolicy {
 pub fn is_within(root: &Path, candidate: &Path) -> bool {
     let r: Vec<_> = root.components().collect();
     let c: Vec<_> = candidate.components().collect();
-    c.len() >= r.len() && r.iter().zip(c.iter()).all(|(a, b)| a == b)
+    // Do not normalize `..`: a preceding component may be a symlink, so lexical
+    // cancellation would not describe the path the filesystem actually resolves.
+    !r.is_empty()
+        && !r
+            .iter()
+            .chain(c.iter())
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+        && c.len() >= r.len()
+        && r.iter().zip(c.iter()).all(|(a, b)| a == b)
 }
 
 impl PathPolicy {
@@ -171,6 +179,25 @@ mod tests {
         assert!(!is_within(Path::new("/a/b"), Path::new("/a/bc")));
         assert!(!is_within(Path::new("/a/b"), Path::new("/a")));
         assert!(is_within(Path::new("/"), Path::new("/anything")));
+    }
+
+    #[test]
+    fn lexical_parent_components_are_not_authorized() {
+        let p = policy();
+        assert_eq!(
+            p.check_read(Path::new("/home/dev/../../etc/shadow")),
+            Err("outside_approved_roots")
+        );
+        // Even a net-contained traversal can cross a symlink before returning.
+        assert!(!is_within(
+            Path::new("/home/dev"),
+            Path::new("/home/dev/config/../settings.json")
+        ));
+        assert!(!is_within(Path::new(""), Path::new("/etc/shadow")));
+        assert!(!is_within(
+            Path::new("/home/dev/.."),
+            Path::new("/home/dev/../other")
+        ));
     }
 
     #[test]

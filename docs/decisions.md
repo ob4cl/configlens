@@ -161,13 +161,17 @@ assertions."
 
 ## D17 — Snapshot write path
 
-**Decision:** `tempfile`-style create-new in the destination directory → write → `chmod 0600` →
-`rename`. `--overwrite` is required to replace an existing file; a symlink destination is rejected
-outright. On Windows the ACL is not restricted and the tool says so in the JSON report
+**Decision:** exclusive `OpenOptions::create_new` in the destination directory, with mode `0600`
+at creation on Unix → bounded report write → non-replacing hard-link publication by default.
+`--overwrite` is required for replacing rename; symlink and special-file destinations are rejected.
+Temporary files are cleaned up on failure where the filesystem permits it. Filesystems without
+hard-link support fail closed in create-new mode. The destination directory must be trusted:
+path-based checks do not pin ancestors or prevent hostile directory-entry swaps, and no fsync-based
+crash-durability guarantee is made. On Windows the ACL is not restricted and the tool says so in the JSON report
 (`redaction.snapshot_acl: "not_implemented"`).
 **Why:** §7 atomic-write + owner-only requirement, and refusing to overclaim on Windows.
-**Windows consequence (documented, behaviour unchanged):** Windows has no `0600` equivalent. The
-snapshot is created as a same-directory temporary file and then renamed into place, so it
+**Windows consequence:** Windows has no `0600` equivalent. The
+snapshot is created as a same-directory temporary file and then published into place, so it
 **inherits the ACL of the destination folder** — ConfigLens neither tightens nor loosens it. The
 report states this (`redaction.snapshot_acl = "not_implemented"`) rather than claiming a protection
 that does not exist. Guidance: save snapshots in a **private, user-controlled directory** (for

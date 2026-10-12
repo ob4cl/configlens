@@ -1,6 +1,7 @@
 //! Command-line contract (spec §4) and the sanitized error boundary.
 
 use std::collections::BTreeMap;
+use std::io::Write;
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -8,7 +9,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use crate::adapters::{adapter_for, Client};
 use crate::context::{parse_supplied_context, FailOn, ResolutionContext, Trust, VersionContext};
 use crate::error::{arbitrate, CliError, ErrorDto, Outcome};
-use crate::filesystem::RealFileAccess;
+use crate::filesystem::{FileAccess, FileKind, RealFileAccess};
 use crate::model::report::{
     build as build_report, Compatibility, EvidenceReport, Report, ReportInput, REPORT_SCHEMA_JSON,
 };
@@ -57,7 +58,7 @@ pub enum PathsChoice {
     about = "Explain which AI configuration value wins, and why",
     long_about = "ConfigLens is a local, read-only CLI that traces supported AI coding-tool settings \
                   through configuration files and supplied session inputs. It never executes your \
-                  configuration, makes network requests or reads credentials.",
+                  configuration, makes network requests or accesses credential stores.",
     after_help = "Examples:\n  \
                   configlens clients\n  \
                   configlens scan --client claude --cwd . --client-version 2.1.296\n  \
@@ -272,6 +273,11 @@ pub fn prepare(client: Client, common: &CommonArgs) -> Result<Prepared, CliError
         &xdg.display().to_string(),
     );
     context.env = env;
+    context.program_data = context
+        .env
+        .as_ref()
+        .and_then(|env| env.get("PROGRAMDATA"))
+        .map(PathBuf::from);
     context.paths = path_mode(common.paths);
     context.strict = common.strict;
     if let Some(version) = &common.client_version {
@@ -296,9 +302,11 @@ pub fn prepare(client: Client, common: &CommonArgs) -> Result<Prepared, CliError
     }
 
     if let Some(path) = &common.input_context {
-        let text = std::fs::read_to_string(path).map_err(|_| {
-            CliError::file_problem("context_unreadable", &path.display().to_string())
-        })?;
+        let text = read_explicit_input(
+            path,
+            "context_unreadable",
+            crate::parse::Limits::default().max_bytes,
+        )?;
         let supplied = parse_supplied_context(&text, client.id(), &context.client_version)?;
         if let Some(version) = &supplied.client_version {
             if context.client_version.is_unknown() {
@@ -343,7 +351,11 @@ pub fn run(cli: Cli) -> i32 {
     match dispatch(cli, quiet) {
         Ok(code) => code,
         Err(error) => {
-            eprintln!("configlens: {}: {}", error.code(), error.message());
+            stderr_note(format_args!(
+                "configlens: {}: {}",
+                error.code(),
+                error.message()
+            ));
             error.exit_code()
         }
     }
@@ -353,20 +365,20 @@ fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
     match cli.command {
         Command::Clients(args) => {
             if args.format == Format::Json {
-                print!("{}", clients_json()?);
+                stdout_output(&clients_json()?)?;
             } else {
-                print!("{}", render_text::render_clients());
+                stdout_output(&render_text::render_clients())?;
             }
             Ok(0)
         }
         Command::Schema(args) => {
             match args.kind {
-                SchemaKind::Report => print!("{REPORT_SCHEMA_JSON}"),
+                SchemaKind::Report => stdout_output(REPORT_SCHEMA_JSON)?,
             }
             Ok(0)
         }
         Command::Completions(args) => {
-            print!("{}", crate::completions::script(args.shell));
+            stdout_output(&crate::completions::script(args.shell))?;
             Ok(0)
         }
         Command::SupportReport(args) => {
@@ -380,20 +392,20 @@ fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
             let json = render_json::render(&report);
             if args.preview {
                 // Explicit preview: the sanitized report goes to stdout, nothing is written.
-                print!("{json}");
+                stdout_output(&json)?;
                 if !quiet {
-                    eprintln!(
+                    stderr_note(format_args!(
                         "configlens: preview only — nothing was written. Add --output <path> to save the sanitized report."
-                    );
+                    ));
                 }
             } else if let Some(output) = &args.output {
                 // Explicit output; never an automatic upload, and never a default path.
                 let outcome = crate::commands::write_snapshot(output, &json, args.overwrite)?;
                 if !quiet {
-                    eprintln!(
+                    stderr_note(format_args!(
                         "configlens: wrote {} bytes of share-mode support report to {} (permissions: {}). Review it before attaching it anywhere.",
                         outcome.bytes, outcome.location, outcome.permissions
-                    );
+                    ));
                 }
             } else {
                 return Err(CliError::usage(
@@ -403,19 +415,23 @@ fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
             Ok(exit_code_for_run(&prepared, &common, FailOn::Error, None)?.exit_code())
         }
         Command::Diff(args) => {
-            let before = std::fs::read_to_string(&args.before).map_err(|_| {
-                CliError::file_problem("report_unreadable", &args.before.display().to_string())
-            })?;
-            let after = std::fs::read_to_string(&args.after).map_err(|_| {
-                CliError::file_problem("report_unreadable", &args.after.display().to_string())
-            })?;
+            let before = read_explicit_input(
+                &args.before,
+                "report_unreadable",
+                crate::commands::MAX_REPORT_BYTES,
+            )?;
+            let after = read_explicit_input(
+                &args.after,
+                "report_unreadable",
+                crate::commands::MAX_REPORT_BYTES,
+            )?;
             let result = crate::commands::diff_reports(
                 &crate::commands::parse_report(&before)?,
                 &crate::commands::parse_report(&after)?,
             )?;
             match args.format {
-                Format::Text => print!("{}", crate::commands::render_diff(&result)),
-                Format::Json => print!("{}", crate::commands::render_diff_json(&result)?),
+                Format::Text => stdout_output(&crate::commands::render_diff(&result))?,
+                Format::Json => stdout_output(&crate::commands::render_diff_json(&result)?)?,
             }
             Ok(0)
         }
@@ -423,7 +439,7 @@ fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
             let client = resolve_client(common.client.as_deref())?;
             let prepared = prepare(client, &common)?;
             let report = compose_report("scan", &prepared, Vec::new())?;
-            print_report(&report, &prepared, common.format, None);
+            print_report(&report, &prepared, common.format, None)?;
             Ok(exit_code_for_run(&prepared, &common, FailOn::Error, None)?.exit_code())
         }
         Command::Explain(args) => {
@@ -436,7 +452,7 @@ fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
             };
             prepared.run.insert_resolution(resolution);
             let report = compose_report("explain", &prepared, Vec::new())?;
-            print_report(&report, &prepared, args.common.format, Some(&args.key));
+            print_report(&report, &prepared, args.common.format, Some(&args.key))?;
             Ok(
                 exit_code_for_run(&prepared, &args.common, FailOn::Error, Some(&args.key))?
                     .exit_code(),
@@ -447,7 +463,7 @@ fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
             let fail_on = FailOn::from(args.fail_on);
             let prepared = prepare(client, &args.common)?;
             let report = compose_report("doctor", &prepared, Vec::new())?;
-            print_report(&report, &prepared, args.common.format, None);
+            print_report(&report, &prepared, args.common.format, None)?;
             Ok(exit_code_for_run(&prepared, &args.common, fail_on, None)?.exit_code())
         }
         Command::Snapshot(args) => {
@@ -457,14 +473,72 @@ fn dispatch(cli: Cli, quiet: bool) -> Result<i32, CliError> {
             let json = render_json::render(&report);
             let outcome = crate::commands::write_snapshot(&args.output, &json, args.overwrite)?;
             if !quiet {
-                eprintln!(
+                stderr_note(format_args!(
                     "configlens: wrote {} bytes to {} (permissions: {})",
                     outcome.bytes, outcome.location, outcome.permissions
-                );
+                ));
             }
             Ok(exit_code_for_run(&prepared, &args.common, FailOn::Error, None)?.exit_code())
         }
     }
+}
+
+/// Read an explicitly selected input with the same regular-file and byte-limit
+/// protections as discovered configuration. Authorize its parent, not a symlink's
+/// resolved target, so the selected name cannot redirect a read outside that root.
+fn read_explicit_input(
+    path: &std::path::Path,
+    unreadable: &'static str,
+    max_bytes: usize,
+) -> Result<String, CliError> {
+    let path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|_| CliError::file_problem(unreadable, "input"))?
+            .join(path)
+    };
+    // Resolve only the parent: accept ordinary `../report.json` spellings
+    // without resolving away an escaping final-component symlink.
+    let parent = path
+        .parent()
+        .and_then(|parent| std::fs::canonicalize(parent).ok())
+        .ok_or_else(|| CliError::file_problem(unreadable, "input"))?;
+    let path = path
+        .file_name()
+        .map(|name| parent.join(name))
+        .unwrap_or(path);
+    let roots = vec![parent];
+    let outcome = RealFileAccess.read_capped(&path, max_bytes as u64, &roots);
+    match outcome.content {
+        Some(text) if outcome.kind == FileKind::Regular => Ok(text),
+        _ => {
+            let code = match outcome.kind {
+                FileKind::Missing | FileKind::Unreadable => unreadable,
+                other => other.diagnostic_code(),
+            };
+            Err(CliError::file_problem(code, &path.display().to_string()))
+        }
+    }
+}
+
+/// Output failures are handled, never panicked. A consumer closing its pipe is
+/// ordinary early termination; other write errors retain the file-problem code.
+fn stdout_output(text: &str) -> Result<(), CliError> {
+    let mut stdout = std::io::stdout().lock();
+    match stdout
+        .write_all(text.as_bytes())
+        .and_then(|()| stdout.flush())
+    {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        Err(_) => Err(CliError::file_problem("output_unwritable", "stdout")),
+    }
+}
+
+fn stderr_note(message: std::fmt::Arguments<'_>) {
+    // No secondary panic if stderr itself is closed or unwritable.
+    let _ = writeln!(std::io::stderr().lock(), "{message}");
 }
 
 fn clients_json() -> Result<String, CliError> {
@@ -510,9 +584,9 @@ fn print_report(
     prepared: &Prepared,
     format: Format,
     explain_pointer: Option<&str>,
-) {
+) -> Result<(), CliError> {
     match format {
-        Format::Json => print!("{}", render_json::render(report)),
+        Format::Json => stdout_output(&render_json::render(report))?,
         Format::Text => match explain_pointer {
             Some(pointer) => {
                 // Share mode rewrites pointers, URL hosts and embedded path roots inside the
@@ -533,10 +607,11 @@ fn print_report(
                     false,
                 );
                 let _ = color; // text output is plain unless a caller asks for colour
-                print!(
-                    "{}",
-                    render_text::render_explain(&prepared.run, &resolution, &prepared.context)
-                );
+                stdout_output(&render_text::render_explain(
+                    &prepared.run,
+                    &resolution,
+                    &prepared.context,
+                ))?;
                 let base = resolution.pointer.clone();
                 let children: Vec<&str> = report
                     .resolutions
@@ -549,18 +624,19 @@ fn print_report(
                     .map(|r| r.pointer.as_str())
                     .collect();
                 if !children.is_empty() {
-                    println!("Child pointers ({}):", children.len());
+                    stdout_output(&format!("Child pointers ({}):\n", children.len()))?;
                     for child in children {
-                        println!("  {child}");
+                        stdout_output(&format!("  {child}\n"))?;
                     }
                 }
             }
             None => match report.command.as_str() {
-                "doctor" => print!("{}", render_text::render_doctor(&prepared.run)),
-                _ => print!("{}", render_text::render_scan(&prepared.run)),
+                "doctor" => stdout_output(&render_text::render_doctor(&prepared.run))?,
+                _ => stdout_output(&render_text::render_scan(&prepared.run))?,
             },
         },
     }
+    Ok(())
 }
 
 /// Compose the report envelope for a run.

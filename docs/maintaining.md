@@ -77,7 +77,7 @@ this checkout does not have (`docs/semantics.md`, `docs/compatibility.md`, `docs
 
 ## Release checklist (not yet satisfied)
 
-The `0.1.x` line is a private-beta prototype (currently `0.1.0-beta.3`). Before any published
+The `0.1.x` line is a pre-release prototype (currently `0.1.0-beta.3`). Before a stable published
 release, these must be true — they are the "launch dependencies". Open items are marked `[ ]`,
 satisfied ones `[x]`:
 
@@ -93,14 +93,22 @@ satisfied ones `[x]`:
 - [x] **MSRV actually built.** `cargo +1.85.0 check --locked --all-targets --all-features` exits `0`
       (§8.1 of `verification-log.md`) and the CI `msrv` job runs the same check; local development used
       1.99.0.
-- [ ] **Conformance, or an honest label.** Either build a pinned loader harness, or keep every rule at
-      `fixture_verified`/`documented` and say so.
+- [x] **Conformance, or an honest label.** Rules remain at most `fixture_verified`; a pinned upstream
+      loader harness has not been run. Do not promote the label without runtime evidence.
 - [x] **Benchmarks.** `benches/resolution.rs` runs (`cargo bench`); its medians and quadratic scaling
       are recorded in `docs/implementation-status.md`. Publish no speed claim beyond those numbers.
-- [ ] **Fixtures tree.** `fixtures/` and `examples/` are empty; fixtures are inline in tests.
+- [x] **Fixtures.** Synthetic fixtures live in `docs/research/fixtures/`, website data and inline
+      tests. No separate top-level `fixtures/` or `examples/` distribution is claimed.
 - [ ] **Known gaps closed or accepted.** Windows snapshot ACLs. (Share-mode URL-host pseudonymization
       is now implemented and tested.)
-- [ ] **Artifacts.** Tagged source, binaries and checksums; no mandatory curl-to-shell installer.
+- [x] **Beta artifacts.** The three beta releases have archives and checksums; beta.2 and beta.3
+      also have SBOMs. The audit flags beta.2's SBOM version mismatch without changing old assets.
+      Binaries remain unsigned and macOS builds unnotarized; crates.io publication is not claimed.
+
+Build distributable binaries with `python3 scripts/build_release.py --target <target>` (Windows:
+`python`). This preserves caller flags while remapping Rust home/checkout source prefixes. Inspect
+final archives separately: remapping does not promise to scrub linker paths, arbitrary strings or
+all ignored Cargo caches.
 
 ## GitHub Actions pinning
 
@@ -116,8 +124,9 @@ When a pin changes — including a Dependabot pull request:
 2. Confirm the SHA matches the pin you are about to write, and update the trailing version comment.
 3. Treat a **major** version bump as a code change, not a routine dependency update: read the
    changelog, check the action's `action.yml` inputs the workflow relies on, and let CI run.
-4. Only official, widely used actions are used. Third-party tools are installed by the workflow
-   (for example `cargo install cargo-fuzz --locked --version <v>`) rather than pulled as an action.
+4. Most actions are official GitHub actions. The pinned third-party `taiki-e/install-action`
+   installs cargo-deny; review its provenance and tool pin as well. Other tools are installed by
+   explicit version (for example `cargo install cargo-fuzz --locked --version <v>`).
 
 The pin inventory and the verification dates live in the private maintainer archive alongside this
 project's release mechanics.

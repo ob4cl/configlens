@@ -43,6 +43,12 @@ cargo build --locked --release
 ./demo/demo.sh          # isolated synthetic end-to-end smoke test; exits 0
 ```
 
+Before distributing a locally built binary, run `python3 scripts/build_release.py` (Windows:
+`python`) to remap Rust home/checkout paths, then inspect the artifact. Ordinary Cargo builds may
+embed identifying source paths. Release CI uses this helper; linker-generated or external-tool
+strings can still require review. Release-tooling/privacy checks require Python 3:
+`python3 -m unittest discover -s scripts -p 'test_*.py' -v`.
+
 The recorded run in [`docs/verification-log.md`](docs/verification-log.md) covered 324 tests (194
 library unit tests plus 130 integration tests across `tests/acceptance.rs`, `tests/cli_contract.rs`,
 `tests/conformance.rs`, `tests/rules_claude.rs`, `tests/rules_opencode.rs` and

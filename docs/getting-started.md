@@ -128,6 +128,10 @@ configlens diff before.json after.json
 Snapshots are written create-new and atomically, with owner-only permissions on Unix. Pass
 `--overwrite` to replace an existing file. Protected values compare as `unknown_redacted` — two
 redacted values are never reported as equal, because equality cannot be proven from a mask.
+Use a private, trusted destination directory. Create-new publication requires hard-link support
+and fails closed when unavailable; explicit overwrite uses rename. Windows inherits the folder's
+ACL without tightening it. The writer does not promise crash durability or protection against a
+hostile process replacing directory entries concurrently.
 
 ## 6. What "wins" actually means
 
