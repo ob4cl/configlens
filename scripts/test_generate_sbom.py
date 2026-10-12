@@ -7,6 +7,7 @@ import unittest
 from generate_sbom import (
     SPEC_VERSION,
     TOOL_VERSION,
+    check_tool_version,
     crate_version,
     generate,
     normalise,
@@ -87,7 +88,7 @@ class FakeRunner:
         if self.returncode != 0:
             return FakeResult(returncode=self.returncode, stderr="synthetic failure")
         target = arguments[arguments.index("--target") + 1]
-        body = self.payload if self.payload is not None else document()
+        body = self.payload if self.payload is not None else document("0.1.0-beta.1")
         (Path(cwd) / f"configlens_bin_{target}.cdx.json").write_text(
             json.dumps(body), encoding="utf-8"
         )
@@ -107,8 +108,17 @@ class SbomTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         (self.root / "Cargo.toml").write_text(
-            '[package]\nname = "configlens"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[package]\nname = "configlens"\nversion = "0.1.0-beta.1"\n', encoding="utf-8"
         )
+
+    def test_rejects_tag_package_mismatch_before_running_tool(self):
+        runner = fake_runner()
+        with self.assertRaisesRegex(ValueError, "requires package version"):
+            generate(self.root, self.root / "out", "v0.1.0-beta.2",
+                     "x86_64-unknown-linux-gnu", runner)
+        self.assertEqual(runner.calls, [])
+        self.assertFalse((self.root / "out").exists())
+        self.assertFalse((self.root / "configlens_bin_x86_64-unknown-linux-gnu.cdx.json").exists())
 
     def test_generates_valid_normalised_reproducible_sbom(self):
         runner = fake_runner()
@@ -118,13 +128,14 @@ class SbomTests(unittest.TestCase):
         self.assertEqual(first.read_bytes(), second.read_bytes(), "the SBOM must be reproducible")
         written = json.loads(first.read_text(encoding="utf-8"))
         root_component = written["metadata"]["component"]
-        self.assertEqual(root_component["bom-ref"], "pkg:cargo/configlens@0.1.0")
+        self.assertEqual(root_component["bom-ref"], "pkg:cargo/configlens@0.1.0-beta.1")
+        self.assertEqual(root_component["version"], first.name.split("-x86_64")[0].removeprefix("configlens-v"))
         self.assertNotIn("/home/", first.read_text(encoding="utf-8"))
         # Components and dependency edges are sorted, so the bytes do not depend on graph order.
         self.assertEqual([c["name"] for c in written["components"]], ["clap", "serde"])
         self.assertEqual(
             [entry["ref"] for entry in written["dependencies"]],
-            ["pkg:cargo/clap@4.6.7", "pkg:cargo/configlens@0.1.0", "pkg:cargo/serde@1.0.229"],
+            ["pkg:cargo/clap@4.6.7", "pkg:cargo/configlens@0.1.0-beta.1", "pkg:cargo/serde@1.0.229"],
         )
         self.assertIn("pkg:cargo/serde@1.0.229", written["dependencies"][1]["dependsOn"])
         # The tool was invoked exactly as the release workflow documents, with a pinned epoch.
@@ -283,10 +294,30 @@ class SbomTests(unittest.TestCase):
             generate(*args, fake_runner())
 
     def test_crate_version_comes_from_the_manifest(self):
-        self.assertEqual(crate_version(self.root), "0.1.0")
+        self.assertEqual(crate_version(self.root), "0.1.0-beta.1")
         (self.root / "Cargo.toml").write_text('[package]\nname = "configlens"\n', encoding="utf-8")
         with self.assertRaises(ValueError):
             crate_version(self.root)
+
+    def test_crate_version_reads_only_package_section(self):
+        (self.root / "Cargo.toml").write_text(
+            '[dependencies.decoy]\nversion = "9.9.9"\n'
+            '[package]\nname = "configlens"\nversion = "0.1.0-beta.1"\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(crate_version(self.root), "0.1.0-beta.1")
+        (self.root / "Cargo.toml").write_text(
+            '[package]\nname = "configlens"\n[dependencies.decoy]\nversion = "9.9.9"\n',
+            encoding="utf-8",
+        )
+        with self.assertRaises(ValueError):
+            crate_version(self.root)
+
+    def test_tool_version_requires_exact_pin_not_substring(self):
+        for version in ("0.5.90", "10.5.9", "0.5.9-beta.1"):
+            with self.subTest(version=version):
+                with self.assertRaises(ValueError):
+                    check_tool_version(fake_runner(tool_version=version), self.root, {})
 
 
 if __name__ == "__main__":

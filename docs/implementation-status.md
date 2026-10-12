@@ -177,8 +177,8 @@ runtime-conformance claim.
 | Panic hook suppresses input content | [x] | custom hook in `src/main.rs` |
 | Limits: 2 MiB/file, 16 MiB total, 128 sources, depth 64, include depth 8, 2000 events/key | [x] | each with its own diagnostic and test |
 | Reject devices/sockets/FIFOs/directories | [x] | `filesystem::tests::{directories_are_refused,sockets_are_refused}` |
-| Symlink loops + escape detected | [x] | `filesystem::tests::symlink_*` |
-| Snapshot: explicit path, create-new, atomic same-dir temp, 0600, reject symlink target, `--overwrite` | [~] | Unix verified (`0600`); **Windows ACL not implemented** (`redaction.snapshot_acl = "not_implemented"`). On Windows there is no `0600` equivalent: the same-directory temp file is renamed into place, so the snapshot **inherits the destination folder's ACL** (neither tightened nor loosened). A restrictive DACL is out of scope for 0.1 — it would need `unsafe` Win32 security APIs or a new dependency (`unsafe_code = "forbid"`, minimal-dependency policy). Guidance: save snapshots in a private, user-controlled directory |
+| Symlink loops + escape detected | [x] | Parent-directory escapes and lexical traversal covered by `filesystem::tests` and `path_policy::tests`. Canonicalization/open races remain; this is not a race-proof sandbox |
+| Snapshot: explicit path, create-new, atomic same-dir temp, 0600, reject symlink target, `--overwrite` | [~] | Exclusive temporary creation, Unix mode `0600` at creation, non-replacing hard-link publication (fails closed without hard-link support), explicit-overwrite rename and failure cleanup covered by `commands::snapshot_write_tests`. **Windows ACL not implemented** (`redaction.snapshot_acl = "not_implemented"`); snapshots inherit the folder ACL. Save to a private, trusted directory. No hostile directory-swap or crash-durability guarantee |
 | No automatic snapshots/caches/log files | [x] | none created |
 
 ## 8. Tests (§8)

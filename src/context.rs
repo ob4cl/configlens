@@ -202,7 +202,8 @@ impl ResolutionContext {
             project_root: None,
             home: PathBuf::from(home),
             xdg_config: PathBuf::from(xdg_config),
-            program_data: std::env::var_os("PROGRAMDATA").map(PathBuf::from),
+            // Environment policy belongs to the caller, not this constructor.
+            program_data: None,
             approved_roots: Vec::new(),
             client_version: VersionContext::Unknown,
             trust: Trust::Unknown,
@@ -247,15 +248,16 @@ pub fn parse_supplied_context(
     expected_client: &str,
     claimed_version: &VersionContext,
 ) -> Result<SuppliedContext, CliError> {
-    let merged: SuppliedContext = serde_json::from_str(text).map_err(|e| {
-        CliError::incompatible_input(&format!("context file is not valid JSON: {e}"))
-    })?;
+    // Serde type errors may include arbitrary input strings. Terminal sanitization
+    // is not secret redaction, so diagnostics must never contain its raw message.
+    let merged: SuppliedContext = serde_json::from_str(text)
+        .map_err(|_| CliError::incompatible_input("context file is not valid context JSON"))?;
 
     if let Some(schema) = &merged.schema_version {
         if schema != "1.0" {
-            return Err(CliError::incompatible_input(&format!(
-                "unsupported context schema_version {schema}"
-            )));
+            return Err(CliError::incompatible_input(
+                "unsupported context schema_version",
+            ));
         }
     }
     if let Some(client) = &merged.client {

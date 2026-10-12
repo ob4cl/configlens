@@ -96,7 +96,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           rustup target add --toolchain stable "$TARGET"
-          cargo +stable build --locked --release --target "$TARGET" --bin configlens
+          python scripts/build_release.py --toolchain stable --target "$TARGET"
       - name: Package binary and public project notices only
         env:
           TAG: ${{ inputs.tag }}

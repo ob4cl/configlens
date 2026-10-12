@@ -10,8 +10,9 @@ ConfigLens is a small, local, read-only Rust CLI that traces a supported configu
 **Claude Code** and **OpenCode** across supported configuration sources, and shows the observed
 winner — with the file, line and reason for each contribution, including the ones that lost.
 
-It never executes your configuration, never runs a client binary, opens no socket and reads no
-credential. Values are redacted unless an adapter explicitly allowlists them.
+It never executes your configuration, never runs a client binary, opens no socket and accesses no
+credential store. Configuration files may contain sensitive values, which are redacted unless an
+adapter explicitly allowlists them.
 
 > **Pre-release, `0.1.0-beta.3`.** A working prototype, not a finished product: both adapters are
 > fixture-verified rather than runtime-conformant, and unreadable layers are reported as gaps instead
@@ -27,7 +28,7 @@ Prebuilt binaries are attached to every release. Three targets ship today:
 | macOS (Apple Silicon) | `configlens-<tag>-aarch64-apple-darwin.tar.gz` |
 | Linux (x86-64, glibc) | `configlens-<tag>-x86_64-unknown-linux-gnu.tar.gz` |
 
-Each release also carries a `SHA256SUMS` file and a CycloneDX SBOM per target. The binaries are
+Each release carries a `SHA256SUMS` file; beta.2 and beta.3 also have a CycloneDX SBOM per target. The binaries are
 **unsigned** and there is no installer or package manager; replace `<tag>` below with the release you
 want (currently `v0.1.0-beta.3`).
 
@@ -77,6 +78,11 @@ cargo install --locked --git https://github.com/ob4cl/configlens
 
 Or from a checkout: `cargo build --locked --release`, which leaves the binary at
 `target/release/configlens`.
+
+For a binary you intend to distribute, use `python3 scripts/build_release.py` instead (Python 3
+required; on Windows use `python`). This remaps Rust source paths under your home and checkout to
+neutral prefixes. Ordinary Cargo builds can embed local paths; remapping is best-effort, so inspect
+the final artifact rather than treating it as a general secret scrubber.
 
 **Not available yet:** macOS Intel, Linux arm64, crates.io, Homebrew, Scoop/winget. There is no
 mandatory curl-to-shell installer, and nothing here contacts the network at run time.
@@ -274,6 +280,15 @@ CLI, Cline, Roo and Hermes (not investigated). Run `configlens clients` for the 
   of scope for 0.1. Save snapshots in a **private, user-controlled directory** (for example
   `%USERPROFILE%`, not a shared or world-readable folder) so the inherited ACL is the one you mean.
 - Reports still describe your project structure. Never paste raw credential files into an issue.
+- Filesystem checks resolve parent-directory symlinks and reject `..` traversal before reading.
+  Checks and opens are separate path-based operations, not a race-proof sandbox: do not scan a
+  tree that a hostile process can mutate concurrently. Save snapshots in a trusted directory.
+  Create-new snapshot publication requires hard-link support and fails closed without it;
+  `--overwrite` uses rename. Neither mode promises crash-durable storage.
+- Explicit `--input-context` inputs are bounded to 2 MiB; serialized report inputs and snapshot
+  output use a separate 64 MiB bound so a produced snapshot can be diffed. Inputs must resolve to
+  regular files inside the selected parent directory. A final symlink escaping that directory is
+  refused; select the intended target directly instead.
 
 ## Status
 
@@ -285,8 +300,8 @@ CLI, Cline, Roo and Hermes (not investigated). Run `configlens clients` for the 
   client in [Compatibility](#compatibility).
 - Windows snapshot ACL restriction is not implemented, and the report says so rather than implying a
   protection that does not exist.
-- The engine is quadratic in key count; real configurations have tens of keys, where it is
-  sub-millisecond. The measured scaling is in
+- The engine is quadratic in key count. The recorded 100-key benchmark took about 3.8 ms on the
+  measured hardware; that is not an end-to-end CLI latency guarantee. The measured scaling is in
   [`docs/implementation-status.md`](docs/implementation-status.md).
 - What is implemented, verified and **not** verified is tracked item by item in
   [`docs/implementation-status.md`](docs/implementation-status.md), with the commands actually run in

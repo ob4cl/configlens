@@ -92,9 +92,9 @@ Error: Fuzz target exited with exit status: 77
 exit_status=1
 --- crash artifacts ---
 total 12
-drwxr-xr-x 2 user user 4096 Oct 11 11:33 .
-drwxr-xr-x 3 user user 4096 Oct 11 11:33 ..
--rw-r--r-- 1 user user   20 Oct 11 11:33 crash-bf816cb168fc4f59a426cc566448cabe07e7f7bb
+drwxr-xr-x 2 user group 4096 Oct 11 11:33 .
+drwxr-xr-x 3 user group 4096 Oct 11 11:33 ..
+-rw-r--r-- 1 user group   20 Oct 11 11:33 crash-bf816cb168fc4f59a426cc566448cabe07e7f7bb
 === 2026-10-11T11:33:43+01:00 fuzz run resolve_precedence (90s) ===
     Finished `release` profile [optimized + debuginfo] target(s) in 0.04s
     Finished `release` profile [optimized + debuginfo] target(s) in 0.05s
@@ -464,7 +464,7 @@ Error: Fuzz target exited with exit status: 77
 exit_status=1
 --- crash artifacts ---
 total 8
-drwxr-xr-x 2 user user 4096 Oct 11 11:35 .
-drwxr-xr-x 5 user user 4096 Oct 11 11:35 ..
--rw-r--r-- 1 user user    0 Oct 11 11:35 crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+drwxr-xr-x 2 user group 4096 Oct 11 11:35 .
+drwxr-xr-x 5 user group 4096 Oct 11 11:35 ..
+-rw-r--r-- 1 user group    0 Oct 11 11:35 crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
 === 2026-10-11T11:35:15+01:00 session complete ===

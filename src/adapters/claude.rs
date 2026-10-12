@@ -12,7 +12,7 @@ use crate::adapters::{
     DiscoveryPlan, Registry, SourceClass,
 };
 use crate::context::ResolutionContext;
-use crate::filesystem::FileAccess;
+use crate::filesystem::{FileAccess, FileKind};
 use crate::parse::Syntax;
 use crate::security::PathPolicy;
 
@@ -53,8 +53,17 @@ impl ClaudeAdapter {
         let mut out = Vec::new();
         let primary = dir.join(MANAGED_FILE);
         out.push((primary, "managed_settings_file".to_string()));
-        let mut listed: Vec<PathBuf> = access
-            .list_dir(&dir.join(MANAGED_DIR), roots)
+        let fragments = dir.join(MANAGED_DIR);
+        let entries = match access.list_dir_checked(&fragments, roots) {
+            Ok(entries) => entries,
+            Err(_) => {
+                // Return a marker for discovery's coverage gap, not a settings
+                // candidate: the directory path must never be parsed as a document.
+                out.push((fragments, "managed_directory_listing_failed".to_string()));
+                return out;
+            }
+        };
+        let mut listed: Vec<PathBuf> = entries
             .into_iter()
             .filter(|p| {
                 p.extension().map(|e| e == "json").unwrap_or(false)
@@ -101,7 +110,7 @@ impl ClientAdapter for ClaudeAdapter {
 
         // 1. User settings (`$CLAUDE_CONFIG_DIR` wins over `~/.claude`).
         let user = claude_home.join("settings.json");
-        if access.exists_regular(&user) {
+        if access.classify(&user, roots) != FileKind::Missing {
             plan.candidates.push(Candidate {
                 layer_id: "cc.user".to_string(),
                 class: SourceClass::User,
@@ -137,7 +146,7 @@ impl ClientAdapter for ClaudeAdapter {
         // A file an earlier version (pre v2.1.211) left in the starting directory is still read;
         // the root file's value wins where both set the same key.
         let legacy = ctx.cwd.join(".claude/settings.local.json");
-        if legacy != local && access.exists_regular(&legacy) {
+        if legacy != local && access.classify(&legacy, roots) != FileKind::Missing {
             plan.candidates.push(Candidate {
                 layer_id: "cc.project_local".to_string(),
                 class: SourceClass::ProjectLocal,
@@ -161,6 +170,13 @@ impl ClientAdapter for ClaudeAdapter {
         // 6. Managed file tier for this platform.
         for dir in managed_dirs(Client::Claude, ctx.os, ctx.program_data.as_deref()) {
             for (path, why) in self.managed_files(&dir, access, roots) {
+                if why == "managed_directory_listing_failed" {
+                    plan.expected_unobservable.push((
+                        "cc.managed.file".to_string(),
+                        "managed_directory_listing_failed".to_string(),
+                    ));
+                    continue;
+                }
                 plan.candidates.push(Candidate {
                     layer_id: "cc.managed.file".to_string(),
                     class: SourceClass::ManagedFile,
@@ -224,6 +240,23 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn managed_directory_listing_failure_remains_visible() {
+        let managed = tempfile::tempdir().expect("temp dir");
+        let outside = tempfile::tempdir().expect("temp dir");
+        let fragments = managed.path().join(MANAGED_DIR);
+        std::os::unix::fs::symlink(outside.path(), &fragments).expect("symlink");
+        let files = ClaudeAdapter::new().managed_files(
+            managed.path(),
+            &crate::filesystem::RealFileAccess,
+            &[managed.path().to_path_buf()],
+        );
+        assert!(files.iter().any(|(path, why)| {
+            path == &fragments && why == "managed_directory_listing_failed"
+        }));
+    }
+
     fn policy(ctx: &ResolutionContext, root: Option<&str>) -> PathPolicy {
         PathPolicy::new(
             &ctx.home,
@@ -256,6 +289,54 @@ mod tests {
             .iter()
             .filter(|c| c.layer_id == id)
             .collect()
+    }
+
+    #[test]
+    fn managed_listing_errors_create_coverage_gaps_not_settings_candidates() {
+        struct UnreadableListing;
+        impl FileAccess for UnreadableListing {
+            fn read_capped(
+                &self,
+                _: &Path,
+                _: u64,
+                _: &[PathBuf],
+            ) -> crate::filesystem::ReadOutcome {
+                crate::filesystem::ReadOutcome::missing()
+            }
+            fn exists_regular(&self, _: &Path) -> bool {
+                false
+            }
+            fn classify(&self, _: &Path, _: &[PathBuf]) -> FileKind {
+                FileKind::Missing
+            }
+            fn list_dir_checked(&self, _: &Path, _: &[PathBuf]) -> Result<Vec<PathBuf>, FileKind> {
+                Err(FileKind::Unreadable)
+            }
+        }
+        let ctx = ctx("/home/dev/work/p", "/home/dev");
+        let plan = ClaudeAdapter::new().discover(&ctx, &UnreadableListing, &policy(&ctx, None));
+        assert!(plan.expected_unobservable.iter().any(|(layer, reason)| {
+            layer == "cc.managed.file" && reason == "managed_directory_listing_failed"
+        }));
+        assert!(!plan.candidates.iter().any(|candidate| {
+            candidate
+                .path
+                .as_ref()
+                .is_some_and(|path| path.ends_with(MANAGED_DIR))
+        }));
+    }
+
+    #[test]
+    fn unreadable_user_settings_are_preserved_for_diagnostics() {
+        let ctx = ctx("/home/dev/work/p", "/home/dev");
+        let user = ctx.home.join(".claude/settings.json");
+        let access =
+            MemoryFileAccess::new().with_kind(&user, crate::filesystem::FileKind::Unreadable);
+        let plan = ClaudeAdapter::new().discover(&ctx, &access, &policy(&ctx, None));
+        assert!(plan
+            .candidates
+            .iter()
+            .any(|candidate| candidate.path.as_ref() == Some(&user)));
     }
 
     #[test]

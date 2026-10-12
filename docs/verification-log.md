@@ -3,6 +3,21 @@
 Commands actually run in this repository, with their real results. Nothing here is a claim about a
 command that was not executed. Copy/paste each command to reproduce.
 
+## 2026-10-12 follow-up audit
+
+The combined audit tree passed formatting, all-feature Clippy with warnings denied, all-feature
+locked Rust tests (360 passing), the locked release build, the isolated demo, MSRV 1.85.0 checking,
+and macOS/Windows cross-target checking. All 34 release-tooling/privacy Python tests passed. Dependency
+policy, workflow lint, three 60-second fuzz smokes, website checks and browser tests also passed.
+See [`audit-2026-10-12.md`](audit-2026-10-12.md) for commands, scope and explicit limitations.
+The earlier numbered sections below are historical runs, not the current test census.
+Unrelated concurrent edits in the original checkout were excluded by moving the known audit
+changes into a separate worktree before final verification. Independent re-review passed after
+the large-snapshot/report-limit regression was fixed.
+The first hosted PR run passed the Rust suites on Linux, macOS and Windows, plus quality, MSRV,
+dependency, fuzz and website checks. Its Windows Python step exposed two test-harness portability
+assumptions; the follow-up selects Git Bash explicitly and checks both Windows remap spellings.
+
 ## Environment
 
 | Item | Value |
