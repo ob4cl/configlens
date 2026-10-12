@@ -28,8 +28,14 @@ class BuildReleaseTests(unittest.TestCase):
                 self.assertEqual(cwd, root)
                 flags = env["CARGO_ENCODED_RUSTFLAGS"].split("\x1f")
                 self.assertEqual(flags[:3], caller.split("\x1f"))
-                self.assertEqual(flags[3:], [f"--remap-path-prefix={home}=/build-home",
-                                             f"--remap-path-prefix={root}=/configlens"])
+                expected = []
+                for prefix, replacement in ((home, "/build-home"), (root, "/configlens")):
+                    spellings = [str(prefix)]
+                    if os.name == "nt":
+                        spellings.append(prefix.as_posix())
+                    expected.extend(f"--remap-path-prefix={spelling}={replacement}"
+                                    for spelling in dict.fromkeys(spellings))
+                self.assertEqual(flags[3:], expected)
                 self.assertEqual(env["KEEP"], "yes")
                 self.assertNotIn("RUSTFLAGS", env)
                 output = cwd / "target" / target / "release" / "configlens"
