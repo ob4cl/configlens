@@ -1,0 +1,111 @@
+<section id="install" class="section wrap">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">06 / TAKE A CLOSER LOOK</p><h2>
+        Bring clarity<br />to your next config change.
+      </h2>
+    </div><p>
+      <span class="release-pill">PINNED PUBLIC BETA · v0.1.0-beta.3</span><br
+      />A working prototype, not a stable release.
+    </p>
+  </div><div class="install-grid">
+    <div class="install-main">
+      <label class="field-label" for="platform">Choose your platform</label
+      ><select id="platform" disabled
+        ><option value="linux">Linux · x86-64 · glibc</option><option
+          value="macos">macOS · Apple Silicon</option
+        ><option value="windows">Windows · x86-64</option></select
+      ><div class="actions">
+        <a
+          id="download-link"
+          class="button primary"
+          href="https://github.com/ob4cl/configlens/releases/download/v0.1.0-beta.3/configlens-v0.1.0-beta.3-x86_64-unknown-linux-gnu.tar.gz"
+          >Download Linux archive <span aria-hidden="true">↓</span></a
+        ><a
+          class="text-link"
+          href="https://github.com/ob4cl/configlens/releases/tag/v0.1.0-beta.3"
+          >Release notes ↗</a
+        >
+      </div><noscript
+        ><p class="small">
+          JavaScript is off. Use a platform-specific download:
+        </p><ul class="small">
+          <li>
+            <a
+              href="https://github.com/ob4cl/configlens/releases/download/v0.1.0-beta.3/configlens-v0.1.0-beta.3-x86_64-unknown-linux-gnu.tar.gz"
+              >Linux x86-64 GNU</a
+            >
+          </li><li>
+            <a
+              href="https://github.com/ob4cl/configlens/releases/download/v0.1.0-beta.3/configlens-v0.1.0-beta.3-aarch64-apple-darwin.tar.gz"
+              >macOS Apple Silicon</a
+            >
+          </li><li>
+            <a
+              href="https://github.com/ob4cl/configlens/releases/download/v0.1.0-beta.3/configlens-v0.1.0-beta.3-x86_64-pc-windows-msvc.zip"
+              >Windows x86-64</a
+            >
+          </li>
+        </ul><p class="small">
+          The verification command below is for Linux. See the release notes for
+          platform-specific checksum instructions.
+        </p></noscript
+      ><p class="small warning">
+        Binaries are unsigned; the macOS archive is not notarized. Review the
+        release and checksum before running anything.
+      </p><details class="verify-details">
+        <summary>Verify your download <span aria-hidden="true">+</span></summary
+        ><p class="small">
+          Download <a
+            href="https://github.com/ob4cl/configlens/releases/download/v0.1.0-beta.3/SHA256SUMS"
+            >SHA256SUMS</a
+          > into the same directory. Compare the matching archive’s hash; stop on
+          any mismatch.
+        </p><pre
+          id="checksum-command">sha256sum configlens-v0.1.0-beta.3-x86_64-unknown-linux-gnu.tar.gz</pre><p
+          class="small muted"
+        >
+          Compare with the corresponding line in SHA256SUMS. A checksum checks
+          integrity, not publisher identity.
+        </p><button class="copy-button" data-copy-target="checksum-command"
+          >Copy verification command</button
+        >
+      </details>
+    </div><div class="install-source">
+      <span class="tiny-label">OR BUILD FROM SOURCE · RUST 1.85+</span
+      ><pre><code id="source-install-command">cargo install --locked --git https://github.com/ob4cl/configlens</code></pre><button
+        class="copy-button"
+        data-copy-target="source-install-command">Copy source install</button
+      ><p class="small muted">
+        Source install follows the repository default branch; it is not pinned
+        to the beta archive.
+      </p><span class="tiny-label">YOUR FIRST TRACE</span
+      ><pre><code id="first-trace-command">configlens explain /model --client claude --client-version 2.1.296</code></pre><button
+        class="copy-button"
+        data-copy-target="first-trace-command">Copy first trace</button
+      ><p class="small">
+        Use a supported client version claim. ConfigLens never runs a client
+        binary to discover it.
+      </p>
+    </div>
+  </div><p id="install-copy-status" role="status" class="small muted"></p><p
+    class="small"
+  >
+    <a class="text-link" href="https://github.com/ob4cl/configlens/releases"
+      >All releases ↗</a
+    > · <a
+      class="text-link"
+      href="https://github.com/ob4cl/configlens/blob/main/README.md#install"
+      >Full installation guide ↗</a
+    >
+  </p><div class="open-source">
+    <img src="/configlens/favicon.svg" alt="" width="48" height="48" /><div>
+      <h3>Open source. Open about the limits.</h3><p>
+        Read the rules. Reproduce the fixtures. Help make the next explanation
+        better.
+      </p>
+    </div><a class="button" href="https://github.com/ob4cl/configlens"
+      >Explore on GitHub <span aria-hidden="true">↗</span></a
+    >
+  </div>
+</section>
