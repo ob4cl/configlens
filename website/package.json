@@ -16,7 +16,7 @@
     "fixtures": "python3 scripts/capture-fixtures.py"
   },
   "dependencies": {
-    "astro": "7.3.8"
+    "astro": "7.4.7"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
